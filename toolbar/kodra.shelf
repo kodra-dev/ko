@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <shelfSet name="kodra" label="Kodra">
+    <memberToolshelf name="dev"/>
+  </shelfSet>
+
+  <toolshelf name="dev" label="Dev">
+    <memberTool name="reload_ko"/>
+  </toolshelf>
+
+  <tool name="reload_ko" label="Reload Ko" icon="hicon:/SVGIcons.index?BUTTONS_reload.svg">
+    <script scriptType="python"><![CDATA[import importlib
+
+
+KO_MODULES = [
+    'ko_radial_menus',
+]
+
+print("Reloading modules:")
+
+for km in KO_MODULES:
+    m = importlib.import_module(km)
+    importlib.reload(m)
+    print(m)
+    ]]></script>
+  </tool>
+</shelfDocument>

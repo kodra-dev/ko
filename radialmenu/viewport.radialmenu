@@ -1,0 +1,40 @@
+{
+	"fileversion":"19.5.534",
+	"name":"viewport",
+	"categories":"Display",
+	"pane":"scene",
+	"label":"Viewport",
+	"type":"submenu",
+	"items":{
+		"0":{
+			"label":"Top",
+			"type":"script_action",
+			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'TOP')"
+		},
+		"1":{
+			"label":"Front",
+			"type":"script_action",
+			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'FRONT')"
+		},
+		"2":{
+			"label":"Left",
+			"type":"script_action",
+			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'LEFT')"
+		},
+		"4":{
+			"label":"Bottom",
+			"type":"script_action",
+			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'BOTTOM')"
+		},
+		"6":{
+			"label":"Right",
+			"type":"script_action",
+			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'RIGHT')"
+		},
+		"7":{
+			"label":"Back",
+			"type":"script_action",
+			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'BACK')"
+		}
+	}
+}
