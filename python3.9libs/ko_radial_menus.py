@@ -6,20 +6,21 @@ def setViewportOrientation(kwargs, orientation):
     viewport.homeAll()
 
     newZ = hou.Vector3(0, 0, 1)
+    newType = hou.geometryViewportType.Perspective
     if orientation == 'TOP':
-        newZ = hou.Vector3(0, -1, 0)
+        newType = hou.geometryViewportType.Top
     if orientation == 'BOTTOM':
-        newZ = hou.Vector3(0, 1, 0)
+        newType = hou.geometryViewportType.Bottom
     if orientation == 'RIGHT':
-        newZ = hou.Vector3(-1, 0, 0)
+        newType = hou.geometryViewportType.Right
     if orientation == 'LEFT':
-        newZ = hou.Vector3(1, 0, 0)
+        newType = hou.geometryViewportType.Left
     if orientation == 'FRONT':
-        newZ = hou.Vector3(0, 0, 1)
+        newType = hou.geometryViewportType.Front
     if orientation == 'BACK':
-        newZ = hou.Vector3(0, 0, -1)
+        newType = hou.geometryViewportType.Back
+    if orientation == "PERSPECTIVE":
+        newType = hou.geometryViewportType.Perspective
+    
+    viewport.changeType(newType)
       
-    camera = viewport.defaultCamera()
-    camera.setRotation(
-        hou.hmath.buildRotateZToAxis(newZ).extractRotationMatrix3()
-    )

@@ -7,6 +7,7 @@
 
   <shelfSet name="kodra" label="Kodra">
     <memberToolshelf name="dev"/>
+    <memberToolshelf name="ko_modeling"/>
   </shelfSet>
 
   <toolshelf name="dev" label="Dev">
@@ -19,6 +20,7 @@
 
 KO_MODULES = [
     'ko_radial_menus',
+    'ko_modeling',
 ]
 
 print("Reloading modules:")

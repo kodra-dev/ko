@@ -26,6 +26,11 @@
 			"type":"script_action",
 			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'BOTTOM')"
 		},
+		"5":{
+			"label":"Perspective",
+			"type":"script_action",
+			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'PERSPECTIVE')"
+		},
 		"6":{
 			"label":"Right",
 			"type":"script_action",

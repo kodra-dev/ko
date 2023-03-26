@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <toolshelf name="ko_modeling" label="KoModeling">
+    <memberTool name="connect"/>
+  </toolshelf>
+
+  <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import ko_modeling
+
+ko_modeling.connect(kwargs)]]></script>
+  </tool>
+</shelfDocument>
