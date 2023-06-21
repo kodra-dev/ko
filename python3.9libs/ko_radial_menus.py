@@ -1,8 +1,6 @@
 import hou
 
-def setViewportOrientation(kwargs, orientation):
-    pane = kwargs["pane"]
-    viewport = pane.curViewport()
+def setViewportOrientation(kwargs, orientation, viewport):
     viewport.homeAll()
 
     newZ = hou.Vector3(0, 0, 1)
@@ -21,6 +19,34 @@ def setViewportOrientation(kwargs, orientation):
         newType = hou.geometryViewportType.Back
     if orientation == "PERSPECTIVE":
         newType = hou.geometryViewportType.Perspective
+    if orientation == "UV":
+        newType = hou.geometryViewportType.UV
     
     viewport.changeType(newType)
-      
+
+
+def animationPlayback(kwargs, command):
+    if command == "PLAY":
+        if hou.playbar.isPlaying():
+            hou.playbar.stop()
+        else:
+            hou.playbar.play()
+    if command == "REVERSE":
+        if hou.playbar.isPlaying():
+            hou.playbar.stop()
+        else:
+            hou.playbar.reverse()
+    if command == "NEXT_KEYFRAME":
+        hou.playbar.stop()
+        hou.playbar.jumpToNextKeyframe()
+    if command == "PREV_KEYFRAME":
+        hou.playbar.stop()
+        hou.playbar.jumpToPreviousKeyframe()
+    if command == "TO_LAST":
+        range = hou.playbar.playbackRange()
+        hou.playbar.stop()
+        hou.setFrame(range[1])
+    if command == "TO_FIRST":
+        range = hou.playbar.playbackRange()
+        hou.playbar.stop()
+        hou.setFrame(range[0])

@@ -1,5 +1,12 @@
 Default-Icons
 
+# Houdini
+*_bak*.hiplc
+*_bak*.hdalc
+*_auto*.hiplc
+*_auto*.hdalc
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

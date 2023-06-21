@@ -12,6 +12,7 @@
 
   <toolshelf name="dev" label="Dev">
     <memberTool name="reload_ko"/>
+    <memberTool name="open_in_explorer"/>
   </toolshelf>
 
   <tool name="reload_ko" label="Reload Ko" icon="hicon:/SVGIcons.index?BUTTONS_reload.svg">
@@ -19,6 +20,7 @@
 
 
 KO_MODULES = [
+    'ko_dev',
     'ko_radial_menus',
     'ko_modeling',
 ]
@@ -30,5 +32,11 @@ for km in KO_MODULES:
     importlib.reload(m)
     print(m)
     ]]></script>
+  </tool>
+
+  <tool name="open_in_explorer" label="Open in Explorer" icon="hicon:/SVGIcons.index?COMMON_file.svg">
+    <script scriptType="python"><![CDATA[import ko_dev
+
+ko_dev.openInExplorer()]]></script>
   </tool>
 </shelfDocument>

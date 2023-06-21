@@ -1,45 +1,9 @@
 {
-	"fileversion":"19.5.534",
-	"name":"viewport",
-	"categories":"Display",
+	"fileversion":"19.5.640",
+	"name":"Viewport",
+	"categories":"ko",
 	"pane":"scene",
-	"label":"Viewport",
-	"type":"submenu",
-	"items":{
-		"0":{
-			"label":"Top",
-			"type":"script_action",
-			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'TOP')"
-		},
-		"1":{
-			"label":"Front",
-			"type":"script_action",
-			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'FRONT')"
-		},
-		"2":{
-			"label":"Left",
-			"type":"script_action",
-			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'LEFT')"
-		},
-		"4":{
-			"label":"Bottom",
-			"type":"script_action",
-			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'BOTTOM')"
-		},
-		"5":{
-			"label":"Perspective",
-			"type":"script_action",
-			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'PERSPECTIVE')"
-		},
-		"6":{
-			"label":"Right",
-			"type":"script_action",
-			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'RIGHT')"
-		},
-		"7":{
-			"label":"Back",
-			"type":"script_action",
-			"script":"import ko_radial_menus\n\nko_radial_menus.setViewportOrientation(kwargs, 'BACK')"
-		}
-	}
+	"label":"viewport",
+	"type":"script_submenu",
+	"script":"import hou\nimport ko_radial_menus\n\n\ndesktop = hou.ui.curDesktop()\np = desktop.paneUnderCursor()\npt = p.currentTab()\nviewport = pt.curViewport()\n\n\ndef setViewportOrientation(orientation, viewport):\n    def wrapper(**kargs):\n        ko_radial_menus.setViewportOrientation(kargs, orientation, viewport)\n    return wrapper\n\nentries = {\n    \"n\" : {\n        \"type\": \"script_action\",\n        \"label\": \"Top\",\n        \"script\": setViewportOrientation('TOP', viewport),\n    },\n    \"s\" : {\n        \"type\": \"script_action\",\n        \"label\": \"Bottom\",\n        \"script\": setViewportOrientation('BOTTOM', viewport),\n    },\n    \"e\" : {\n        \"type\": \"script_action\",\n        \"label\": \"Right\",\n        \"script\": setViewportOrientation('RIGHT', viewport),\n    },\n    \"w\" : {\n        \"type\": \"script_action\",\n        \"label\": \"Left\",\n        \"script\": setViewportOrientation('LEFT', viewport),\n    },\n    \"se\" : {\n        \"type\": \"script_action\",\n        \"label\": \"Perspective\",\n        \"script\": setViewportOrientation('PERSPECTIVE', viewport),\n    },\n    \"sw\" : {\n        \"type\": \"script_action\",\n        \"label\": \"UV\",\n        \"script\": setViewportOrientation('UV', viewport),\n    },\n    \"ne\" : {\n        \"type\": \"script_action\",\n        \"label\": \"Back\",\n        \"script\": setViewportOrientation('BACK', viewport),\n    },\n    \"nw\" : {\n        \"type\": \"script_action\",\n        \"label\": \"Front\",\n        \"script\": setViewportOrientation('FRONT', viewport),\n    },\n}\n\nradialmenu.setRadialMenu(entries)"
 }

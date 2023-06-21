@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    This file defines the node menu items for the KineFX package.
+-->
+<menuDocument>
+  <menu>
+    <scriptItem id="opmenu.ko_save_and_match_definition">
+        <label>Save and Match Definition</label>
+        <context>
+            <expression>
+                return kwargs["node"].isEditable() and kwargs["node"].type().definition() is not None
+            </expression>
+        </context>
+        <parent>root_menu</parent>
+        <insertAfter>opmenu.saveoptype</insertAfter>
+        <scriptCode><![CDATA[
+node = (kwargs["node"])
+node.type().definition().updateFromNode(node)
+node.matchCurrentDefinition()
+    ]]></scriptCode>
+    </scriptItem>
+  </menu>
+</menuDocument>
