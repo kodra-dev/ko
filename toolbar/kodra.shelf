@@ -23,6 +23,7 @@ KO_MODULES = [
     'ko_dev',
     'ko_radial_menus',
     'ko_modeling',
+    'ko_menu',
 ]
 
 print("Reloading modules:")

@@ -19,5 +19,40 @@ node.type().definition().updateFromNode(node)
 node.matchCurrentDefinition()
     ]]></scriptCode>
     </scriptItem>
-  </menu>
+
+    <scriptItem id="opmenu.ko_add_title_note">
+        <label>Add Title Note</label>
+        <context>
+            <expression>
+                return kwargs["node"] is not None
+            </expression>
+        </context>
+        <parent>root_menu</parent>
+        <insertAfter>opmenu.edit_comment</insertAfter>
+        <scriptCode>
+<![CDATA[
+import ko_menu
+ko_menu.add_title_sticky_note(kwargs["node"])
+]]>
+        </scriptCode>
+    </scriptItem>
+
+    <scriptItem id="opmenu.ko_add_comment_note">
+        <label>Add Comment Note</label>
+        <context>
+            <expression>
+                return kwargs["node"] is not None
+            </expression>
+        </context>
+        <parent>root_menu</parent>
+        <insertAfter>opmenu.ko_add_title_note</insertAfter>
+        <scriptCode>
+<![CDATA[
+import ko_menu
+ko_menu.add_comment_sticky_note(kwargs["node"])
+]]>
+        </scriptCode>
+    </scriptItem>
+
+</menu>
 </menuDocument>
