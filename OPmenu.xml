@@ -20,6 +20,10 @@ node.matchCurrentDefinition()
     ]]></scriptCode>
     </scriptItem>
 
+    <separatorItem id="opmenu.ko_note_sepr">
+        <insertAfter>opmenu.properties</insertAfter>
+    </separatorItem>
+
     <scriptItem id="opmenu.ko_add_title_note">
         <label>Add Title Note</label>
         <context>
@@ -28,7 +32,7 @@ node.matchCurrentDefinition()
             </expression>
         </context>
         <parent>root_menu</parent>
-        <insertAfter>opmenu.edit_comment</insertAfter>
+        <insertAfter>opmenu.ko_note_sepr</insertAfter>
         <scriptCode>
 <![CDATA[
 import ko_menu
