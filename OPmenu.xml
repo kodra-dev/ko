@@ -58,5 +58,22 @@ ko_menu.add_comment_sticky_note(kwargs["node"])
         </scriptCode>
     </scriptItem>
 
+    <scriptItem id="opmenu.ko_open_in_apex_editor">
+        <label>Open in Apex</label>
+        <context>
+            <expression>
+                return kwargs["node"].type().name().startswith("apex::")
+            </expression>
+        </context>
+        <parent>root_menu</parent>
+        <insertBefore>opmenu.preview</insertBefore>
+        <scriptCode>
+<![CDATA[
+import ko_menu
+ko_menu.open_in_apex_editor(kwargs["networkeditor"], kwargs["node"])
+]]>
+        </scriptCode>
+    </scriptItem>
+
 </menu>
 </menuDocument>
