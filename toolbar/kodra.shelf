@@ -25,6 +25,7 @@ KO_MODULES = [
     'ko_modeling',
     'ko_menu',
     'ko_rig',
+    'ko_ui',
 ]
 
 print("Reloading modules:")
