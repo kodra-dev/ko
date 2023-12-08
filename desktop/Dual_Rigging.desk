@@ -8,38 +8,32 @@ radial menu set defaultmodeling
 root {
     split 0.263072 V {
         tabs 0 1 {
-            pane panetab1 -a 0 -l 1 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m neteditor
-            pane panetab2 -a 0 -l 10 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m chaneditor
-            pane panetab3 -a 0 -l 10 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m iprviewer
+            pane panetab1 -a 0 -l 10 -H /obj/animation_layer/ -T SOP -m neteditor
+            pane panetab2 -a 0 -l 10 -H /obj/animation_layer/ -T SOP -m chaneditor
+            pane panetab3 -a 0 -l 10 -H /obj/animation_layer/ -T SOP -m iprviewer
             pane panetab4 -a 0 -l 10 -H /img/ -T IMG -m imageview
-            pane panetab13 -a 0 -l 10 -H /ch/ -T CHOPNET -m channelview
-            pane panetab11 -a 0 -l 10 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m details
+            pane panetab13 -a 0 -l 10 -H /obj/ANI_CHOP/ -T CHOP -m channelview
+            pane panetab11 -a 0 -l 10 -H /obj/animation_layer/ -T SOP -m details
         }
         split 0.5 H {
             tabs 0 1 {
-                pane panetab6 -a 0 -l 1 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m details
+                pane panetab6 -a 0 -l 10 -H /obj/animation_layer/ -T SOP -m details
             }
-            tabs 1 1 {
-                pane panetab5 -a 0 -l 10 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m pythonpanel
-                pane panetab7 -a 0 -l 10 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m pythonpanel
+            tabs 0 1 {
+                pane panetab5 -a 0 -l 10 -H /obj/animation_layer/ -T SOP -m pythonpanel
+                pane panetab7 -a 0 -l 10 -H /obj/animation_layer/ -T SOP -m pythonpanel
             }
         }
     }
 
-    panel panel1 -w 2565 374 971 1029 {
+    panel panel1 -w 2550 363 990 1039 {
         tabs 0 1 {
-            pane FloatingPanel2 -a 0 -l 10 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m sceneview
-        }
-    }
-
-    panel panel1 -w -5 594 1197 721 {
-        tabs 0 1 {
-            pane FloatingPanel -a 0 -l 2 -H /obj/APEXGraphExamples1/fetch_two_results/ -T SOP -m apexeditor
+            pane FloatingPanel2 -a 0 -l 10 -H /obj/animation_layer/ -T SOP -m sceneview
         }
     }
 }
 shelfdock -o 1 -l icon_and_text -G "0.53 0.50" add shelf_set_1 shelf_set_3
-networkeditor -p '{\n	"palettecolors":"",\n	"showspareinputdep":"1",\n	"showchilddep":"1",\n	"showdep":"0",\n	"taskgraphsortdirection":"0",\n	"showtaskgraphperf":"0",\n	"taskgraphperfstatname":"Cook Time",\n	"perfstatname":"Time",\n	"showparmdialogmax":"1",\n	"taskgraphcollapsemode":"Off",\n	"workitemcolorattribute":"",\n	"gridmode":"0",\n	"workitemattrtocollapseby":"",\n	"overviewbounds":"0.000000 0.000000 768.000000 173.100000",\n	"overviewmode":"2",\n	"showmenu":"1",\n	"showperfstats":"1",\n	"grouplistsplit":"0.75",\n	"showgrouplist":"0",\n	"palettemode":"1",\n	"useworkitemcolorattribute":"0",\n	"showtasksmenu":"1",\n	"backgroundimageediting":"0",\n	"backgroundimagebrightness":"1.0",\n	"gridystep":"1.0",\n	"showtree":"0",\n	"palettesize":"226 226",\n	"treesplit":"0.162891",\n	"typesidebarsplit":"0.25",\n	"showtypesidebar":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"gridxstep":"2.0"\n}\n' panetab1
+networkeditor -p '{\n	"palettecolors":"",\n	"showspareinputdep":"1",\n	"showchilddep":"1",\n	"showdep":"0",\n	"taskgraphsortdirection":"0",\n	"showtaskgraphperf":"0",\n	"taskgraphperfstatname":"Cook Time",\n	"perfstatname":"Time",\n	"showparmdialogmax":"1",\n	"taskgraphcollapsemode":"Off",\n	"workitemcolorattribute":"",\n	"gridmode":"0",\n	"workitemattrtocollapseby":"",\n	"overviewbounds":"0.000000 0.000000 768.000000 191.100000",\n	"overviewmode":"2",\n	"showmenu":"1",\n	"showperfstats":"1",\n	"grouplistsplit":"0.75",\n	"showgrouplist":"0",\n	"palettemode":"1",\n	"useworkitemcolorattribute":"0",\n	"showtasksmenu":"1",\n	"backgroundimageediting":"0",\n	"backgroundimagebrightness":"1.0",\n	"gridystep":"1.0",\n	"showtree":"0",\n	"palettesize":"226 226",\n	"treesplit":"0.162891",\n	"typesidebarsplit":"0.25",\n	"showtypesidebar":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"gridxstep":"2.0"\n}\n' panetab1
 netcolumns -c display,xray,select,origin,capture,bone -n OBJ panetab1
 netcolumns -c display,render,template,selectabletemplate,highlight,unload,bypass,lock -n SOP panetab1
 netcolumns -c delscript,comment -n CHOPNET panetab1
@@ -66,10 +60,9 @@ scenegraphtree -S 0.25 -m 2 -p "/collections /lights" -c  -i  -o  -x 1 -s 1 -M 0
 pythonpanel -s on -t off -n rig_tree panetab5
 pythonpanel -s on -t off -n apexselectionmanager panetab7
 viewerstow -x open -b stow -l open -m hide -c hide -d open ${DESKNAME}.FloatingPanel2.world
-vieweroption -a 2 ${DESKNAME}.FloatingPanel2.world
+vieweroption -a 0 ${DESKNAME}.FloatingPanel2.world
 viewlayout -s 2 ${DESKNAME}.FloatingPanel2.world
 viewtype -t ortho_right ${DESKNAME}.FloatingPanel2.world.`vpname("${DESKNAME}.FloatingPanel2.world",4)`
 viewtype -t ortho_front ${DESKNAME}.FloatingPanel2.world.`vpname("${DESKNAME}.FloatingPanel2.world",3)`
 viewtype -t ortho_top ${DESKNAME}.FloatingPanel2.world.`vpname("${DESKNAME}.FloatingPanel2.world",1)`
 viewtype -t perspective ${DESKNAME}.FloatingPanel2.world.`vpname("${DESKNAME}.FloatingPanel2.world",2)`
-networkeditor -p '{\n	"showspareinputdep":"1",\n	"showchilddep":"1",\n	"showdep":"0",\n	"taskgraphsortdirection":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showtaskgraphperf":"0",\n	"showperfstats":"1",\n	"perfstatname":"Time",\n	"showparmdialogmax":"1",\n	"palettesize":"226 226",\n	"gridxstep":"2.0",\n	"showparmdialog":"1",\n	"taskgraphperfstatname":"Cook Time",\n	"taskgraphcollapsemode":"Off",\n	"workitemcolorattribute":"",\n	"gridmode":"0",\n	"workitemattrtocollapseby":"",\n	"overviewbounds":"0.000000 0.000000 359.100000 179.700000",\n	"overviewmode":"2",\n	"useworkitemcolorattribute":"0",\n	"backgroundimagebrightness":"1.0",\n	"backgroundimageediting":"0",\n	"showtasksmenu":"1",\n	"gridystep":"1.0",\n	"palettemode":"0",\n	"palettecolors":"",\n	"showmenu":"1"\n}\n' FloatingPanel
