@@ -7,6 +7,7 @@
 
   <toolshelf name="ko_modeling" label="KoModeling">
     <memberTool name="connect"/>
+    <memberTool name="remove_visibility_ops"/>
   </toolshelf>
 
   <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
@@ -16,5 +17,23 @@
     <script scriptType="python"><![CDATA[import ko_modeling
 
 ko_modeling.connect(kwargs)]]></script>
+  </tool>
+
+  <tool name="remove_visibility_ops" label="Remove Visibility Ops" icon="hicon:/SVGIcons.index?SOP_visibility.svg">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import hou
+print(hou.pwd())
+print(kwargs)
+
+if kwargs['pane'] and kwargs['pane'].type() == hou.paneTabType.SceneViewer:
+    viewer = kwargs['pane']
+else:
+    viewer = hou.ui.paneTabOfType(hou.paneTabType.SceneViewer)
+
+for child in viewer.pwd().allSubChildren(top_down=False, recurse_in_locked_nodes=False):
+    if child.type() == hou.nodeType(hou.sopNodeTypeCategory(), "visibility"):
+        child.destroy()]]></script>
   </tool>
 </shelfDocument>
