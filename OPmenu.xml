@@ -62,7 +62,9 @@ ko_menu.add_comment_sticky_note(kwargs["node"])
         <label>Open in Apex</label>
         <context>
             <expression>
-                return kwargs["node"].type().name().startswith("apex::")
+                node = kwargs['node']
+                typeName = node.type().name()
+                return typeName.startswith("apex::") or typeName.startswith("null") or typeName.startswith("stash")
             </expression>
         </context>
         <parent>root_menu</parent>
