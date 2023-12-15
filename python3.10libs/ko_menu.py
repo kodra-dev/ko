@@ -23,8 +23,11 @@ def add_comment_sticky_note(ref_node):
     note.setPosition(ref_pose + hou.Vector2((-ref_size.x() / 2 - 1, -ref_size.y() / 2 - 0.25)))
 
 def open_in_apex_editor(editor, node):
-    apex_editor = hou.ui.curDesktop().createFloatingPaneTab(hou.paneTabType.ApexEditor, (20, 550), (1200, 800),
+    panel = hou.ui.curDesktop().createFloatingPanel(hou.paneTabType.ApexEditor, (20, 550), (1200, 800),
                                                             immediate=True)
+    apex_editor = panel.panes()[0].tabs()[0]
+    apex_editor.showNetworkControls(False)
+    apex_editor.setPref("showmenu", "0")
     old_current_node = editor.currentNode()
 
     editor.setCurrentNode(node)
@@ -32,4 +35,12 @@ def open_in_apex_editor(editor, node):
     apex_editor.setPin(hou.paneLinkType.Pinned)
     editor.setCurrentNode(old_current_node)
 
-    
+def open_in_floating_window(editor, node):
+    panel = hou.ui.curDesktop().createFloatingPanel(hou.paneTabType.NetworkEditor, (20, 550), (1200, 800),
+                                                    immediate=True)
+    if editor.linkGroup() == hou.paneLinkType.FollowSelection:
+        editor.setPin(hou.paneLinkType.Pinned)
+    new_editor = panel.panes()[0].tabs()[0]
+    new_editor.showNetworkControls(False)
+    new_editor.setPref("showmenu", "0")
+    new_editor.setPwd(node)
