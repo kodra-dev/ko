@@ -23,7 +23,7 @@ KO_MODULES = [
     'ko_dev',
     'ko_radial_menus',
     'ko_modeling',
-    'ko_menu',
+    'ko_network_editor',
     'ko_rig',
     'ko_anim',
     'ko_ui',

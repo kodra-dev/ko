@@ -35,8 +35,8 @@ node.matchCurrentDefinition()
         <insertAfter>opmenu.ko_note_sepr</insertAfter>
         <scriptCode>
 <![CDATA[
-import ko_menu
-ko_menu.add_title_sticky_note(kwargs["node"])
+import ko_network_editor
+ko_network_editor.add_title_sticky_note(kwargs["node"])
 ]]>
         </scriptCode>
     </scriptItem>
@@ -52,8 +52,8 @@ ko_menu.add_title_sticky_note(kwargs["node"])
         <insertAfter>opmenu.ko_add_title_note</insertAfter>
         <scriptCode>
 <![CDATA[
-import ko_menu
-ko_menu.add_comment_sticky_note(kwargs["node"])
+import ko_network_editor
+ko_network_editor.add_comment_sticky_note(kwargs["node"])
 ]]>
         </scriptCode>
     </scriptItem>
@@ -62,18 +62,36 @@ ko_menu.add_comment_sticky_note(kwargs["node"])
         <label>Open in Apex</label>
         <context>
             <expression>
+                import ko_rig
                 node = kwargs['node']
-                typeName = node.type().name()
-                return (typeName.startswith("apex::") or typeName.startswith("null") or typeName.startswith("stash")
-                        or typeName == 'unpackfolder' or typeName == 'packedfoldersplit')
+                return ko_rig.isApexGraph(node)
             </expression>
         </context>
         <parent>root_menu</parent>
         <insertBefore>opmenu.preview</insertBefore>
         <scriptCode>
 <![CDATA[
-import ko_menu
-ko_menu.open_in_apex_editor(kwargs["networkeditor"], kwargs["node"])
+import ko_network_editor
+ko_network_editor.open_in_apex_editor(kwargs["networkeditor"], kwargs["node"])
+]]>
+        </scriptCode>
+    </scriptItem>
+
+    <scriptItem id="opmenu.ko_unpack_open_in_apex_editor">
+        <label>Unpack and Open in Apex</label>
+        <context>
+            <expression>
+                import ko_rig
+                node = kwargs['node']
+                return ko_rig.isPackedRig(node)
+            </expression>
+        </context>
+        <parent>root_menu</parent>
+        <insertBefore>opmenu.preview</insertBefore>
+        <scriptCode>
+<![CDATA[
+import ko_network_editor
+ko_network_editor.unpack_open_in_apex_editor(kwargs["networkeditor"], kwargs["node"])
 ]]>
         </scriptCode>
     </scriptItem>
@@ -89,8 +107,8 @@ ko_menu.open_in_apex_editor(kwargs["networkeditor"], kwargs["node"])
         <insertBefore>opmenu.preview</insertBefore>
         <scriptCode>
 <![CDATA[
-import ko_menu
-ko_menu.open_in_floating_window(kwargs["networkeditor"], kwargs["node"])
+import ko_network_editor
+ko_network_editor.open_in_floating_window(kwargs["networkeditor"], kwargs["node"])
 ]]>
         </scriptCode>
     </scriptItem>
