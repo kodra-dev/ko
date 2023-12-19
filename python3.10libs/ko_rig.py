@@ -21,7 +21,8 @@ def isApexGraph(node):
         return False
 
     geo = node.geometry()
-    return (geo.findPointAttrib("callback") != None
+    return  (geo != None
+            and geo.findPointAttrib("callback") != None
             and geo.findPointAttrib("name") != None
             and geo.findPointAttrib("parms") != None)
 
@@ -31,7 +32,7 @@ def isPackedRig(node):
         return False
 
     geo = node.geometry()
-    return bool(geo.extractPackedPaths("*.rig"))
+    return (geo != None and bool(geo.extractPackedPaths("*.rig")))
 
 
 
