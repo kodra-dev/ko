@@ -11,7 +11,6 @@
                 return kwargs["node"].isEditable() and kwargs["node"].type().definition() is not None
             </expression>
         </context>
-        <parent>root_menu</parent>
         <insertAfter>opmenu.saveoptype</insertAfter>
         <scriptCode><![CDATA[
 node = (kwargs["node"])
@@ -31,7 +30,6 @@ node.matchCurrentDefinition()
                 return kwargs["node"] is not None
             </expression>
         </context>
-        <parent>root_menu</parent>
         <insertAfter>opmenu.ko_note_sepr</insertAfter>
         <scriptCode>
 <![CDATA[
@@ -48,7 +46,6 @@ ko_network_editor.add_title_sticky_note(kwargs["node"])
                 return kwargs["node"] is not None
             </expression>
         </context>
-        <parent>root_menu</parent>
         <insertAfter>opmenu.ko_add_title_note</insertAfter>
         <scriptCode>
 <![CDATA[
@@ -67,7 +64,6 @@ ko_network_editor.add_comment_sticky_note(kwargs["node"])
                 return ko_rig.isApexGraph(node)
             </expression>
         </context>
-        <parent>root_menu</parent>
         <insertBefore>opmenu.preview</insertBefore>
         <scriptCode>
 <![CDATA[
@@ -86,7 +82,6 @@ ko_network_editor.open_in_apex_editor(kwargs["networkeditor"], kwargs["node"])
                 return ko_rig.isPackedRig(node)
             </expression>
         </context>
-        <parent>root_menu</parent>
         <insertBefore>opmenu.preview</insertBefore>
         <scriptCode>
 <![CDATA[
@@ -103,7 +98,6 @@ ko_network_editor.unpack_open_in_apex_editor(kwargs["networkeditor"], kwargs["no
                 return kwargs["node"].isNetwork()
             </expression>
         </context>
-        <parent>root_menu</parent>
         <insertBefore>opmenu.preview</insertBefore>
         <scriptCode>
 <![CDATA[
@@ -113,5 +107,20 @@ ko_network_editor.open_in_floating_window(kwargs["networkeditor"], kwargs["node"
         </scriptCode>
     </scriptItem>
 
+    <subMenu id="opmenu.actions_menu">
+        <separatorItem id="opmenu.ko_actions_sepr">
+            <insertAtIndex>10</insertAtIndex>
+        </separatorItem>
+
+        <scriptItem id="opmenu.ko_force_recook">
+            <label>Force Recook</label>
+            <insertAfter>opmenu.ko_actions_sepr</insertAfter>
+            <scriptCode>
+<![CDATA[
+kwargs["node"].cook(force=True)
+]]>
+            </scriptCode>
+        </scriptItem>
+    </subMenu>
 </menu>
 </menuDocument>

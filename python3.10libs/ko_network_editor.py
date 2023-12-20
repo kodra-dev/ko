@@ -49,14 +49,14 @@ def unpack_open_in_apex_editor(editor, node):
 
     geo = node.geometry()
     parent = editor.pwd()
-    unpack_node = parent.node("_unpack_to_view")
+    unpack_node = parent.node(UNPACK_NODE_NAME)
     if(unpack_node and unpack_node.type() != hou.sopNodeTypeCategory().nodeType("unpackfolder")):
         hou.ui.displayMessage(f"Node {unpack_node.name()} exists, but not a Unpack Folder SOP. Aborted.",
                                 severity=hou.severityType.Error)
         return
     
     if(not unpack_node):
-        unpack_node = parent.createNode("unpackfolder", "_unpack_to_view",
+        unpack_node = parent.createNode("unpackfolder", UNPACK_NODE_NAME,
                                         run_init_scripts=False, load_contents=True, exact_type_name=True)
     
     editorBounds = editor.visibleBounds()
