@@ -17,7 +17,7 @@ def resetRig(kwargs):
 
 
 def isApexGraph(node):
-    if not node:
+    if not node or node.type() != hou.SopNode:
         return False
 
     geo = node.geometry()
@@ -28,7 +28,7 @@ def isApexGraph(node):
 
 
 def isPackedRig(node):
-    if not node:
+    if not node or node.type() != hou.SopNode:
         return False
 
     geo = node.geometry()
