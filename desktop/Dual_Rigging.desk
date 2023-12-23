@@ -8,27 +8,27 @@ radial menu set defaultmodeling
 root {
     split 0.263072 V {
         tabs 0 1 {
-            pane panetab1 -a 0 -l 10 -H /obj/geo1/ -T SOP -m neteditor
-            pane panetab2 -a 0 -l 10 -H /obj/geo1/ -T SOP -m chaneditor
-            pane panetab3 -a 0 -l 10 -H /obj/geo1/ -T SOP -m iprviewer
+            pane panetab1 -a 0 -l 10 -H /obj/apex_workflow/ -T SOP -m neteditor
+            pane panetab2 -a 0 -l 10 -H /obj/apex_workflow/ -T SOP -m chaneditor
+            pane panetab3 -a 0 -l 10 -H /obj/apex_workflow/ -T SOP -m iprviewer
             pane panetab4 -a 0 -l 10 -H /img/ -T IMG -m imageview
             pane panetab13 -a 0 -l 10 -H /ch/ -T CHOPNET -m channelview
-            pane panetab11 -a 0 -l 10 -H /obj/geo1/ -T SOP -m details
+            pane panetab11 -a 0 -l 10 -H /obj/apex_workflow/ -T SOP -m details
         }
         split 0.5 H {
             tabs 0 1 {
-                pane panetab6 -a 0 -l 10 -H /obj/geo1/ -T SOP -m details
+                pane panetab6 -a 0 -l 10 -H /obj/apex_workflow/ -T SOP -m details
             }
-            tabs 0 1 {
-                pane panetab5 -a 0 -l 10 -H /obj/geo1/ -T SOP -m pythonpanel
-                pane panetab7 -a 0 -l 10 -H /obj/geo1/ -T SOP -m pythonpanel
+            tabs 1 1 {
+                pane panetab5 -a 0 -l 10 -H /obj/apex_workflow/ -T SOP -m pythonpanel
+                pane panetab7 -a 0 -l 10 -H /obj/apex_workflow/ -T SOP -m pythonpanel
             }
         }
     }
 
-    panel panel1 -w 2549 579 790 830 {
+    panel panel1 -w 2594 374 1110 1027 {
         tabs 0 1 {
-            pane FloatingPanel2 -a 0 -l 10 -H /obj/geo1/ -T SOP -m sceneview
+            pane FloatingPanel2 -a 0 -l 10 -H /obj/apex_workflow/ -T SOP -m sceneview
         }
     }
 }

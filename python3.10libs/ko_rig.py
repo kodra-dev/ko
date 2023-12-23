@@ -17,7 +17,7 @@ def resetRig(kwargs):
 
 
 def isApexGraph(node):
-    if not node or node.type() != hou.SopNode:
+    if not node or not isinstance(node, hou.SopNode):
         return False
 
     geo = node.geometry()
@@ -28,11 +28,26 @@ def isApexGraph(node):
 
 
 def isPackedRig(node):
-    if not node or node.type() != hou.SopNode:
+    if not node or not isinstance(node, hou.SopNode):
         return False
 
     geo = node.geometry()
     return (geo != None and bool(geo.extractPackedPaths("*.rig")))
+
+
+def getFrameRange(geo):
+    """
+    Get the range of keyframes from packed animation data (channel primitives) 
+    """
+    min_start = 10000000
+    max_end = -10000000
+    for prim in geo.prims():
+        if isinstance(prim, hou.ChannelPrim):
+            start = int(prim.start())
+            end = int(prim.end())
+            min_start = min(min_start, start)
+            max_end = max(max_end, end)
+    return (min_start, max_end)
 
 
 
