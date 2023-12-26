@@ -24,9 +24,13 @@ KO_MODULES = [
     'ko_radial_menus',
     'ko_modeling',
     'ko_network_editor',
+    'ko_sop',
     'ko_rig',
+    'ko_rigcomp',
+    'ko_rigutils',
     'ko_anim',
     'ko_ui',
+    'ko_math',
 ]
 
 print("Reloading modules:")

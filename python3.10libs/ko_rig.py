@@ -1,6 +1,7 @@
 import hou
 import apex
 import ko_ui
+import ko_sop
 
 def resetRig(kwargs):
     node = kwargs['node']
@@ -50,4 +51,30 @@ def getFrameRange(geo):
     return (min_start, max_end)
 
 
+def applyRigComponent(node, fun):
+    """
+    Call this in a Python SOP or Python-based SOP
+    """
+    node = hou.pwd()
+    base_name = node.evalParm("basename")
+    rig_path = f"/{base_name}.rig"
+    skel_path = f"/{base_name}.skel"
 
+    geo = node.geometry()
+
+    rig_geo = geo.unpackFromFolder(rig_path)
+    skel = geo.unpackFromFolder(skel_path)
+
+    rig = apex.Graph()
+    rig.loadFromGeometry(rig_geo)
+
+    parms = ko_sop.nodeParmsToDict(node)
+
+    fun(rig, skel, parms)
+
+    rig.layout()
+
+    new_rig_geo = hou.Geometry()
+    rig.writeToGeometry(new_rig_geo)
+
+    geo.packToFolder(rig_path, new_rig_geo)
