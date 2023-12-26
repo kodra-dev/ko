@@ -1,5 +1,6 @@
 import hou
 import hdefereval
+import ko_sop
 
 def add_title_sticky_note(ref_node):
     note = ref_node.parent().createStickyNote()
@@ -102,3 +103,36 @@ def home_all(editor):
     for b in boxes:
         bounds.enlargeToContain(b)
     editor.setVisibleBounds(bounds)
+
+
+def recookUpmostPythonNodes(editor, debug_log=False):
+    node = editor.pwd()
+    queue = list(c for c in node.children() if c.inputs() == ())
+    visited = set()
+    ignored = set()
+    while queue:
+        node = queue.pop()
+        if node in visited:
+            continue
+        visited.add(node)
+
+        if node.type() == hou.sopNodeTypeCategory().nodeType("python") or ko_sop.isPythonBased(node):
+            if debug_log:
+                print(f"Recooking {node.path()}")
+
+            try:
+                node.cook(force=True)
+            except hou.OperationFailed:
+                raise hou.Error(f"Failed to recook {node.path()}. Aborted.")
+
+            for d in node.outputs():
+                ignored.add(d)
+        else:
+            if node in ignored:
+                continue
+            for d in node.outputs():
+                if debug_log:
+                    print(f"Checking {d.path()} to queue")
+                if all(i in visited for i in d.inputs() if i):
+                    queue.append(d)
+

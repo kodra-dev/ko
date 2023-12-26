@@ -2,10 +2,12 @@ import hou
 import apex
 import ko_math as kmath
 
-def getNode(rig: apex.Graph, pattern: str) -> int:
+def getNode(rig: apex.Graph, pattern: str, must_exist: bool = True) -> int | None:
     nodes = rig.matchNodes(pattern)
     if not nodes:
-        raise Exception(f"Pattern {pattern} doesn't match any nodes.")
+        if must_exist:
+            raise Exception(f"Pattern {pattern} doesn't match any nodes.")
+        return None
     if len(nodes) > 1:
         raise Exception(f"Pattern {pattern} matches multiple nodes.")
     return nodes[0]

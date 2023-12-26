@@ -12,39 +12,41 @@
 
   <toolshelf name="dev" label="Dev">
     <memberTool name="reload_ko"/>
+    <memberTool name="recook_python"/>
     <memberTool name="open_in_explorer"/>
   </toolshelf>
 
   <tool name="reload_ko" label="Reload Ko" icon="hicon:/SVGIcons.index?BUTTONS_reload.svg">
-    <script scriptType="python"><![CDATA[import importlib
-
-
-KO_MODULES = [
-    'ko_dev',
-    'ko_radial_menus',
-    'ko_modeling',
-    'ko_network_editor',
-    'ko_sop',
-    'ko_rig',
-    'ko_rigcomp',
-    'ko_rigutils',
-    'ko_anim',
-    'ko_ui',
-    'ko_math',
-]
-
-print("Reloading modules:")
-
-for km in KO_MODULES:
-    m = importlib.import_module(km)
-    importlib.reload(m)
-    print(m)
-    ]]></script>
+    <script scriptType="python"><![CDATA[import ko_dev
+ko_dev.reloadKoModules() ]]></script>
   </tool>
 
   <tool name="open_in_explorer" label="Open in Explorer" icon="hicon:/SVGIcons.index?COMMON_file.svg">
     <script scriptType="python"><![CDATA[import ko_dev
 
 ko_dev.openInExplorer()]]></script>
+  </tool>
+
+  <tool name="recook_python" label="Recook Python" icon="MISC_python">
+    <helpText><![CDATA[= Recook Python =
+
+""" Drag it to a network editor to call on that editor. (Ctrl: show debug log) """]]></helpText>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[pane = kwargs['pane']
+if not pane:
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+# if not pane or not isinstance(pane, hou.NetworkEditor):
+#     raise Exception("This tool must be run from a Network Editor pane. (You can drag it onto the network editor)")
+
+import ko_dev
+ko_dev.reloadKoModules()
+
+import ko_network_editor
+ko_network_editor.recookUpmostPythonNodes(pane, debug_log=kwargs['ctrlclick'])]]></script>
+    <keywordList>
+      <keyword>drag</keyword>
+    </keywordList>
   </tool>
 </shelfDocument>

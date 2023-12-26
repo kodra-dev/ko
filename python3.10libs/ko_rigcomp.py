@@ -23,11 +23,12 @@ def setJointsRord(rig, skel, **kwargs):
 
 def twoBoneIK(rig, skel, **kwargs):
     comp_name = kwargs['compname']
+    color = hou.Vector3(kwargs['nodecolor'])
+
+    ctl_parent_name = kwargs['ctlparent']
     root_name = kwargs['root']
     mid_name = kwargs['mid']
-
     tip_name = kwargs['tip']
-    color = hou.Vector3(kwargs['nodecolor'])
     falloff = kwargs['falloff']
     stretch_axis = kwargs['stretchaxis']
 
@@ -50,6 +51,10 @@ def twoBoneIK(rig, skel, **kwargs):
     rig.setNodeColor(ctl_target, color)
     ru.promoteTfo(rig, ctl_target, t=True, r=promote_target_r, s=promote_target_s)
 
+    if ctl_parent_name:
+        ctl_parent = ru.getNode(rig, ctl_parent_name)
+        ru.setParentTfo(rig, ctl_target, ctl_parent)
+
     mch_root_name = ru.mchJointName(comp_name, "IKRoot")
     mch_root = ru.safeAdd(rig, mch_root_name, "TransformObject")
     ru.insertBetweenParentTfo(rig, root, mch_root) 
@@ -64,7 +69,11 @@ def twoBoneIK(rig, skel, **kwargs):
 
     ru.connect(rig, smooth_ik, "rootout", root, "xform")
     ru.connect(rig, smooth_ik, "midout", mid, "xform")
-    ru.connect(rig, smooth_ik, "tipout", tip, "xform")
+
+    # We'd like to control tip's rotation with ctl_target, so we don't connect tipout to tip/xform here
+    # ru.connect(rig, smooth_ik, "tipout", tip, "xform")
+    ru.setParentTfo(rig, tip, ctl_target)
+    ru.updateParms(rig, tip, { "restlocal": hou.Matrix4(1) })
 
     ru.updateParms(rig, smooth_ik, {
         "falloff": falloff,
