@@ -19,6 +19,7 @@ def lerp(a, b, bias):
                            a[3] + (b[3] - a[3]) * bias)
     raise ValueError(f"Can't lerp {a} and {b}")
 
+
 def lerpMatrix4(a, b, biases):
     t_bias, r_bias, s_bias = biases
     a_srt = a.explode()

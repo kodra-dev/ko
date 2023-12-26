@@ -24,7 +24,7 @@ def setParentTfo(rig: apex.Graph, child: int, parent: int):
 def getParentTfo(rig: apex.Graph, child: int) -> int:
     return getSourceNode(rig, child, "parent")
 
-def insertBetweenParetnTfo(rig: apex.Graph, child: int, parent: int,
+def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
                            biases: (float, float, float) = (1, 1, 1)):
     """
     Insert parent between child and its old parent

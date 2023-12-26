@@ -52,7 +52,7 @@ def twoBoneIK(rig, skel, **kwargs):
 
     mch_root_name = ru.mchJointName(comp_name, "IKRoot")
     mch_root = ru.safeAdd(rig, mch_root_name, "TransformObject")
-    ru.insertBetweenParetnTfo(rig, root, mch_root) 
+    ru.insertBetweenParentTfo(rig, root, mch_root) 
     rig.setNodeColor(mch_root, color)
 
     smooth_ik_name = f"SmoothIK_{comp_name}"
