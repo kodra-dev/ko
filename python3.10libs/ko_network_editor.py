@@ -106,6 +106,9 @@ def home_all(editor):
 
 
 def recookUpmostPythonNodes(editor, debug_log=False):
+    """
+    Recook all Python SOPs and Python-based nodes that don't have an ancestor Python SOP / Python-based node.
+    """
     node = editor.pwd()
     queue = list(c for c in node.children() if c.inputs() == ())
     visited = set()
@@ -115,6 +118,9 @@ def recookUpmostPythonNodes(editor, debug_log=False):
         if node in visited:
             continue
         visited.add(node)
+
+        if debug_log:
+            print(f"Visiting {node.path()}")
 
         if node.type() == hou.sopNodeTypeCategory().nodeType("python") or ko_sop.isPythonBased(node):
             if debug_log:
@@ -131,8 +137,6 @@ def recookUpmostPythonNodes(editor, debug_log=False):
             if node in ignored:
                 continue
             for d in node.outputs():
-                if debug_log:
-                    print(f"Checking {d.path()} to queue")
                 if all(i in visited for i in d.inputs() if i):
                     queue.append(d)
 

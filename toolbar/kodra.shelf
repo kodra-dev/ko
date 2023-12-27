@@ -17,6 +17,7 @@
   </toolshelf>
 
   <tool name="reload_ko" label="Reload Ko" icon="hicon:/SVGIcons.index?BUTTONS_reload.svg">
+    <helpText><![CDATA[1]]></helpText>
     <script scriptType="python"><![CDATA[import ko_dev
 ko_dev.reloadKoModules() ]]></script>
   </tool>

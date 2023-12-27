@@ -87,6 +87,21 @@ def updateParms(rig: apex.Graph, node: int, parms: dict):
         old_parms[k] = parms[k]
     rig.setNodeParms(node, old_parms)
 
+def xformmask(t: bool = True, r: bool = True, s: bool = True) -> int:
+    return (1 if t else 0) | (2 if r else 0) | (4 if s else 0)
+
+# Note that z is not negative z. It's more like maketransform than lookat in Vex
+def lookat(z: hou.Vector3, y: hou.Vector3 = hou.Vector3(0, 1, 0), translate: hou.Vector3 = hou.Vector3(0, 0, 0)) -> hou.Matrix4:
+    z = z.normalized()
+    x = y.cross(z).normalized()
+    y = z.cross(x).normalized()
+    return hou.Matrix4((
+        x[0], x[1], x[2], 0,
+        y[0], y[1], y[2], 0,
+        z[0], z[1], z[2], 0,
+        translate[0], translate[1], translate[2], 1
+    ))
+
 
 
 JOINT_PREFIXES = ["CTL", "MCH", "DEF", "TGT"]
