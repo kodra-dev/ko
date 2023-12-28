@@ -18,13 +18,28 @@ def tfo(rig: apex.Graph, name: str) -> int:
 def ac(rig: apex.Graph, name: str) -> int:
     return getNode(rig, f"%callback(AbstractControl) & {name}")
 
+def tfoRestTransform(rig: apex.Graph, tfo: int) -> hou.Matrix4:
+    xform = rig.getNodeParms(tfo)["restlocal"] or hou.Matrix4(1)
+    parent = getParentTfo(rig, tfo, must_exist=False)
+    while parent:
+        parent_xform = rig.getNodeParms(parent)["restlocal"] or hou.Matrix4(1)
+        xform = xform * parent_xform
+        parent = getParentTfo(rig, parent, must_exist=False)
+    return xform
 
-def setParentTfo(rig: apex.Graph, child: int, parent: int):
+
+def setParentTfo(rig: apex.Graph, child: int, parent: int, compensate_xform: bool = False):
+    if compensate_xform:
+        child_xform = tfoRestTransform(rig, child)
+        parent_xform = tfoRestTransform(rig, parent)
+        child_xform = child_xform * parent_xform.inverted()
+        updateParms(rig, child, { "restlocal": child_xform })
     connect(rig, parent, "xform", child, "parent")
     connect(rig, parent, "localxform", child, "parentlocal")
 
-def getParentTfo(rig: apex.Graph, child: int) -> int:
-    return getSourceNode(rig, child, "parent")
+
+def getParentTfo(rig: apex.Graph, child: int, must_exist: bool = True) -> int | None:
+    return getSourceNode(rig, child, "parent", must_exist=must_exist)
 
 def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
                            biases: (float, float, float) = (1, 1, 1)):
@@ -73,11 +88,13 @@ def connect(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, d
     dp = getInPort(rig, dst_node, inPortName(dst_port_name))
     rig.addWire(sp, dp)
 
-def getSourceNode(rig: apex.Graph, dst_node: int, dst_port_name: str) -> int:
+def getSourceNode(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int | None:
     port = getInPort(rig, dst_node, dst_port_name)
     srcPorts = rig.connectedPorts(port)
     if not srcPorts:
-        raise Exception(f"Node {rig.nodeName(dst_node)}'s port {dst_port_name} has no source connected.")
+        if must_exist:
+            raise Exception(f"Node {rig.nodeName(dst_node)}'s port {dst_port_name} has no source connected.")
+        return None
     return rig.portNode(srcPorts[0])
 
 

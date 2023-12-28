@@ -30,8 +30,8 @@ def twoBoneIK(rig, skel, **kwargs):
     root_name = kwargs['root']
     mid_name = kwargs['mid']
     tip_name = kwargs['tip']
-    falloff = kwargs['falloff']
-    stretch_axis = kwargs['stretchaxis']
+    # falloff = kwargs['falloff']
+    # stretch_axis = kwargs['stretchaxis']
 
     promote_target_r = kwargs['promotargetr']
     promote_target_s = kwargs['promotargets']
@@ -62,7 +62,7 @@ def twoBoneIK(rig, skel, **kwargs):
     # TODO: restlocal needs to handle the case when ctl_parent is not origin
     if ctl_parent_name:
         ctl_parent = ru.getNode(rig, ctl_parent_name)
-        ru.setParentTfo(rig, ctl_target, ctl_parent)
+        ru.setParentTfo(rig, ctl_target, ctl_parent, compensate_xform=True)
 
 
     root_joint_xlate = root_joint_xform.extractTranslates()
@@ -92,7 +92,7 @@ def twoBoneIK(rig, skel, **kwargs):
         # TODO: restlocal needs to handle the case when ctl_parent is not origin
         if ctl_parent_name:
             ctl_parent = ru.getNode(rig, ctl_parent_name)
-            ru.setParentTfo(rig, ctl_ik_pole, ctl_parent)
+            ru.setParentTfo(rig, ctl_ik_pole, ctl_parent, compensate_xform=True)
     elif pole_style == "revolve":
         # In this case, pole is initially at the projected_mid, and will stay on the line root->tip dynamically
         # Its restlocal's orientation matters, but not its translation
@@ -103,7 +103,6 @@ def twoBoneIK(rig, skel, **kwargs):
 
         ru.setParentTfo(rig, ctl_ik_pole, mch_root)
 
-        mid_ratio = (projected_mid - root_joint_xlate).length() / (tip_joint_xlate - root_joint_xlate).length()
         pole_lookat_pos = mid_joint_xlate + (mid_joint_xlate - projected_mid).normalized() * 1 # pole_length doesn't matter here
         pole_up_pos = root_joint_xlate
         pole_xform = ru.lookat(pole_lookat_pos-projected_mid, pole_up_pos-projected_mid, projected_mid)
@@ -118,13 +117,21 @@ def twoBoneIK(rig, skel, **kwargs):
         ru.connect(rig, op_mul, "result", op_build, "t")
         to_twist_xform = ru.getOutPort(rig, op_build, "m")
 
+        mid_ratio = (projected_mid - root_joint_xlate).length() / (tip_joint_xlate - root_joint_xlate).length()
+        op_slerp = rig.addNode("", "transform::Slerp<Matrix4>")
+        ru.connect(rig, mch_root, "xform", op_slerp, "a")
+        ru.connect(rig, ctl_target, "xform", op_slerp, "b")
+        ru.updateParms(rig, op_slerp, { "bias": mid_ratio })
+        ru.connect(rig, op_slerp, "result", ctl_ik_pole, "xform")
+        ru.updateParms(rig, ctl_ik_pole, { "xformmask": ru.xformmask(t=True, r=False, s=False) })
+
 
     smooth_ik_name = f"SmoothIK_{comp_name}"
-    smooth_ik = ru.safeAdd(rig, smooth_ik_name, "SmoothIk")
+    smooth_ik = ru.safeAdd(rig, smooth_ik_name, "rig::TwoBoneIK")
 
-    ru.connect(rig, mch_root, "xform", smooth_ik, "driver_root")
-    ru.connect(rig, ctl_target, "xform", smooth_ik, "driver_target")
-    rig.addWire(to_twist_xform, ru.getInPort(rig, smooth_ik, "driver_twist"))
+    ru.connect(rig, mch_root, "xform", smooth_ik, "rootdriver")
+    ru.connect(rig, ctl_target, "xform", smooth_ik, "goal")
+    rig.addWire(to_twist_xform, ru.getInPort(rig, smooth_ik, "twist"))
 
     ru.connect(rig, smooth_ik, "rootout", root, "xform")
     ru.connect(rig, smooth_ik, "midout", mid, "xform")
@@ -135,11 +142,11 @@ def twoBoneIK(rig, skel, **kwargs):
     ru.updateParms(rig, tip, { "restlocal": hou.Matrix4(1) })
 
     ru.updateParms(rig, smooth_ik, {
-        "falloff": falloff,
-        "axis": stretch_axis,
-        "rest_root": root_joint_xform,
-        "rest_mid": mid_joint_xform,
-        "rest_tip": tip_joint_xform,
+        "root": root_joint_xform,
+        "mid": mid_joint_xform,
+        "tip": tip_joint_xform,
+        "blend": 1.0,
+        "stretch": 1,
     })
 
     rig.setNodeColor(ctl_target, color)
