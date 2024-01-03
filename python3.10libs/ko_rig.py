@@ -20,6 +20,8 @@ def resetRig(kwargs):
 def isApexGraph(node):
     if not node or not isinstance(node, hou.SopNode):
         return False
+    if node.type() == hou.nodeType(hou.sopNodeTypeCategory(), "apex::editgraph"):
+        return True
 
     geo = node.geometry()
     return  (geo != None

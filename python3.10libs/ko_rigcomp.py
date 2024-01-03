@@ -24,7 +24,7 @@ def setJointsRord(rig, skel, **kwargs):
 
 def twoBoneIK(rig, skel, **kwargs):
     comp_name = kwargs['compname']
-    color = hou.Vector3(kwargs['nodecolor'])
+    color = kwargs['nodecolor']
 
     ctl_parent_name = kwargs['ctlparent']
     root_name = kwargs['root']
@@ -105,7 +105,7 @@ def twoBoneIK(rig, skel, **kwargs):
 
         pole_lookat_pos = mid_joint_xlate + (mid_joint_xlate - projected_mid).normalized() * 1 # pole_length doesn't matter here
         pole_up_pos = root_joint_xlate
-        pole_xform = ru.lookat(pole_lookat_pos-projected_mid, pole_up_pos-projected_mid, projected_mid)
+        pole_xform = kmath.lookat(pole_lookat_pos-projected_mid, pole_up_pos-projected_mid, projected_mid)
         pole_xform_local = pole_xform * root_joint_xform.inverted()
         ru.updateParms(rig, ctl_ik_pole, { "restlocal": pole_xform_local })
         ru.promoteTfo(rig, ctl_ik_pole, t=False, r=True, s=False)
@@ -153,3 +153,137 @@ def twoBoneIK(rig, skel, **kwargs):
     rig.setNodeColor(mch_root, color)
     rig.setNodeColor(ctl_ik_pole, color)
     rig.setNodeColor(smooth_ik, color)
+
+
+def trackTo(rig, skel, **kwargs):
+    comp_name = kwargs['compname']
+    color = kwargs['nodecolor']
+
+    driven_name = kwargs['driven']
+    target_name = kwargs['target']
+    mirroed = kwargs['mirrored']
+
+    driven = ru.tfo(rig, driven_name)
+    target = ru.tfo(rig, target_name)
+
+    new_nodes = set()
+
+    mch_ref_name = ru.mchJointName(comp_name, "TrackFrom")
+    mch_ref = ru.safeAdd(rig, mch_ref_name, "TransformObject", new_nodes)
+    ru.insertBetweenParentTfo(rig, driven, mch_ref)
+
+    op_lookat = ru.addNode(rig, "lookat", "transform::LookAt", new_nodes)
+    ru.connect(rig, mch_ref, "xform", op_lookat, "inxform")
+
+    op_up = ru.addNode(rig, "up", "Value<Vector3>", new_nodes)
+    ru.updateParms(rig, op_up, { "parm": hou.Vector3(0, 1, 0) })
+    op_mul = ru.addNode(rig, "mul", "Multiply<Vector3,Matrix4>", new_nodes) 
+    ru.connect(rig, op_up, "value", op_mul, "a")
+    ru.connect(rig, mch_ref, "xform", op_mul, "b")
+    op_build = ru.addNode(rig, "build", "transform::Build", new_nodes)
+    ru.connect(rig, op_mul, "result", op_build, "t")
+
+    ru.connect(rig, op_build, "m", op_lookat, "lookup")
+
+    if mirroed:
+        op_explode1 = ru.addNode(rig, "explode1", "transform::Explode", new_nodes)
+        ru.connect(rig, target, "xform", op_explode1, "m")
+
+        op_explode2 = ru.addNode(rig, "explode2", "transform::Explode", new_nodes)
+        ru.connect(rig, mch_ref, "xform", op_explode2, "m")
+        op_val = ru.addNode(rig, "val", "Value<Float>", new_nodes)
+        ru.updateParms(rig, op_val, { "parm": 2.0 })
+        op_mul2 = ru.addNode(rig, "mul2", "Multiply<Vector3,Float>", new_nodes)
+        ru.connect(rig, op_explode2, "t", op_mul2, "a")
+        ru.connect(rig, op_val, "value", op_mul2, "b")
+
+        op_sub = ru.addNode(rig, "sub", "Subtract<Vector3>", new_nodes)
+        ru.connect(rig, op_mul2, "result", op_sub, "a")
+        ru.connect(rig, op_explode1, "t", op_sub, "b")
+
+        op_build2 = ru.addNode(rig, "build2", "transform::Build", new_nodes)
+        ru.connect(rig, op_sub, "result", op_build2, "t")
+
+        ru.connect(rig, op_build2, "m", op_lookat, "lookat")
+
+    else:
+        ru.connect(rig, target, "xform", op_lookat, "lookat")
+
+    ru.connect(rig, op_lookat, "xform", driven, "xform")
+
+    ru.setNodesColor(rig, new_nodes, color)
+    ru.promoteTfo(rig, target, t=True, r=False, s=False, demote=True)
+
+
+def eyesTarget(rig, skel, **kwargs):
+    trackTo(rig, skel,
+            compname=kwargs['compname'] + "_L",
+            nodecolor=kwargs['nodecolor'],
+            driven=kwargs['driven'] + "_L",
+            target=kwargs['target'] + "_L",
+            mirrored=False)
+    trackTo(rig, skel,
+            compname=kwargs['compname'] + "_R",
+            nodecolor=kwargs['nodecolor'],
+            driven=kwargs['driven'] + "_R",
+            target=kwargs['target'] + "_R",
+            mirrored=True)
+    target_center = ru.tfo(rig, kwargs['targetcenter'])
+    ru.promoteTfo(rig, target_center, t=True, r=False, s=False, demote=True)
+
+
+def rotationChain(rig, skel, **kwargs):
+    compname = kwargs['compname']
+    color = kwargs['nodecolor']
+
+    main_joint_name = kwargs['mainjoint']
+    joint_pattern = kwargs['jointpattern']
+
+    primary_axis = kwargs['primaxis']
+    secondary_axis = kwargs['scndaxis']
+
+    main_joint = ru.tfo(rig, main_joint_name)
+    joints = rig.matchNodes(joint_pattern)
+
+    new_nodes = set()
+
+    ctl_main_name = ru.ctlJoinName(compname, "Main")
+    ctl_main = ru.safeAdd(rig, ctl_main_name, "TransformObject", new_nodes)
+    rord = ru.axesToRord(primary_axis, secondary_axis)
+
+    parent = ru.getParentTfo(rig, main_joint, must_exist=False)
+    if parent:
+        ru.setParentTfo(rig, ctl_main, parent, compensate_xform=False)
+
+    ru.updateParms(rig, ctl_main, {
+        "restlocal": ru.tfoRestLocal(rig, main_joint),
+        "rord": rord
+    })
+    ru.promoteTfo(rig, ctl_main, t=False, r=True, s=False)
+    rig.setNodeTag(ctl_main, "rord_set")
+
+    op_val = ru.addNode(rig, "val", "Value<Vector3>", new_nodes)
+    ru.updateParms(rig, op_val, { "parm": hou.Vector3(
+        1 if primary_axis == 0 or secondary_axis == 0 else 0,
+        1 if primary_axis == 1 or secondary_axis == 1 else 0,
+        1 if primary_axis == 2 or secondary_axis == 2 else 0,
+    ) })
+
+    op_mul = ru.addNode(rig, "mul", "Multiply<Vector3>", new_nodes)
+    ru.connect(rig, ctl_main, "r", op_mul, "a")
+    ru.connect(rig, op_val, "value", op_mul, "b")
+
+    joints.sort(key=lambda j: rig.nodeName(j))
+
+    for i in range(len(joints)):
+        joint = joints[i]
+        mch_joint_name = ru.mchJointName(f"{compname}_{i}", "Int")
+        mch_joint = ru.addNode(rig, mch_joint_name, "TransformObject", new_nodes)
+        ru.updateParms(rig, mch_joint, { "rord": rord })
+        ru.insertBetweenParentTfo(rig, joint, mch_joint)
+        ru.connect(rig, op_mul, "result", mch_joint, "r")
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
+
