@@ -30,6 +30,60 @@ def tfoRestTransform(rig: apex.Graph, tfo: int) -> hou.Matrix4:
         parent = getParentTfo(rig, parent, must_exist=False)
     return xform
 
+def tfoAncestors(rig: apex.Graph, tfo: int) -> list[int]:
+    ancestors = []
+    parent = getParentTfo(rig, tfo, must_exist=False)
+    while parent:
+        ancestors.append(parent)
+        parent = getParentTfo(rig, parent, must_exist=False)
+    return ancestors
+
+def extractTfoChain(rig: apex.Graph, tfos: list[int]) -> list[dict]:
+    chain = []
+    unchecked = set(tfos)
+    root = None # root is the true root of the whole skeleton, not the root of the chain
+    leaf = None
+
+    while unchecked:
+        t = unchecked.pop()
+        leaf = t
+        while True:
+            parent = getParentTfo(rig, t, must_exist=False)
+            if parent is None:
+                root = t
+                break
+            else:
+                t = parent
+                if t in unchecked:
+                    unchecked.remove(t)
+
+    unchecked = set(tfos)
+    n = leaf
+    while n:
+        if n in unchecked:
+            unchecked.remove(n)
+        rest_local = tfoRestLocal(rig, n)
+        chain.insert(0, {
+            "node": n,
+            "name": rig.nodeName(n),
+            "rest_local": rest_local,
+        })
+        if n == root:
+            break
+        n = getParentTfo(rig, n, must_exist=False)
+
+    if unchecked:
+        raise Exception(f"Tfos don't form a chain: {', '.join(rig.nodeName(n) for n in unchecked)}")
+
+    xform = hou.Matrix4(1)
+    for i in range(len(chain)):
+        xform = chain[i]["rest_local"] * xform
+        chain[i]["xform"] = xform
+
+    return list(c for c in chain if c["node"] in tfos)
+
+
+
 def axesToRord(primary_axis: int, secondary_axis: int) -> int:
     """
     primary, tertiary, secondary
@@ -197,10 +251,10 @@ def jointSetSuffix(old_name: str, suffix: str) -> str:
     return joinJointName(parts[0], parts[1], suffix)
 
 
-def mchJointName(comp_name: str, sub_prefix: str) -> str:
+def mchJointName(comp_name: str, sub_prefix: str = "") -> str:
     parts = splitJointName(comp_name)
     return joinJointName("MCH", sub_prefix + '_' + parts[1], parts[2])
 
-def ctlJoinName(comp_name: str, sub_prefix: str) -> str:
+def ctlJoinName(comp_name: str, sub_prefix: str = "") -> str:
     parts = splitJointName(comp_name)
     return joinJointName("CTL", sub_prefix + '_' + parts[1], parts[2])

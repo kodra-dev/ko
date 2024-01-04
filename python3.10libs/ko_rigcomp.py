@@ -236,14 +236,15 @@ def rotationChain(rig, skel, **kwargs):
     compname = kwargs['compname']
     color = kwargs['nodecolor']
 
-    main_joint_name = kwargs['mainjoint']
-    joint_pattern = kwargs['jointpattern']
+    control_locator_name = kwargs['controllocator']
+    tfo_pattern = kwargs['tfopattern']
 
     primary_axis = kwargs['primaxis']
     secondary_axis = kwargs['scndaxis']
+    lock_secondary_axis = kwargs['lockscndaxis']
 
-    main_joint = ru.tfo(rig, main_joint_name)
-    joints = rig.matchNodes(joint_pattern)
+    control_locator = ru.tfo(rig, control_locator_name)
+    joints = rig.matchNodes(tfo_pattern)
 
     new_nodes = set()
 
@@ -251,23 +252,31 @@ def rotationChain(rig, skel, **kwargs):
     ctl_main = ru.safeAdd(rig, ctl_main_name, "TransformObject", new_nodes)
     rord = ru.axesToRord(primary_axis, secondary_axis)
 
-    parent = ru.getParentTfo(rig, main_joint, must_exist=False)
+    ancestors = ru.tfoAncestors(rig, control_locator)
+    for j in joints:
+        if j in ancestors:
+            raise Exception(f"""Driven joint {rig.nodeName(j)} is an ancestor of control locator {rig.nodeName(control_locator)};
+                            it's not allowed for now.""")
+
+    parent = ru.getParentTfo(rig, control_locator, must_exist=False)
     if parent:
         ru.setParentTfo(rig, ctl_main, parent, compensate_xform=False)
 
     ru.updateParms(rig, ctl_main, {
-        "restlocal": ru.tfoRestLocal(rig, main_joint),
+        "restlocal": ru.tfoRestLocal(rig, control_locator),
         "rord": rord
     })
     ru.promoteTfo(rig, ctl_main, t=False, r=True, s=False)
     rig.setNodeTag(ctl_main, "rord_set")
 
     op_val = ru.addNode(rig, "val", "Value<Vector3>", new_nodes)
-    ru.updateParms(rig, op_val, { "parm": hou.Vector3(
-        1 if primary_axis == 0 or secondary_axis == 0 else 0,
-        1 if primary_axis == 1 or secondary_axis == 1 else 0,
-        1 if primary_axis == 2 or secondary_axis == 2 else 0,
-    ) })
+    value = hou.Vector3(0, 0, 0)
+    for i in range(3):
+        if i == primary_axis or (i == secondary_axis and not lock_secondary_axis):
+            value[i] = 1.0 / len(joints)
+        else:
+            value[i] = 0
+    ru.updateParms(rig, op_val, { "parm": value } )
 
     op_mul = ru.addNode(rig, "mul", "Multiply<Vector3>", new_nodes)
     ru.connect(rig, ctl_main, "r", op_mul, "a")
@@ -282,6 +291,118 @@ def rotationChain(rig, skel, **kwargs):
         ru.updateParms(rig, mch_joint, { "rord": rord })
         ru.insertBetweenParentTfo(rig, joint, mch_joint)
         ru.connect(rig, op_mul, "result", mch_joint, "r")
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
+def twistChain(rig, skel, **kwargs):
+    kwargs['primaxis'] = kwargs['twistaxis']
+    kwargs['scndaxis'] = (kwargs['twistaxis'] + 1) % 3
+    kwargs['lockscndaxis'] = True
+    rotationChain(rig, skel, **kwargs)
+
+
+def fbikChain(rig, skel, **kwargs):
+    compname = kwargs['compname']
+    color = kwargs['nodecolor']
+
+    tfo_pattern = kwargs['tfopattern']
+    iterations = kwargs['iterations']
+    damping = kwargs['damping']
+    tolerance = kwargs['tolerance']
+
+    target_specs = kwargs['targets']
+
+    new_nodes = set()
+
+    joints = rig.matchNodes(tfo_pattern)
+    chain = ru.extractTfoChain(rig, joints)
+
+    op_geo = ru.safeAdd(rig, f"FBIKSkel_{compname}", "Value<Geometry>", new_nodes)
+    last_add_joint = None
+    last_geo_op = op_geo
+    for i in range(len(chain)):
+        n = chain[i]
+        op_add_joint = ru.safeAdd(rig, f"AddJoint_{compname}_{i}", "skel::AddJoint", new_nodes)
+        ru.updateParms(rig, op_add_joint, {
+            "name": n["name"],
+            "xform": n["xform"],
+            "color": hou.Vector3(1, 1, 1),
+        })
+        if i == 0:
+            ru.connect(rig, op_geo, "value", op_add_joint, "geo")
+            last_geo_op = op_add_joint
+        else:
+            ru.connect(rig, last_geo_op, "geo", op_add_joint, "geo")
+            op_set_parent = ru.addNode(rig, f"SetParent_{compname}_{i}", "skel::SetParent", new_nodes)
+            ru.connect(rig, op_add_joint, "geo", op_set_parent, "geo")
+            ru.connect(rig, op_add_joint, "ptnum", op_set_parent, "joint")
+            ru.connect(rig, last_add_joint, "ptnum", op_set_parent, "parent")
+            last_geo_op = op_set_parent
+        last_add_joint = op_add_joint
+
+    output = ru.getNode(rig, "output")
+    outp = ru.getOutPort(rig, last_geo_op, "geo")
+    inp = ru.getInPort(rig, output, "next")
+    rig.setPortName(inp, "FBIKSkel")
+    rig.addWire(outp, inp)
+
+    op_skel = ru.safeAdd(rig, f"SkelFromGeo_{compname}", "fbik::SkeletonFromGeo", new_nodes)
+    ru.connect(rig, last_geo_op, "geo", op_skel, "geo")
+    op_solver = ru.safeAdd(rig, f"Solver_{compname}", "fbik::PhysIKSolver", new_nodes)
+    ru.connect(rig, op_skel, "skel", op_solver, "skel")
+    ru.updateParms(rig, op_solver, {
+        "iterations": iterations,
+        "damping": damping,
+        "tolerance": tolerance,
+    })
+
+    last_solver_op = op_solver
+    for ts in target_specs:
+        name = ts['target#']
+        weight = ts['weight#']
+        priority = ts['priority#']
+        ctl_name = ts['ctlname#']
+        if not ctl_name:
+            ctl_name = ru.ctlJoinName(f"{name}", "FBIKTarget")
+
+        target = ru.tfo(rig, name)
+        xform = ru.tfoRestTransform(rig, target)
+
+        ctl = ru.safeAdd(rig, ctl_name, "TransformObject", new_nodes)
+        ru.updateParms(rig, ctl, {
+            "restlocal": xform,
+        })
+        ru.promoteTfo(rig, ctl, t=True, r=True, s=False)
+
+        op_target = ru.safeAdd(rig, f"FBIKTarget_{compname}_{name}", "fbik::Target", new_nodes)
+        ru.updateParms(rig, op_target, {
+            "type": 2,
+            "weight": weight,
+            "priority": priority,
+        });
+        ru.connect(rig, ctl, "xform", op_target, "xform")
+
+        op_set_target = ru.addNode(rig, f"SetTarget_{compname}_{name}", "fbik::SetTarget", new_nodes)
+        ru.updateParms(rig, op_set_target, { "bone": name, })
+        ru.connect(rig, last_solver_op, "solver", op_set_target, "solver")
+        ru.connect(rig, op_target, "target", op_set_target, "target")
+        last_solver_op = op_set_target
+
+    op_solve = ru.addNode(rig, f"Solve_{compname}", "fbik::SolvePhysIK", new_nodes)
+    ru.connect(rig, last_solver_op, "solver", op_solve, "solver")
+    op_skel_geo = ru.addNode(rig, f"SkelToGeo_{compname}", "fbik::SkeletonUpdateGeo", new_nodes)
+    ru.connect(rig, op_solve, "skel", op_skel_geo, "skel")
+    ru.connect(rig, last_geo_op, "geo", op_skel_geo, "geo")
+
+    for i in range(len(chain)):
+        n = chain[i]
+        op_get_xform = ru.addNode(rig, f"GetXform_{compname}_{i}", "skel::GetPointTransform", new_nodes)
+        ru.updateParms(rig, op_get_xform, { "name": n["name"], })
+        ru.connect(rig, op_skel_geo, "geo", op_get_xform, "geo")
+        driven = ru.tfo(rig, n["name"])
+        ru.connect(rig, op_get_xform, "xform", driven, "xform")
+
 
     ru.setNodesColor(rig, new_nodes, color)
 

@@ -72,6 +72,9 @@ def applyRigComponent(node, fun):
 
     parms = ko_sop.nodeParmsToDict(node)
 
+    if not "compname" in parms or not parms["compname"]:
+        raise Exception("No component name specified!")
+
     fun(rig, skel, parms)
 
     rig.layout()
