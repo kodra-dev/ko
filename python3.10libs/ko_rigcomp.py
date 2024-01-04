@@ -305,8 +305,10 @@ def twistChain(rig, skel, **kwargs):
 def fbikChain(rig, skel, **kwargs):
     compname = kwargs['compname']
     color = kwargs['nodecolor']
+    basename = kwargs['basename']
 
     tfo_pattern = kwargs['tfopattern']
+    config_from_skel = kwargs['configfromskel']
     iterations = kwargs['iterations']
     damping = kwargs['damping']
     tolerance = kwargs['tolerance']
@@ -318,6 +320,7 @@ def fbikChain(rig, skel, **kwargs):
     joints = rig.matchNodes(tfo_pattern)
     chain = ru.extractTfoChain(rig, joints)
 
+    # Build up a temporary skeleton geo for FBIK
     op_geo = ru.safeAdd(rig, f"FBIKSkel_{compname}", "Value<Geometry>", new_nodes)
     last_add_joint = None
     last_geo_op = op_geo
@@ -341,12 +344,29 @@ def fbikChain(rig, skel, **kwargs):
             last_geo_op = op_set_parent
         last_add_joint = op_add_joint
 
+        if config_from_skel:
+            pass # Not supported at this point, waiting for SideFX response
+            # parms = ru.getParmsNode(rig)
+            # skel_port = ru.getOutPort(rig, parms, f"{basename}.skel")
+            # source_joint = ru.findSourceJoint(rig, skel, n["node"], True)
+            # op_get = ru.addNode(rig, "", "geo::PointAttribValue<Dict>", new_nodes)
+            # rig.addWire(skel_port, ru.getInPort(rig, op_get, "geo"))
+            # ru.updateParms(rig, op_get, { "attribname": "fbik_jointconfig", "elemnum": source_joint })
+            # op_set = ru.addNode(rig, "", "geo::SetPointAttribValue<Dict>", new_nodes)
+            # ru.connect(rig, op_get, "value", op_set, "value")
+            # ru.connect(rig, last_geo_op, "geo", op_set, "geo")
+            # ru.connect(rig, op_add_joint, "ptnum", op_set, "elemnum")
+            # ru.updateParms(rig, op_set, { "attribname": "fbik_jointconfig" })
+            # last_geo_op = op_set
+
+
     output = ru.getNode(rig, "output")
     outp = ru.getOutPort(rig, last_geo_op, "geo")
     inp = ru.getInPort(rig, output, "next")
     rig.setPortName(inp, "FBIKSkel")
     rig.addWire(outp, inp)
 
+    # Actual FBIK logic
     op_skel = ru.safeAdd(rig, f"SkelFromGeo_{compname}", "fbik::SkeletonFromGeo", new_nodes)
     ru.connect(rig, last_geo_op, "geo", op_skel, "geo")
     op_solver = ru.safeAdd(rig, f"Solver_{compname}", "fbik::PhysIKSolver", new_nodes)
@@ -357,6 +377,7 @@ def fbikChain(rig, skel, **kwargs):
         "tolerance": tolerance,
     })
 
+    # Targets and their controls
     last_solver_op = op_solver
     for ts in target_specs:
         name = ts['target#']
@@ -395,6 +416,7 @@ def fbikChain(rig, skel, **kwargs):
     ru.connect(rig, op_solve, "skel", op_skel_geo, "skel")
     ru.connect(rig, last_geo_op, "geo", op_skel_geo, "geo")
 
+    # Update the Tfos from the updated skeleton geo
     for i in range(len(chain)):
         n = chain[i]
         op_get_xform = ru.addNode(rig, f"GetXform_{compname}_{i}", "skel::GetPointTransform", new_nodes)

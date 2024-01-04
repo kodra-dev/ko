@@ -1,6 +1,7 @@
 import hou
 import apex
 import ko_math as kmath
+from kinefx import utils as ku
 
 def getNode(rig: apex.Graph, pattern: str, must_exist: bool = True) -> int | None:
     nodes = rig.matchNodes(pattern)
@@ -83,7 +84,6 @@ def extractTfoChain(rig: apex.Graph, tfos: list[int]) -> list[dict]:
     return list(c for c in chain if c["node"] in tfos)
 
 
-
 def axesToRord(primary_axis: int, secondary_axis: int) -> int:
     """
     primary, tertiary, secondary
@@ -125,6 +125,7 @@ def setParentTfo(rig: apex.Graph, child: int, parent: int, compensate_xform: boo
 def getParentTfo(rig: apex.Graph, child: int, must_exist: bool = True) -> int | None:
     return getSourceNode(rig, child, "parent", must_exist=must_exist)
 
+
 def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
                            biases: (float, float, float) = (1, 1, 1)):
     """
@@ -139,8 +140,12 @@ def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
     setParentTfo(rig, child, parent, compensate_xform=True)
     
 
+def getParmsNode(rig: apex.Graph) -> int:
+    return getNode(rig, "%callback(__parms__)")
+    
+
 def promoteTfo(rig: apex.Graph, tfo: int, t: bool = True, r: bool = True, s: bool = False, demote: bool = False):
-    parms_node = getNode(rig, "%callback(__parms__)")
+    parms_node = getParmsNode(rig)
 
     if demote:
         tp = getInPort(rig, tfo, "t")
@@ -161,6 +166,20 @@ def promoteTfo(rig: apex.Graph, tfo: int, t: bool = True, r: bool = True, s: boo
     if s:
         rig.promoteInput(getInPort(rig, tfo, "s"), parms_node, f"{name}_s")
 
+
+def findSourceJoint(rig: apex.Graph, skel: hou.Geometry, node: int, must_exist: bool) -> int | None:
+    props = rig.getNodeProperties(node)
+    name = rig.nodeName(node)
+    if props.contains("source_joint"):
+        name = props["source_joint"]
+
+    joint = ku.findPointName(skel, name)
+    if not joint:
+        if must_exist:
+            raise Exception(f"Joint {name} doesn't exist.")
+        return None
+    
+    return joint.number()
 
 
 
