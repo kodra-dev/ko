@@ -30,6 +30,7 @@ def twoBoneIK(rig, skel, **kwargs):
     root_name = kwargs['root']
     mid_name = kwargs['mid']
     tip_name = kwargs['tip']
+    ctl_target_name = kwargs['ctltargetname']
     # falloff = kwargs['falloff']
     # stretch_axis = kwargs['stretchaxis']
 
@@ -55,7 +56,6 @@ def twoBoneIK(rig, skel, **kwargs):
     ru.insertBetweenParentTfo(rig, root, mch_root) 
     
     # ctl_target: the control of target joint. e.g. foot
-    ctl_target_name = ru.ctlJointName(comp_name, "IKTarget")
     ctl_target = ru.safeAdd(rig, ctl_target_name, "TransformObject")
     ru.updateParms(rig, ctl_target, { "restlocal": tip_joint_xform })
     ru.promoteTfo(rig, ctl_target, t=True, r=promote_target_r, s=promote_target_s)
@@ -286,9 +286,20 @@ def rotationChain(rig, skel, **kwargs):
         joint = joints[i]
         mch_joint_name = ru.mchJointName(f"{compname}_{i}", "Int")
         mch_joint = ru.addNode(rig, mch_joint_name, "TransformObject", new_nodes)
-        ru.updateParms(rig, mch_joint, { "rord": rord })
         ru.insertBetweenParentTfo(rig, joint, mch_joint)
-        ru.connect(rig, op_mul, "result", mch_joint, "r")
+        # HACK: in case that the joint has its xform controlled by something else... like arm IK
+        ip = ru.getInPort(rig, joint, "xform")
+        op = ru.getSourcePort(rig, joint, "xform", must_exist=False)
+        actual_mch = mch_joint
+        if op != -1:
+            rig.addWire(op, ru.getInPort(rig, mch_joint, "xform"))
+            mch_joint_name2 = ru.mchJointName(f"{compname}_{i}", "Int2")
+            mch_joint2 = ru.addNode(rig, mch_joint_name2, "TransformObject", new_nodes)
+            ru.insertBetweenParentTfo(rig, joint, mch_joint2)
+            rig.removeWires(rig.portWires(ip), True)
+            actual_mch = mch_joint2
+        ru.updateParms(rig, actual_mch, { "rord": rord })
+        ru.connect(rig, op_mul, "result", actual_mch, "r")
 
     ru.setNodesColor(rig, new_nodes, color)
 

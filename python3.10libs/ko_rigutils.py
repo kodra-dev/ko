@@ -144,14 +144,14 @@ def setParentTfo(rig: apex.Graph, child: int, parent: int, compensate_xform: boo
     connect(rig, parent, "localxform", child, "parentlocal")
 
 
-def getParentTfo(rig: apex.Graph, child: int, must_exist: bool = True) -> int | None:
+def getParentTfo(rig: apex.Graph, child: int, must_exist: bool = True) -> int:
     node = getSourceNode(rig, child, "parent", must_exist=must_exist)
-    result = None
-    if node:
+    result = -1
+    if node != -1:
         cb = rig.callbackName(node)
         if cb == "TransformObject" or cb == "rig::FkTransform":
             result = node
-    if result:
+    if result != -1:
         return result
     if must_exist:
         raise Exception(f"Node {rig.nodeName(child)} has no parent.")
@@ -170,7 +170,7 @@ def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
     restlocal = rig.getNodeParms(child)["restlocal"] or hou.Matrix4(1)
     updateParms(rig, parent, { "restlocal": kmath.lerpMatrix4(hou.Matrix4(1), restlocal, biases) })
     setParentTfo(rig, child, parent, compensate_xform=True)
-    
+
 
 def getParmsNode(rig: apex.Graph) -> int:
     return getNode(rig, "%callback(__parms__)")
@@ -199,14 +199,14 @@ def promoteTfo(rig: apex.Graph, tfo: int, t: bool = True, r: bool = True, s: boo
         rig.promoteInput(getInPort(rig, tfo, "s"), parms_node, f"{name}_s")
 
 
-def findSourceJoint(rig: apex.Graph, skel: hou.Geometry, node: int, must_exist: bool) -> int | None:
+def findSourceJoint(rig: apex.Graph, skel: hou.Geometry, node: int, must_exist: bool) -> int:
     props = rig.getNodeProperties(node)
     name = rig.nodeName(node)
     if props.contains("source_joint"):
         name = props["source_joint"]
 
     joint = ku.findPointName(skel, name)
-    if not joint:
+    if joint == -1:
         if must_exist:
             raise Exception(f"Joint {name} doesn't exist.")
         return None
@@ -252,15 +252,21 @@ def connect(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, d
     dp = getInPort(rig, dst_node, inPortName(dst_port_name))
     rig.addWire(sp, dp)
 
-# Get source node of a destination node's port
-def getSourceNode(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int | None:
+def getSourcePort(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int:
     port = getInPort(rig, dst_node, dst_port_name)
     srcPorts = rig.connectedPorts(port)
     if not srcPorts:
         if must_exist:
             raise Exception(f"Node {rig.nodeName(dst_node)}'s port {dst_port_name} has no source connected.")
-        return None
-    return rig.portNode(srcPorts[0])
+        return -1
+    return srcPorts[0]
+
+# Get source node of a destination node's port
+def getSourceNode(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int:
+    port = getSourcePort(rig, dst_node, dst_port_name, must_exist)
+    if port == -1:
+        return -1
+    return rig.portNode(port)
 
 # Get destination node of a source node's port
 def getDestNodes(rig: apex.Graph, src_node: int, src_port_name: str, criteria: Callable[[int], bool] = None) -> list[int]:
@@ -270,12 +276,12 @@ def getDestNodes(rig: apex.Graph, src_node: int, src_port_name: str, criteria: C
     return list(n for n in nodes if criteria == None or criteria(n))
 
 def getDestNode(rig: apex.Graph, src_node: int, src_port_name: str, criteria: Callable[[int], bool] = None,
-                must_exist: bool = True) -> int | None:
+                must_exist: bool = True) -> int:
     nodes = getDestNodes(rig, src_node, src_port_name, criteria)
     if not nodes:
         if must_exist:
             raise Exception(f"Node {rig.nodeName(src_node)}'s port {src_port_name} has no destination connected.")
-        return None
+        return -1
     return nodes[0]
 
 
