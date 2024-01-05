@@ -2,6 +2,7 @@ import hou
 import apex
 import ko_math as kmath
 from kinefx import utils as ku
+from collections.abc import Callable
 
 def getNode(rig: apex.Graph, pattern: str, must_exist: bool = True) -> int | None:
     nodes = rig.matchNodes(pattern)
@@ -14,11 +15,25 @@ def getNode(rig: apex.Graph, pattern: str, must_exist: bool = True) -> int | Non
     return nodes[0]
 
 def tfo(rig: apex.Graph, name: str) -> int:
+    if name.startswith("parent#"):
+        name = name.removeprefix("parent#")
+        return getParentTfo(rig, tfo(rig, name))
+    elif name.startswith("first#"):
+        name = name.removeprefix("first#")
+        nodes = rig.matchNodes(f"%callback(TransformObject) & {name}")
+        nodes.sort(key=lambda n: rig.nodeName(n))
+        return nodes[0]
+    elif name.startswith("last#"):
+        name = name.removeprefix("last#")
+        nodes = rig.matchNodes(f"%callback(TransformObject) & {name}")
+        nodes.sort(key=lambda n: rig.nodeName(n))
+        return nodes[-1]
     return getNode(rig, f"%callback(TransformObject) & {name}")
 
 def ac(rig: apex.Graph, name: str) -> int:
     return getNode(rig, f"%callback(AbstractControl) & {name}")
 
+# Most of these Tfo functions support FkTransform too
 def tfoRestLocal(rig: apex.Graph, tfo: int) -> hou.Matrix4:
     return rig.getNodeParms(tfo)["restlocal"] or hou.Matrix4(1)
 
@@ -30,6 +45,13 @@ def tfoRestTransform(rig: apex.Graph, tfo: int) -> hou.Matrix4:
         xform = xform * parent_xform
         parent = getParentTfo(rig, parent, must_exist=False)
     return xform
+
+def setTfoRestTransform(rig: apex.Graph, tfo: int, xform: hou.Matrix4):
+    parent = getParentTfo(rig, tfo, must_exist=False)
+    if parent:
+        parent_xform = tfoRestTransform(rig, parent)
+        xform = xform * parent_xform.inverted()
+    updateParms(rig, tfo, { "restlocal": xform })
 
 def tfoAncestors(rig: apex.Graph, tfo: int) -> list[int]:
     ancestors = []
@@ -123,7 +145,17 @@ def setParentTfo(rig: apex.Graph, child: int, parent: int, compensate_xform: boo
 
 
 def getParentTfo(rig: apex.Graph, child: int, must_exist: bool = True) -> int | None:
-    return getSourceNode(rig, child, "parent", must_exist=must_exist)
+    node = getSourceNode(rig, child, "parent", must_exist=must_exist)
+    result = None
+    if node:
+        cb = rig.callbackName(node)
+        if cb == "TransformObject" or cb == "rig::FkTransform":
+            result = node
+    if result:
+        return result
+    if must_exist:
+        raise Exception(f"Node {rig.nodeName(child)} has no parent.")
+    return None
 
 
 def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
@@ -189,11 +221,17 @@ def inPortName(name: str) -> str:
 def outPortName(name: str) -> str:
     return name if name.endswith("[out]") else name + "[out]"
     
-def getInPort(rig: apex.Graph, node: int, name: str) -> int:
-    return rig.getPort(node, inPortName(name))
+def getInPort(rig: apex.Graph, node: int, name: str, must_exist: bool = True) -> int | None:
+    p = rig.getPort(node, inPortName(name))
+    if p == -1 and must_exist:
+        raise Exception(f"Node {rig.nodeName(node)} has no in port {name}")
+    return p
 
-def getOutPort(rig: apex.Graph, node: int, name: str) -> int:
-    return rig.getPort(node, outPortName(name))
+def getOutPort(rig: apex.Graph, node: int, name: str, must_exist: bool = True) -> int | None:
+    p = rig.getPort(node, outPortName(name))
+    if p == -1 and must_exist:
+        raise Exception(f"Node {rig.nodeName(node)} has no out port {name}")
+    return p
 
 def addNode(rig: apex.Graph, name: str, apex_cb: str, node_storage: set[int] | None = None) -> int:
     n = rig.addNode(name, apex_cb)
@@ -214,6 +252,7 @@ def connect(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, d
     dp = getInPort(rig, dst_node, inPortName(dst_port_name))
     rig.addWire(sp, dp)
 
+# Get source node of a destination node's port
 def getSourceNode(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int | None:
     port = getInPort(rig, dst_node, dst_port_name)
     srcPorts = rig.connectedPorts(port)
@@ -222,6 +261,22 @@ def getSourceNode(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist
             raise Exception(f"Node {rig.nodeName(dst_node)}'s port {dst_port_name} has no source connected.")
         return None
     return rig.portNode(srcPorts[0])
+
+# Get destination node of a source node's port
+def getDestNodes(rig: apex.Graph, src_node: int, src_port_name: str, criteria: Callable[[int], bool] = None) -> list[int]:
+    port = getOutPort(rig, src_node, src_port_name)
+    dstPorts = rig.connectedPorts(port)
+    nodes = list(rig.portNode(p) for p in dstPorts)
+    return list(n for n in nodes if criteria == None or criteria(n))
+
+def getDestNode(rig: apex.Graph, src_node: int, src_port_name: str, criteria: Callable[[int], bool] = None,
+                must_exist: bool = True) -> int | None:
+    nodes = getDestNodes(rig, src_node, src_port_name, criteria)
+    if not nodes:
+        if must_exist:
+            raise Exception(f"Node {rig.nodeName(src_node)}'s port {src_port_name} has no destination connected.")
+        return None
+    return nodes[0]
 
 
 def updateParms(rig: apex.Graph, node: int, parms: dict):
@@ -269,11 +324,15 @@ def jointSetSuffix(old_name: str, suffix: str) -> str:
     parts = splitJointName(old_name)
     return joinJointName(parts[0], parts[1], suffix)
 
+def mchJointNameFromCtl(ctl_name: str) -> str:
+    parts = splitJointName(ctl_name)
+    return joinJointName("MCH", parts[1], parts[2])
 
 def mchJointName(comp_name: str, sub_prefix: str = "") -> str:
     parts = splitJointName(comp_name)
     return joinJointName("MCH", sub_prefix + '_' + parts[1], parts[2])
 
-def ctlJoinName(comp_name: str, sub_prefix: str = "") -> str:
+def ctlJointName(comp_name: str, sub_prefix: str = "") -> str:
     parts = splitJointName(comp_name)
-    return joinJointName("CTL", sub_prefix + '_' + parts[1], parts[2])
+
+    return joinJointName("CTL", (sub_prefix + '_' if sub_prefix else '') + parts[1], parts[2])

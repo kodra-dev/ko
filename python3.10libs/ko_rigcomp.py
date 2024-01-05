@@ -55,13 +55,12 @@ def twoBoneIK(rig, skel, **kwargs):
     ru.insertBetweenParentTfo(rig, root, mch_root) 
     
     # ctl_target: the control of target joint. e.g. foot
-    ctl_target_name = ru.ctlJoinName(comp_name, "IKTarget")
+    ctl_target_name = ru.ctlJointName(comp_name, "IKTarget")
     ctl_target = ru.safeAdd(rig, ctl_target_name, "TransformObject")
     ru.updateParms(rig, ctl_target, { "restlocal": tip_joint_xform })
     ru.promoteTfo(rig, ctl_target, t=True, r=promote_target_r, s=promote_target_s)
-    # TODO: restlocal needs to handle the case when ctl_parent is not origin
     if ctl_parent_name:
-        ctl_parent = ru.getNode(rig, ctl_parent_name)
+        ctl_parent = ru.tfo(rig, ctl_parent_name)
         ru.setParentTfo(rig, ctl_target, ctl_parent, compensate_xform=True)
 
 
@@ -78,7 +77,7 @@ def twoBoneIK(rig, skel, **kwargs):
         # then extend the line from projected_mid to mid by the length pole_length
 
         # ctl_ik_pole: the control of IK pole. e.g. knee's direction
-        ctl_ik_pole_name = ru.ctlJoinName(comp_name, "IKPole")
+        ctl_ik_pole_name = ru.ctlJointName(comp_name, "IKPole")
         ctl_ik_pole = ru.safeAdd(rig, ctl_ik_pole_name, "TransformObject")
 
         pole_position = mid_joint_xlate + (mid_joint_xlate - projected_mid).normalized() * pole_length
@@ -89,16 +88,15 @@ def twoBoneIK(rig, skel, **kwargs):
 
         to_twist_xform = ru.getOutPort(rig, ctl_ik_pole, "xform")
 
-        # TODO: restlocal needs to handle the case when ctl_parent is not origin
         if ctl_parent_name:
-            ctl_parent = ru.getNode(rig, ctl_parent_name)
+            ctl_parent = ru.tfo(rig, ctl_parent_name)
             ru.setParentTfo(rig, ctl_ik_pole, ctl_parent, compensate_xform=True)
     elif pole_style == "revolve":
         # In this case, pole is initially at the projected_mid, and will stay on the line root->tip dynamically
         # Its restlocal's orientation matters, but not its translation
         # ctl_ik_pole: the control of IK pole. e.g. knee's direction
 
-        ctl_ik_pole_name = ru.ctlJoinName(comp_name, "IKPolePivot")
+        ctl_ik_pole_name = ru.ctlJointName(comp_name, "IKPolePivot")
         ctl_ik_pole = ru.safeAdd(rig, ctl_ik_pole_name, "TransformObject")
 
         ru.setParentTfo(rig, ctl_ik_pole, mch_root)
@@ -248,7 +246,7 @@ def rotationChain(rig, skel, **kwargs):
 
     new_nodes = set()
 
-    ctl_main_name = ru.ctlJoinName(compname, "Main")
+    ctl_main_name = ru.ctlJointName(compname)
     ctl_main = ru.safeAdd(rig, ctl_main_name, "TransformObject", new_nodes)
     rord = ru.axesToRord(primary_axis, secondary_axis)
 
@@ -307,6 +305,7 @@ def fbikChain(rig, skel, **kwargs):
     color = kwargs['nodecolor']
     basename = kwargs['basename']
 
+    ctl_parent_name = kwargs['ctlparent']
     tfo_pattern = kwargs['tfopattern']
     config_from_skel = kwargs['configfromskel']
     iterations = kwargs['iterations']
@@ -378,14 +377,18 @@ def fbikChain(rig, skel, **kwargs):
     })
 
     # Targets and their controls
+    ctl_parent = None
+    if ctl_parent_name:
+        ctl_parent = ru.tfo(rig, ctl_parent_name)
     last_solver_op = op_solver
     for ts in target_specs:
         name = ts['target#']
         weight = ts['weight#']
         priority = ts['priority#']
         ctl_name = ts['ctlname#']
+        type = ts['targettype#']
         if not ctl_name:
-            ctl_name = ru.ctlJoinName(f"{name}", "FBIKTarget")
+            ctl_name = ru.ctlJointName(f"{name}", "FBIKTarget")
 
         target = ru.tfo(rig, name)
         xform = ru.tfoRestTransform(rig, target)
@@ -398,7 +401,7 @@ def fbikChain(rig, skel, **kwargs):
 
         op_target = ru.safeAdd(rig, f"FBIKTarget_{compname}_{name}", "fbik::Target", new_nodes)
         ru.updateParms(rig, op_target, {
-            "type": 2,
+            "type": type,
             "weight": weight,
             "priority": priority,
         });
@@ -409,6 +412,10 @@ def fbikChain(rig, skel, **kwargs):
         ru.connect(rig, last_solver_op, "solver", op_set_target, "solver")
         ru.connect(rig, op_target, "target", op_set_target, "target")
         last_solver_op = op_set_target
+
+        if ctl_parent:
+            ru.setParentTfo(rig, ctl, ctl_parent, compensate_xform=True)
+
 
     op_solve = ru.addNode(rig, f"Solve_{compname}", "fbik::SolvePhysIK", new_nodes)
     ru.connect(rig, last_solver_op, "solver", op_solve, "solver")
@@ -425,8 +432,109 @@ def fbikChain(rig, skel, **kwargs):
         driven = ru.tfo(rig, n["name"])
         ru.connect(rig, op_get_xform, "xform", driven, "xform")
 
+        # These tfos can't be manually controlled anymore, so we demote them
+        ru.promoteTfo(rig, driven, t=False, r=False, s=False, demote=True)
+
 
     ru.setNodesColor(rig, new_nodes, color)
 
 
+def torsoTwist(rig, skel, **kwargs):
+    compname = kwargs['compname']
+    color = kwargs['nodecolor']
+
+    ctl_parent_name = kwargs['ctlparent']
+
+    target_btm_name = kwargs['targetbtm']
+    target_mid_name = kwargs['targetmid']
+    target_top_name = kwargs['targettop']
+    btm_weight = kwargs['btmweight']
+    mid_weight = kwargs['midweight']
+    top_weight = kwargs['topweight']
+
+    mid_twist_ratio = kwargs['midtwistratio']
+    btm_twist_ratio = kwargs['btmtwistratio']
+
+
+    twist_axis = kwargs['twistaxis']
+
+    fbik_kwargs = kwargs.copy()
+    clt_btm_name = ru.ctlJointName(f"{compname}_Btm")
+    ctl_mid_name = ru.ctlJointName(f"{compname}_Mid")
+    clt_top_name = ru.ctlJointName(f"{compname}_Top")
+    fbik_kwargs['targets'] = [
+        { 'target#': target_btm_name, 'ctlname#': clt_btm_name,
+          'weight#': btm_weight, 'priority#': 1, 'targettype#': 2 },
+        { 'target#': target_mid_name, 'ctlname#': ctl_mid_name,
+          'weight#': mid_weight, 'priority#': 1, 'targettype#': 2 },
+        { 'target#': target_top_name, 'ctlname#': clt_top_name,
+          'weight#': top_weight, 'priority#': 1, 'targettype#': 2 },
+    ]
+
+    fbikChain(rig, skel, **fbik_kwargs)
+
+    new_nodes = set()
+
+    ctl_name = ru.ctlJointName(compname)
+    ctl_parent = None
+    if ctl_parent_name:
+        ctl_parent = ru.tfo(rig, ctl_parent_name)
+
+    ctl = ru.safeAdd(rig, ctl_name, "TransformObject", new_nodes)
+    ctl_btm = ru.tfo(rig, clt_btm_name)
+    ctl_btm_xform = ru.tfoRestTransform(rig, ctl_btm)
+    ctl_xlate = ctl_btm_xform.extractTranslates()
+    ctl_xform = kmath.lookatAnyY(twist_axis, ctl_xlate)
+    ru.setParentTfo(rig, ctl, ctl_parent)
+    ru.setTfoRestTransform(rig, ctl, ctl_xform)
+    ru.setParentTfo(rig, ctl_btm, ctl, compensate_xform=True)
+
+    ctl_rest_local = ru.tfoRestLocal(rig, ctl)
+    op_val = ru.addNode(rig, f"{ctl_name}_restlocal", "Value<Matrix4>", new_nodes)
+    ru.updateParms(rig, op_val, { "parm": ctl_rest_local })
+    op_mul0 = ru.addNode(rig, f"{ctl_name}_inherited", "Multiply<Matrix4>", new_nodes)
+    ru.connect(rig, op_val, "value", op_mul0, "a")
+    ru.connect(rig, ctl_parent, "xform", op_mul0, "b")
+    op_invert = ru.addNode(rig, "invert", "Invert<Matrix4>", new_nodes)
+    ru.connect(rig, op_mul0, "result", op_invert, "a")
+    op_mul = ru.addNode(rig, "mul", "Multiply<Matrix4>", new_nodes)
+    ru.connect(rig, op_invert, "result", op_mul, "a")
+    ru.connect(rig, ctl, "xform", op_mul, "b")
+
+    def mch_twist_logic(driven_ctl, ratio):
+        mch_name = ru.mchJointNameFromCtl(rig.nodeName(driven_ctl))
+        mch = ru.safeAdd(rig, mch_name, "TransformObject", new_nodes)
+        ru.insertBetweenParentTfo(rig, driven_ctl, mch)
+        mch_mid_rest_local = ru.tfoRestLocal(rig, mch)
+        op_val2 = ru.addNode(rig, f"{mch_name}_restlocal", "Value<Matrix4>", new_nodes)
+        ru.updateParms(rig, op_val2, { "parm": mch_mid_rest_local })
+        op_mul2 = ru.addNode(rig, f"{mch_name}_inherited", "Multiply<Matrix4>", new_nodes)
+        mch_parent = ru.getParentTfo(rig, mch)
+        ru.connect(rig, op_val2, "value", op_mul2, "a")
+        ru.connect(rig, mch_parent, "xform", op_mul2, "b")
+        op_mul3 = ru.addNode(rig, "mul", "Multiply<Matrix4>", new_nodes)
+        ru.connect(rig, op_mul2, "result", op_mul3, "a")
+        op_lerp1 = ru.addNode(rig, f"{compname}_MidRatio", "Lerp<Matrix4>", new_nodes)
+        ru.updateParms(rig, op_lerp1, {
+            "a": hou.Matrix4(1),
+            "bias": ratio,
+        })
+        ru.connect(rig, op_mul, "result", op_lerp1, "b")
+        ru.connect(rig, op_lerp1, "result", op_mul3, "b")
+        ru.connect(rig, op_mul3, "result", mch, "xform")
+
+    # mch_btm: similar to mch_mid, but for ctl_btm
+    ctl_mid = ru.tfo(rig, ctl_mid_name)
+    ctl_btm = ru.tfo(rig, clt_btm_name)
+    mch_twist_logic(ctl_mid, mid_twist_ratio)
+    mch_twist_logic(ctl_btm, btm_twist_ratio)
+
+    # fbik_target = ru.getDestNode(rig, ctl_mid, "xform", lambda n: rig.callbackName(n) == "fbik::Target")
+
+    ctl_top = ru.tfo(rig, clt_top_name)
+    ru.setParentTfo(rig, ctl_top, ctl, compensate_xform=True)
+
+    ru.promoteTfo(rig, ctl, t=False, r=True, s=False)
+
+    ru.setNodesColor(rig, new_nodes, color)
 

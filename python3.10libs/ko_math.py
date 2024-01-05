@@ -58,6 +58,14 @@ def lookat(z: hou.Vector3, y: hou.Vector3 = hou.Vector3(0, 1, 0), translate: hou
         translate[0], translate[1], translate[2], 1
     ))
 
+def lookatAnyY(z: hou.Vector3, translate: hou.Vector3 = hou.Vector3(0, 0, 0)) -> hou.Matrix4:
+    z = z.normalized()
+    y = hou.Vector3(0, 1, 0)
+    x = y.cross(z).normalized()
+    if x.length() < 0.001:
+        y = hou.Vector3(1, 0, 0)
+    return lookat(z, y, translate)
+
 def extendedLookat(forward: hou.Vector3, up: hou.Vector3,
                    local_forward: hou.Vector3 = hou.Vector3(0, 0, 1), local_up: hou.Vector3 = hou.Vector3(0, 1, 0),
                    translate: hou.Vector3 = hou.Vector3(0, 0, 0)) -> hou.Matrix4:
