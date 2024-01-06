@@ -247,6 +247,32 @@ def safeAdd(rig: apex.Graph, name: str, apex_cb: str, node_storage: set[int] | N
         node_storage.add(n)
     return n
 
+def duplicateNode(rig: apex.Graph, node: int, name: str = "",
+                  hijack_outputs: bool = False, node_storage: set[int] | None = None) -> int:
+    if name == "":
+        name = rig.nodeName(node) + "_copy"
+    n = addNode(rig, name, rig.callbackName(node), node_storage)
+    rig.setNodeParms(n, rig.getNodeParms(node))
+    rig.setNodeProperties(n, rig.getNodeProperties(node))
+    rig.setNodeTags(n, rig.nodeTags(node), False)
+    # No API can get the node color
+
+    in_ports = rig.getInputPorts(node)
+    for ip in in_ports:
+        ops = rig.connectedPorts(ip)
+        if ops:
+            rig.addWire(ops[0], getInPort(rig, n, rig.portName(ip)))
+    
+    if hijack_outputs:
+        out_ports = rig.getOutputPorts(node)
+        for op in out_ports:
+            ips = rig.connectedPorts(op)
+            for ip in ips:
+                rig.addWire(getOutPort(rig, n, rig.portName(op)), ip)
+    
+    return n
+    
+
 def connect(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, dst_port_name: str):
     sp = getOutPort(rig, src_node, outPortName(src_port_name))
     dp = getInPort(rig, dst_node, inPortName(dst_port_name))

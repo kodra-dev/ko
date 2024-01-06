@@ -31,6 +31,7 @@ def twoBoneIK(rig, skel, **kwargs):
     mid_name = kwargs['mid']
     tip_name = kwargs['tip']
     ctl_target_name = kwargs['ctltargetname']
+    tip_follow_control = kwargs['tipfollowcontrol']
     # falloff = kwargs['falloff']
     # stretch_axis = kwargs['stretchaxis']
 
@@ -39,6 +40,8 @@ def twoBoneIK(rig, skel, **kwargs):
 
     pole_length = kwargs['polelength']
     pole_style = kwargs['polestyle']
+    
+    new_nodes = set()
 
     root = ru.tfo(rig, root_name)
     mid = ru.tfo(rig, mid_name)
@@ -52,13 +55,14 @@ def twoBoneIK(rig, skel, **kwargs):
 
     # mch_root: the root of the IK chain. e.g. hip
     mch_root_name = ru.mchJointName(comp_name, "IKRoot")
-    mch_root = ru.safeAdd(rig, mch_root_name, "TransformObject")
+    mch_root = ru.safeAdd(rig, mch_root_name, "TransformObject", new_nodes)
     ru.insertBetweenParentTfo(rig, root, mch_root) 
     
     # ctl_target: the control of target joint. e.g. foot
-    ctl_target = ru.safeAdd(rig, ctl_target_name, "TransformObject")
-    ru.updateParms(rig, ctl_target, { "restlocal": tip_joint_xform })
-    ru.promoteTfo(rig, ctl_target, t=True, r=promote_target_r, s=promote_target_s)
+    ctl_target = ru.tfo(rig, ctl_target_name)
+    # ctl_target = ru.safeAdd(rig, ctl_target_name, "TransformObject")
+    # ru.updateParms(rig, ctl_target, { "restlocal": tip_joint_xform })
+    ru.promoteTfo(rig, ctl_target, t=True, r=promote_target_r, s=promote_target_s, demote=True)
     if ctl_parent_name:
         ctl_parent = ru.tfo(rig, ctl_parent_name)
         ru.setParentTfo(rig, ctl_target, ctl_parent, compensate_xform=True)
@@ -78,7 +82,7 @@ def twoBoneIK(rig, skel, **kwargs):
 
         # ctl_ik_pole: the control of IK pole. e.g. knee's direction
         ctl_ik_pole_name = ru.ctlJointName(comp_name, "IKPole")
-        ctl_ik_pole = ru.safeAdd(rig, ctl_ik_pole_name, "TransformObject")
+        ctl_ik_pole = ru.safeAdd(rig, ctl_ik_pole_name, "TransformObject", new_nodes)
 
         pole_position = mid_joint_xlate + (mid_joint_xlate - projected_mid).normalized() * pole_length
         pole_xform = hou.hmath.buildTranslate(pole_position)
@@ -97,7 +101,7 @@ def twoBoneIK(rig, skel, **kwargs):
         # ctl_ik_pole: the control of IK pole. e.g. knee's direction
 
         ctl_ik_pole_name = ru.ctlJointName(comp_name, "IKPolePivot")
-        ctl_ik_pole = ru.safeAdd(rig, ctl_ik_pole_name, "TransformObject")
+        ctl_ik_pole = ru.safeAdd(rig, ctl_ik_pole_name, "TransformObject", new_nodes)
 
         ru.setParentTfo(rig, ctl_ik_pole, mch_root)
 
@@ -108,15 +112,15 @@ def twoBoneIK(rig, skel, **kwargs):
         ru.updateParms(rig, ctl_ik_pole, { "restlocal": pole_xform_local })
         ru.promoteTfo(rig, ctl_ik_pole, t=False, r=True, s=False)
 
-        op_mul = rig.addNode("", "Multiply<Vector3,Matrix4>")
+        op_mul = ru.addNode(rig, "mul", "Multiply<Vector3,Matrix4>", new_nodes)
         ru.updateParms(rig, op_mul, { "a": hou.Vector3(0, 0, 1) })
         ru.connect(rig, ctl_ik_pole, "xform", op_mul, "b")
-        op_build = rig.addNode("", "transform::Build")
+        op_build = ru.addNode(rig, "build", "transform::Build", new_nodes)
         ru.connect(rig, op_mul, "result", op_build, "t")
         to_twist_xform = ru.getOutPort(rig, op_build, "m")
 
         mid_ratio = (projected_mid - root_joint_xlate).length() / (tip_joint_xlate - root_joint_xlate).length()
-        op_slerp = rig.addNode("", "transform::Slerp<Matrix4>")
+        op_slerp = ru.addNode(rig, "slerp", "transform::Slerp<Matrix4>", new_nodes)
         ru.connect(rig, mch_root, "xform", op_slerp, "a")
         ru.connect(rig, ctl_target, "xform", op_slerp, "b")
         ru.updateParms(rig, op_slerp, { "bias": mid_ratio })
@@ -126,18 +130,15 @@ def twoBoneIK(rig, skel, **kwargs):
 
     smooth_ik_name = f"SmoothIK_{comp_name}"
     smooth_ik = ru.safeAdd(rig, smooth_ik_name, "rig::TwoBoneIK")
-
     ru.connect(rig, mch_root, "xform", smooth_ik, "rootdriver")
     ru.connect(rig, ctl_target, "xform", smooth_ik, "goal")
     rig.addWire(to_twist_xform, ru.getInPort(rig, smooth_ik, "twist"))
 
+    if tip_follow_control:
+        ru.setParentTfo(rig, tip, ctl_target, compensate_xform=True)
+
     ru.connect(rig, smooth_ik, "rootout", root, "xform")
     ru.connect(rig, smooth_ik, "midout", mid, "xform")
-
-    # We'd like to control tip's rotation with ctl_target, so we don't connect tipout to tip/xform here
-    # ru.connect(rig, smooth_ik, "tipout", tip, "xform")
-    ru.setParentTfo(rig, tip, ctl_target)
-    ru.updateParms(rig, tip, { "restlocal": hou.Matrix4(1) })
 
     ru.updateParms(rig, smooth_ik, {
         "root": root_joint_xform,
@@ -147,10 +148,7 @@ def twoBoneIK(rig, skel, **kwargs):
         "stretch": 1,
     })
 
-    rig.setNodeColor(ctl_target, color)
-    rig.setNodeColor(mch_root, color)
-    rig.setNodeColor(ctl_ik_pole, color)
-    rig.setNodeColor(smooth_ik, color)
+    ru.setNodesColor(rig, new_nodes, color)
 
 
 def trackTo(rig, skel, **kwargs):
@@ -234,34 +232,28 @@ def rotationChain(rig, skel, **kwargs):
     compname = kwargs['compname']
     color = kwargs['nodecolor']
 
-    control_locator_name = kwargs['controllocator']
+    ctl_name = kwargs['ctlname']
     tfo_pattern = kwargs['tfopattern']
 
     primary_axis = kwargs['primaxis']
     secondary_axis = kwargs['scndaxis']
     lock_secondary_axis = kwargs['lockscndaxis']
 
-    control_locator = ru.tfo(rig, control_locator_name)
     joints = rig.matchNodes(tfo_pattern)
 
     new_nodes = set()
 
-    ctl_main_name = ru.ctlJointName(compname)
-    ctl_main = ru.safeAdd(rig, ctl_main_name, "TransformObject", new_nodes)
+    ctl_main = ru.tfo(rig, ctl_name)
     rord = ru.axesToRord(primary_axis, secondary_axis)
 
-    ancestors = ru.tfoAncestors(rig, control_locator)
+    ancestors = ru.tfoAncestors(rig, ctl_main)
     for j in joints:
         if j in ancestors:
-            raise Exception(f"""Driven joint {rig.nodeName(j)} is an ancestor of control locator {rig.nodeName(control_locator)};
+            raise Exception(f"""Driven joint {rig.nodeName(j)} is an ancestor of control {rig.nodeName(ctl_main)};
                             it's not allowed for now.""")
 
-    parent = ru.getParentTfo(rig, control_locator, must_exist=False)
-    if parent:
-        ru.setParentTfo(rig, ctl_main, parent, compensate_xform=False)
-
     ru.updateParms(rig, ctl_main, {
-        "restlocal": ru.tfoRestLocal(rig, control_locator),
+        "restlocal": ru.tfoRestLocal(rig, ctl_main),
         "rord": rord
     })
     ru.promoteTfo(rig, ctl_main, t=False, r=True, s=False)
