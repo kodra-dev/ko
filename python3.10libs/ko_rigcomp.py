@@ -3,6 +3,7 @@ import apex
 from kinefx import utils as ku
 import ko_rigutils as ru
 import ko_math as kmath
+from hou import hmath as hm
 
 def setJointsRord(rig, skel, **kwargs):
     name_attrib = skel.findPointAttrib("name")
@@ -256,7 +257,7 @@ def rotationChain(rig, skel, **kwargs):
         "restlocal": ru.tfoRestLocal(rig, ctl_main),
         "rord": rord
     })
-    ru.promoteTfo(rig, ctl_main, t=False, r=True, s=False)
+    ru.promoteTfo(rig, ctl_main, t=False, r=True, s=False, demote=True)
     rig.setNodeTag(ctl_main, "rord_set")
 
     op_val = ru.addNode(rig, "val", "Value<Vector3>", new_nodes)
@@ -490,7 +491,6 @@ def torsoTwist(rig, skel, **kwargs):
     ctl_xform = kmath.lookatAnyY(twist_axis, ctl_xlate)
     ru.setParentTfo(rig, ctl, ctl_parent)
     ru.setTfoRestTransform(rig, ctl, ctl_xform)
-    ru.setParentTfo(rig, ctl_btm, ctl, compensate_xform=True)
 
     ctl_rest_local = ru.tfoRestLocal(rig, ctl)
     op_val = ru.addNode(rig, f"{ctl_name}_restlocal", "Value<Matrix4>", new_nodes)
@@ -508,16 +508,16 @@ def torsoTwist(rig, skel, **kwargs):
         mch_name = ru.mchJointNameFromCtl(rig.nodeName(driven_ctl))
         mch = ru.safeAdd(rig, mch_name, "TransformObject", new_nodes)
         ru.insertBetweenParentTfo(rig, driven_ctl, mch)
-        mch_mid_rest_local = ru.tfoRestLocal(rig, mch)
+        mch_rest_local = ru.tfoRestLocal(rig, mch)
         op_val2 = ru.addNode(rig, f"{mch_name}_restlocal", "Value<Matrix4>", new_nodes)
-        ru.updateParms(rig, op_val2, { "parm": mch_mid_rest_local })
+        ru.updateParms(rig, op_val2, { "parm": mch_rest_local })
         op_mul2 = ru.addNode(rig, f"{mch_name}_inherited", "Multiply<Matrix4>", new_nodes)
         mch_parent = ru.getParentTfo(rig, mch)
         ru.connect(rig, op_val2, "value", op_mul2, "a")
         ru.connect(rig, mch_parent, "xform", op_mul2, "b")
         op_mul3 = ru.addNode(rig, "mul", "Multiply<Matrix4>", new_nodes)
         ru.connect(rig, op_mul2, "result", op_mul3, "a")
-        op_lerp1 = ru.addNode(rig, f"{compname}_MidRatio", "Lerp<Matrix4>", new_nodes)
+        op_lerp1 = ru.addNode(rig, f"{compname}_ratio", "Lerp<Matrix4>", new_nodes)
         ru.updateParms(rig, op_lerp1, {
             "a": hou.Matrix4(1),
             "bias": ratio,
@@ -528,9 +528,10 @@ def torsoTwist(rig, skel, **kwargs):
 
     # mch_btm: similar to mch_mid, but for ctl_btm
     ctl_mid = ru.tfo(rig, ctl_mid_name)
-    ctl_btm = ru.tfo(rig, clt_btm_name)
     mch_twist_logic(ctl_mid, mid_twist_ratio)
     mch_twist_logic(ctl_btm, btm_twist_ratio)
+
+    # ru.setParentTfo(rig, ctl_btm, ctl, compensate_xform=True)
 
     # fbik_target = ru.getDestNode(rig, ctl_mid, "xform", lambda n: rig.callbackName(n) == "fbik::Target")
 
@@ -540,4 +541,237 @@ def torsoTwist(rig, skel, **kwargs):
     ru.promoteTfo(rig, ctl, t=False, r=True, s=False)
 
     ru.setNodesColor(rig, new_nodes, color)
+
+
+def reverseFoot(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    compname = kwargs['compname']
+    color = kwargs['nodecolor']
+
+    ctl_target_name = kwargs['existingiktarget']
+    ctl_heel_name = kwargs['heel']
+    ctl_foot_tip_name = kwargs['foottip']
+    ctl_ball_name = kwargs['ball']
+
+    new_nodes = set()
+
+    ctl_target = ru.tfo(rig, ctl_target_name)
+    ctl_heel = ru.tfo(rig, ctl_heel_name)
+    ctl_foot_tip = ru.tfo(rig, ctl_foot_tip_name)
+    ctl_ball = ru.tfo(rig, ctl_ball_name)
+
+    (prefix, main, suffix) = ru.splitJointName(ctl_ball_name)
+    ctl_ball_rev_name = ru.joinJointName(prefix, f"{main}Rev", suffix)
+    ctl_ball_rev = ru.duplicateNode(rig, ctl_ball, ctl_ball_rev_name, new_nodes)
+
+    # ctl_target is now controlled by ctl, so we rename it to a new MCH name
+    (prefix, main, suffix) = ru.splitJointName(ctl_target_name)
+    mch_target_name = ru.joinJointName("MCH", f"IKTarget_{main}", suffix)
+    mch_target = ctl_target
+    rig.setNodeName(mch_target, mch_target_name)
+    new_nodes.add(mch_target)
+    ctl = ru.safeAdd(rig, ctl_target_name, "TransformObject", new_nodes)
+    ru.insertBetweenParentTfo(rig, mch_target, ctl)
+
+    ru.setParentTfo(rig, ctl_heel, ctl, compensate_xform=True)
+    ru.setParentTfo(rig, ctl_foot_tip, ctl_heel, compensate_xform=True)
+    ru.setParentTfo(rig, ctl_ball_rev, ctl_foot_tip, compensate_xform=True)
+    ru.setParentTfo(rig, ctl_ball, ctl_ball_rev, compensate_xform=True)
+    ru.setParentTfo(rig, mch_target, ctl_ball_rev, compensate_xform=True)
+
+    ru.promoteTfo(rig, ctl, t=True, r=True, s=False, demote=True)
+    ru.promoteTfo(rig, mch_target, t=False, r=False, s=False, demote=True)
+    ru.promoteTfo(rig, ctl_heel, t=False, r=True, s=False, demote=True)
+    ru.promoteTfo(rig, ctl_foot_tip, t=False, r=True, s=False, demote=True)
+    ru.promoteTfo(rig, ctl_ball_rev, t=False, r=True, s=False, demote=True)
+    ru.promoteTfo(rig, ctl_ball, t=False, r=True, s=False, demote=True)
+
+    # The "reverse foot" behavior: ctl_ball's restlocal multiplies the inverse of ctl_ball_rev_inherited -> ctl_ball_rev_current
+    # new_ctl_ball_restlocal = ctl_ball_restlocal * ctl_ball_rev_inherited * inverted(ctl_ball_rev_current)
+    # So ctl_ball doesn't move when ctl_ball_rev moves
+    ctl_ball_rev_parent = ctl_foot_tip
+    op_restlocal = ru.addNode(rig, f"{ctl_ball_rev_name}_restlocal", "Value<Matrix4>", new_nodes)
+    ru.updateParms(rig, op_restlocal, { "parm": ru.tfoRestLocal(rig, ctl_ball_rev) })
+    op_inherited = ru.addNode(rig, f"{ctl_ball_rev_name}_inherited", "Multiply<Matrix4>", new_nodes)
+    ru.connect(rig, op_restlocal, "value", op_inherited, "a")
+    ru.connect(rig, ctl_ball_rev_parent, "xform", op_inherited, "b")
+    op_inv = ru.addNode(rig, f"{ctl_ball_rev_name}_inv", "Invert<Matrix4>", new_nodes)
+    ru.connect(rig, ctl_ball_rev, "xform", op_inv, "a")
+    op_mul = ru.addNode(rig, f"mul", "Multiply<Matrix4>", new_nodes)
+    ru.connect(rig, op_inherited, "result", op_mul, "a")
+    ru.connect(rig, op_inv, "result", op_mul, "b")
+    op_restlocal2 = ru.addNode(rig, f"{ctl_ball_name}_restlocal", "Value<Matrix4>", new_nodes)
+    ru.updateParms(rig, op_restlocal2, { "parm": ru.tfoRestLocal(rig, ctl_ball) })
+    op_mul2 = ru.addNode(rig, f"mul2", "Multiply<Matrix4>", new_nodes)
+    ru.connect(rig, op_restlocal2, "value", op_mul2, "a")
+    ru.connect(rig, op_mul, "result", op_mul2, "b")
+    ru.connect(rig, op_mul2, "result", ctl_ball, "restlocal")
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
+
+### Not so "component-like" functions below
+
+def tagsFromJointGroups(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    groups = skel.pointGroups()
+    for g in groups:
+        points = g.points()
+        for p in points:
+            joint = ru.getNode(rig, p.attribValue("name"), must_exist=False)
+            if joint != -1:
+                rig.setNodeTag(joint, g.name())
+
+
+def initializeAbstractControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    color = kwargs['nodecolor']
+
+    pattern = kwargs['tfopattern']
+    
+    new_nodes = set()
+
+    tfos = rig.matchNodes(pattern)
+    for tfo in tfos:
+        name = rig.nodeName(tfo)
+        (_, main, suffix) = ru.splitJointName(name)
+        mch_name = ru.joinJointName("MCH", f"ForAC_{main}", suffix)
+        mch = ru.safeAdd(rig, mch_name, "rig::FkTransform", new_nodes) 
+        ru.insertBetweenParentTfo(rig, tfo, mch)
+        rig.setNodeName(tfo, f"__")
+        ac = ru.safeAdd(rig, name, "AbstractControl", new_nodes)
+        ru.connect(rig, mch, "xform", ac, "xform") 
+        ru.promoteAc(rig, ac, x=True, y=True)
+
+    rig.removeNodes(tfos)
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
+# Used by abstract_controls_config, which is a SOP unlike other Python-based components
+def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    color = kwargs['nodecolor'] if 'nodecolor' in kwargs else kmath.randomColor()
+
+    ac = kwargs['ac']
+    x_min_value = kwargs['xrange'][0]
+    x_max_value = kwargs['xrange'][1]
+    y_min_value = kwargs['yrange'][0]
+    y_max_value = kwargs['yrange'][1]
+    override_properties = kwargs['overrideproperties']
+    lock_range = kwargs['lockrange']
+    nub_shape_name = kwargs['nubshapename']
+    slider_shape_name = kwargs['slidershapename']
+    ac_color = kwargs['color']
+    ac_size = kwargs['size']
+    style = kwargs['style']
+    range_as_labels = kwargs['rangeaslabels']
+
+    # TODO
+    if style != 'xslider':
+        raise Exception("Only xslider style is supported at this point")
+    if range_as_labels and not override_properties:
+        raise Exception("rangeaslabels is only supported when overrideproperties is True")
+
+
+    properties = rig.getNodeProperties(ac)
+    control_properties = properties['control']
+    if control_properties == None:
+        control_properties = apex.Dict()
+    
+    if override_properties:
+        parms = apex.Dict({
+            "lock_range": lock_range,
+            "x_min": x_min_value,
+            "x_max": x_max_value,
+            "y_min": y_min_value,
+            "y_max": y_max_value,
+        })
+        control_properties['parms'] = parms
+    else:
+        x_min_value = control_properties['parms']['x_min']
+        x_max_value = control_properties['parms']['x_max']
+        y_min_value = control_properties['parms']['y_min']
+        y_max_value = control_properties['parms']['y_max']
+    
+    control_properties['shapeoverride'] = nub_shape_name
+    control_properties['color'] = ac_color
+    control_properties['shapeoffset'] = hm.buildScale(ac_size, ac_size, ac_size)
+
+    properties['control'] = control_properties
+
+    rig.setNodeProperties(ac, properties)
+
+    parent = ru.getSourceNode(rig, ac, "xform")
+    op_comb = ru.addNode(rig, "combine", "rig::CombineParmTransform")
+    ru.connect(rig, parent, "xform", op_comb, "inputlocalxform")
+    ru.connect(rig, op_comb, "localxform", ac, "xform")
+    ru.updateParms(rig, op_comb, {
+        "parentlocalscale": hou.Vector3(1, 1, 1),
+    })
+
+    zero_point_five = ru.addNode(rig, "zero_point_five", "Value<Float>")
+    ru.updateParms(rig, zero_point_five, {
+        "parm": 0.5,
+    })
+
+    def offsetLogic(src_port, min_value, max_value):
+        min_v = ru.addNode(rig, "min", "Value<Float>")
+        ru.updateParms(rig, min_v, {
+            "parm": min_value,
+        })
+        max_v = ru.addNode(rig, "max", "Value<Float>")
+        ru.updateParms(rig, max_v, {
+            "parm": max_value + (0.0001 if max_value == min_value else 0), # Avoid divide by zero
+        })
+
+        delta = ru.addNode(rig, "delta", "Subtract<Float>")
+        rig.addWire(src_port, ru.getInPort(rig, delta, "a"))
+        ru.connect(rig, min_v, "value", delta, "b")
+        range = ru.addNode(rig, "range", "Subtract<Float>")
+        ru.connect(rig, max_v, "value", range, "a")
+        ru.connect(rig, min_v, "value", range, "b")
+        ratio = ru.addNode(rig, "ratio", "Divide<Float>")
+        ru.connect(rig, delta, "result", ratio, "a")
+        ru.connect(rig, range, "result", ratio, "b")
+        normalized = ru.addNode(rig, "normalized", "Subtract<Float>")
+        ru.connect(rig, ratio, "result", normalized, "a")
+        ru.connect(rig, zero_point_five, "value", normalized, "b")
+        return normalized
+
+    offset = ru.addNode(rig, "offset", "FloatToVector3")
+    x_moveable = x_max_value > x_min_value
+    y_moveable = y_max_value > y_min_value
+
+    ru.promoteAc(rig, ac, x=x_moveable, y=y_moveable, demote=True)
+
+    x_src_port = ru.getSourcePort(rig, ac, "x", must_exist=False)
+    y_src_port = ru.getSourcePort(rig, ac, "y", must_exist=False)
+
+    if x_src_port != -1 and (style == 'xslider' or style == 'xypanel'):
+        normalized = offsetLogic(x_src_port, x_min_value, x_max_value)
+        ru.connect(rig, normalized, "result", offset, "x")
+    if y_src_port != -1 and (style == 'yslider' or style == 'xypanel'):
+        normalized = offsetLogic(y_src_port, y_min_value, y_max_value)
+        ru.connect(rig, normalized, "result", offset, "y")
+
+    scaled_offset = ru.addNode(rig, "scaled_offset", "Multiply<Vector3,Float>")
+    scale = ru.addNode(rig, "scale", "Value<Float>")
+    ru.updateParms(rig, scale, {
+        "parm": ac_size,
+    })
+    ru.connect(rig, offset, "vector", scaled_offset, "a")
+    ru.connect(rig, scale, "value", scaled_offset, "b")
+    ru.connect(rig, scaled_offset, "result", op_comb, "t")
+
+    ac_name = rig.nodeName(ac)
+    (_, main, suffix) = ru.splitJointName(ac_name)
+    slider_name = ru.joinJointName("UI", f"{main}", suffix)
+    slider = ru.addNode(rig, slider_name, "AbstractControl")
+    ru.connect(rig, parent, "xform", slider, "xform")
+    slider_properties = rig.getNodeProperties(slider)
+    container_control_properties = control_properties.freeze()
+    container_control_properties['shapeoverride'] = slider_shape_name
+    slider_properties['control'] = container_control_properties
+    rig.setNodeProperties(slider, slider_properties)
+
+
+
 

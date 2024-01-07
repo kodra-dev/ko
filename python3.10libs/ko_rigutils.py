@@ -1,37 +1,38 @@
 import hou
 import apex
 import ko_math as kmath
+import ko_utils as kou
 from kinefx import utils as ku
 from collections.abc import Callable
 
-def getNode(rig: apex.Graph, pattern: str, must_exist: bool = True) -> int | None:
+def getNode(rig: apex.Graph, pattern: str, must_exist: bool = True) -> int:
     nodes = rig.matchNodes(pattern)
     if not nodes:
         if must_exist:
             raise Exception(f"Pattern {pattern} doesn't match any nodes.")
-        return None
+        return -1
     if len(nodes) > 1:
         raise Exception(f"Pattern {pattern} matches multiple nodes.")
     return nodes[0]
 
-def tfo(rig: apex.Graph, name: str) -> int:
+def tfo(rig: apex.Graph, name: str, must_exist: bool = True) -> int:
     if name.startswith("parent#"):
         name = name.removeprefix("parent#")
-        return getParentTfo(rig, tfo(rig, name))
-    elif name.startswith("first#"):
-        name = name.removeprefix("first#")
+        return getParentTfo(rig, tfo(rig, name), must_exist=must_exist)
+    elif name.startswith("first#") or name.startswith("last#"):
+        name = name.removeprefix("first#").removeprefix("last#")
         nodes = rig.matchNodes(f"%callback(TransformObject) & {name}")
         nodes.sort(key=lambda n: rig.nodeName(n))
-        return nodes[0]
-    elif name.startswith("last#"):
-        name = name.removeprefix("last#")
-        nodes = rig.matchNodes(f"%callback(TransformObject) & {name}")
-        nodes.sort(key=lambda n: rig.nodeName(n))
-        return nodes[-1]
-    return getNode(rig, f"%callback(TransformObject) & {name}")
+        if name.startswith("first#"):
+            return kou.firstFromList(nodes, default=-1,
+                                     must_exist=must_exist, message_on_fail=f"Pattern {name} doesn't match any nodes.")
+        else:
+            return kou.lastFromList(nodes, default=-1,
+                                    must_exist=must_exist, message_on_fail=f"Pattern {name} doesn't match any nodes.")
+    return getNode(rig, f"%callback(TransformObject) & {name}", must_exist=must_exist)
 
-def ac(rig: apex.Graph, name: str) -> int:
-    return getNode(rig, f"%callback(AbstractControl) & {name}")
+def ac(rig: apex.Graph, name: str, must_exist: bool = True) -> int:
+    return getNode(rig, f"%callback(AbstractControl) & {name}", must_exist=must_exist)
 
 # Most of these Tfo functions support FkTransform too
 def tfoRestLocal(rig: apex.Graph, tfo: int) -> hou.Matrix4:
@@ -40,7 +41,12 @@ def tfoRestLocal(rig: apex.Graph, tfo: int) -> hou.Matrix4:
 def tfoRestTransform(rig: apex.Graph, tfo: int) -> hou.Matrix4:
     xform = tfoRestLocal(rig, tfo)
     parent = getParentTfo(rig, tfo, must_exist=False)
+    visited = set()
+    visited.add(tfo)
     while parent:
+        if parent in visited:
+            raise Exception(f"Node {rig.nodeName(tfo)} has a circular parent chain.")
+        visited.add(parent)
         parent_xform = rig.getNodeParms(parent)["restlocal"] or hou.Matrix4(1)
         xform = xform * parent_xform
         parent = getParentTfo(rig, parent, must_exist=False)
@@ -56,7 +62,11 @@ def setTfoRestTransform(rig: apex.Graph, tfo: int, xform: hou.Matrix4):
 def tfoAncestors(rig: apex.Graph, tfo: int) -> list[int]:
     ancestors = []
     parent = getParentTfo(rig, tfo, must_exist=False)
+    visited = set()
+    visited.add(tfo)
     while parent:
+        if parent in visited:
+            raise Exception(f"Node {rig.nodeName(tfo)} has a circular parent chain.")
         ancestors.append(parent)
         parent = getParentTfo(rig, parent, must_exist=False)
     return ancestors
@@ -133,6 +143,13 @@ def axesToRord(primary_axis: int, secondary_axis: int) -> int:
             return 5
     raise Exception(f"Invalid axes {primary_axis}, {secondary_axis}")
 
+def unparentTfo(rig: apex.Graph, child: int):
+    child_xform = tfoRestTransform(rig, child)
+    updateParms(rig, child, { "restlocal": child_xform })
+    parent = getParentTfo(rig, child, must_exist=False)
+    if parent != -1:
+        rig.removeWires(rig.portWires(getInPort(rig, child, "parent")), True)
+        rig.removeWires(rig.portWires(getInPort(rig, child, "parentlocal")), True)
 
 def setParentTfo(rig: apex.Graph, child: int, parent: int, compensate_xform: bool = False):
     if compensate_xform:
@@ -197,6 +214,24 @@ def promoteTfo(rig: apex.Graph, tfo: int, t: bool = True, r: bool = True, s: boo
         rig.promoteInput(getInPort(rig, tfo, "r"), parms_node, f"{name}_r")
     if s:
         rig.promoteInput(getInPort(rig, tfo, "s"), parms_node, f"{name}_s")
+
+def promoteAc(rig: apex.Graph, ac: int, x: bool = True, y: bool = True, demote: bool = False):
+    parms_node = getParmsNode(rig)
+
+    if demote:
+        xp = getInPort(rig, ac, "x")
+        wires = rig.portWires(xp)
+        rig.removeWires(wires, True)
+        yp = getInPort(rig, ac, "y")
+        wires = rig.portWires(yp)
+        rig.removeWires(wires, True)
+
+    name = rig.nodeName(ac)
+    if x:
+        rig.promoteInput(getInPort(rig, ac, "x"), parms_node, f"{name}_x")
+    if y:
+        rig.promoteInput(getInPort(rig, ac, "y"), parms_node, f"{name}_y")
+    
 
 
 def findSourceJoint(rig: apex.Graph, skel: hou.Geometry, node: int, must_exist: bool) -> int:
@@ -281,11 +316,8 @@ def connect(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, d
 def getSourcePort(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int:
     port = getInPort(rig, dst_node, dst_port_name)
     srcPorts = rig.connectedPorts(port)
-    if not srcPorts:
-        if must_exist:
-            raise Exception(f"Node {rig.nodeName(dst_node)}'s port {dst_port_name} has no source connected.")
-        return -1
-    return srcPorts[0]
+    return kou.firstFromList(srcPorts, default=-1, must_exist=must_exist,
+                             message_on_fail=f"Node {rig.nodeName(dst_node)}'s port {dst_port_name} has no source connected.")
 
 # Get source node of a destination node's port
 def getSourceNode(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int:
@@ -304,11 +336,8 @@ def getDestNodes(rig: apex.Graph, src_node: int, src_port_name: str, criteria: C
 def getDestNode(rig: apex.Graph, src_node: int, src_port_name: str, criteria: Callable[[int], bool] = None,
                 must_exist: bool = True) -> int:
     nodes = getDestNodes(rig, src_node, src_port_name, criteria)
-    if not nodes:
-        if must_exist:
-            raise Exception(f"Node {rig.nodeName(src_node)}'s port {src_port_name} has no destination connected.")
-        return -1
-    return nodes[0]
+    return kou.firstFromList(nodes, default=-1, must_exist=must_exist,
+                             message_on_fail=f"Node {rig.nodeName(src_node)}'s port {src_port_name} has no destination connected.")
 
 
 def updateParms(rig: apex.Graph, node: int, parms: dict):
@@ -325,8 +354,8 @@ def setNodesColor(rig: apex.Graph, nodes: set[int], color: hou.Color):
         rig.setNodeColor(n, color)
 
 
-JOINT_PREFIXES = ["CTL", "MCH", "DEF", "TGT"]
-JOINT_SUFFIXES = ["L", "R"] 
+JOINT_PREFIXES = ["CTL", "MCH", "DEF", "TGT", "UI"]
+JOINT_SUFFIXES = ["L", "R", "l", "r"] 
 
 def splitJointName(name: str) -> (str, str, str):
     prefix = main = suffix = None
@@ -362,9 +391,10 @@ def mchJointNameFromCtl(ctl_name: str) -> str:
 
 def mchJointName(comp_name: str, sub_prefix: str = "") -> str:
     parts = splitJointName(comp_name)
-    return joinJointName("MCH", sub_prefix + '_' + parts[1], parts[2])
+    return joinJointName("MCH", (sub_prefix + '_' if sub_prefix else '') + parts[1], parts[2])
 
 def ctlJointName(comp_name: str, sub_prefix: str = "") -> str:
     parts = splitJointName(comp_name)
 
     return joinJointName("CTL", (sub_prefix + '_' if sub_prefix else '') + parts[1], parts[2])
+

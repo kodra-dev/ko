@@ -77,3 +77,6 @@ def extendedLookat(forward: hou.Vector3, up: hou.Vector3,
     lookat2 = lookat(local_forward, local_up)
     return lookat2.inverted() * lookat1
 
+def randomColor():
+    import random
+    return hou.Color((random.random(), random.random(), random.random()))
