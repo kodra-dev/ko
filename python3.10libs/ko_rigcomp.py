@@ -179,21 +179,21 @@ def ikFKSwitch(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
     new_nodes = set()
 
-    root_blend = ru.safeAdd(rig, f"{compname}_RootBlend", "Lerp<Matrix4>", new_nodes)
+    root_blend = ru.safeAdd(rig, f"{compname}_RootBlend", "transform::Slerp<Matrix4>", new_nodes)
     root_ik_xform_port = ru.getSourcePort(rig, root, "xform")
     rig.addWire(root_ik_xform_port, ru.getInPort(rig, root_blend, "a"))
     ru.connect(rig, root_fk, "xform", root_blend, "b")
     ru.connect(rig, switch_control, "x", root_blend, "bias")
     ru.connect(rig, root_blend, "result", root, "xform")
 
-    mid_blend = ru.safeAdd(rig, f"{compname}_MidBlend", "Lerp<Matrix4>", new_nodes)
+    mid_blend = ru.safeAdd(rig, f"{compname}_MidBlend", "transform::Slerp<Matrix4>", new_nodes)
     mid_ik_xform_port = ru.getSourcePort(rig, mid, "xform")
     rig.addWire(mid_ik_xform_port, ru.getInPort(rig, mid_blend, "a"))
     ru.connect(rig, mid_fk, "xform", mid_blend, "b")
     ru.connect(rig, switch_control, "x", mid_blend, "bias")
     ru.connect(rig, mid_blend, "result", mid, "xform")
 
-    tip_blend = ru.safeAdd(rig, f"{compname}_TipBlend", "Lerp<Matrix4>")
+    tip_blend = ru.safeAdd(rig, f"{compname}_TipBlend", "transform::Slerp<Matrix4>")
     tip_ik_xform_port = ru.getSourcePort(rig, tip, "xform")
     rig.addWire(tip_ik_xform_port, ru.getInPort(rig, tip_blend, "a"))
     ru.connect(rig, tip_fk, "xform", tip_blend, "b")
@@ -662,7 +662,7 @@ def torsoTwist(rig, skel, **kwargs):
         ru.connect(rig, mch_parent, "xform", op_mul2, "b")
         op_mul3 = ru.addNode(rig, "mul", "Multiply<Matrix4>", new_nodes)
         ru.connect(rig, op_mul2, "result", op_mul3, "a")
-        op_lerp1 = ru.addNode(rig, f"{compname}_ratio", "Lerp<Matrix4>", new_nodes)
+        op_lerp1 = ru.addNode(rig, f"{compname}_ratio", "transform::Slerp<Matrix4>", new_nodes)
         ru.updateParms(rig, op_lerp1, {
             "a": hou.Matrix4(1),
             "bias": ratio,
@@ -856,3 +856,58 @@ def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     slider_properties['control'] = container_control_properties
     rig.setNodeProperties(slider, slider_properties)
 
+
+BLENDSHAPE_CORE_NODE_NAME = "ApplyBlendshapes"
+
+def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    specs = kwargs['specs']
+    color = kwargs['nodecolor']
+    basename = kwargs['basename']
+
+    new_nodes = set()
+
+    op_core = ru.getNode(rig, BLENDSHAPE_CORE_NODE_NAME, must_exist=False)
+    if op_core == -1:
+        op_core = ru.addNode(rig, BLENDSHAPE_CORE_NODE_NAME, "sop::kinefx::characterblendshapescore", new_nodes)
+
+    rest_skel = ru.getNode(rig, "rest")
+    last_skel_port = ru.getOutPort(rig, rest_skel, f"value")
+    parms = ru.getParmsNode(rig)
+    shp_port = ru.getOutPort(rig, parms, f"{basename}.shp")
+    rig.addWire(shp_port, ru.getInPort(rig, op_core, "geoinput0"))
+    bone_deform = ru.getNode(rig, "Bonedeformation")
+    ru.connect(rig, op_core, "geo", bone_deform, "geoinput0")
+
+    for spec in specs:
+        blendshape = spec['blendshape#']
+        driver_type = spec['drivertype#']
+
+        point_transforms = ru.getNode(rig, "pointtransform")
+        set_blendshape = ru.addNode(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
+        ru.updateParms(rig, set_blendshape, {
+            "attribname": blendshape,
+        })
+        driver = ru.addNode(rig, f"driver_{blendshape}", "Value<Float>", new_nodes)
+        rig.addWire(last_skel_port, ru.getInPort(rig, set_blendshape, "geo"))
+        ru.connect(rig, set_blendshape, "geo", op_core, "geoinput1")
+        ru.connect(rig, set_blendshape, "geo", point_transforms, "geo")
+
+        last_skel_port = ru.getOutPort(rig, set_blendshape, "geo")
+
+        ru.connect(rig, driver, "value", set_blendshape, "value")
+
+        if driver_type == 'single_channel':
+            control_name = spec['singlecontrol#']
+            channle_name = spec['singlechannel#']
+            port_name = f"{control_name}_{channle_name}" if channle_name != 'none' else control_name
+            port = ru.getOutPort(rig, parms, port_name)
+            rig.addWire(port, ru.getInPort(rig, driver, "parm"))
+        else:
+            raise Exception(f"Unsupported driver type: {driver_type}")
+        
+        # TODO: mapping
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+        
+    # print(specs[0]["ramp#"])

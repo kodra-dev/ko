@@ -2,6 +2,7 @@ import hou
 import apex
 import ko_ui
 import ko_sop
+import ko_rigutils as ru
 
 def resetRig(kwargs):
     node = kwargs['node']
@@ -53,7 +54,7 @@ def getFrameRange(geo):
     return (min_start, max_end)
 
 
-def applyRigComponent(node, fun):
+def applyRigComponent(node, fun, require_compname=True):
     """
     Call this in a Python SOP or Python-based SOP
     """
@@ -72,7 +73,7 @@ def applyRigComponent(node, fun):
 
     parms = ko_sop.nodeParmsToDict(node)
 
-    if not "compname" in parms or not parms["compname"]:
+    if require_compname and (not "compname" in parms or not parms["compname"]):
         raise Exception("No component name specified!")
 
     fun(rig, skel, parms)
@@ -89,3 +90,36 @@ def applyRigComponent(node, fun):
     hidden_group = geo.findPrimGroup("_3d_hidden_primitives")
     if hidden_group:
         hidden_group.add(geo.prims()[-1])
+
+
+def unpackInputSkel(node, basename):
+    node = hou.pwd()
+    geo = node.inputGeometry(0)
+    skel_path = f"/{basename}.skel"
+    skel = geo.unpackFromFolder(skel_path)
+    return skel
+
+def unpackInputRig(node, basename):
+    node = hou.pwd()
+    geo = node.inputGeometry(0)
+    rig_path = f"/{basename}.rig"
+    rig_geo = geo.unpackFromFolder(rig_path)
+    rig = apex.Graph()
+    rig.loadFromGeometry(rig_geo)
+    return rig
+
+
+def menuScriptBlendshapeChannels(geo: hou.Geometry):
+    value = geo.attribValue("clipchannels")
+    if not value or not isinstance(value, dict):
+        raise Exception("No clipchannels attribute found!")
+    channels = value.keys()
+
+    return ko_ui.menuize(channels)
+
+def menuScriptControlChannels(rig: apex.Graph, separated: bool = False):
+    parms = ru.getParmsNode(rig)
+    ports = rig.getOutputPorts(parms)
+    ports = [rig.portName(p) for p in ports if rig.portTypeName(p) == "Vector3" or rig.portTypeName(p) == "Float"]
+    ports.sort()
+    return ko_ui.menuize(ports)
