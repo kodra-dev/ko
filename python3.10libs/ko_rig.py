@@ -82,4 +82,10 @@ def applyRigComponent(node, fun):
     new_rig_geo = hou.Geometry()
     rig.writeToGeometry(new_rig_geo)
 
-    geo.packToFolder(rig_path, new_rig_geo)
+    success = geo.packToFolder(rig_path, new_rig_geo)
+    if not success:
+        raise Exception(f"Failed to pack rig to {rig_path}!")
+
+    hidden_group = geo.findPrimGroup("_3d_hidden_primitives")
+    if hidden_group:
+        hidden_group.add(geo.prims()[-1])
