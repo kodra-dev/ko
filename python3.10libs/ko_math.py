@@ -1,5 +1,11 @@
 import hou
 
+def fit01(value, min, max):
+    return (value - min) / (max - min)
+
+def remap(value, old_min, old_max, new_min, new_max):
+    return new_min + (value - old_min) * (new_max - new_min) / (old_max - old_min)
+
 def lerp(a, b, bias):
     if type(a) != type(b):
         raise ValueError(f"{a} and {b} are not the same type!")

@@ -110,9 +110,11 @@ def unpackInputRig(node, basename):
 
 
 def menuScriptBlendshapeChannels(geo: hou.Geometry):
+    if not geo.findGlobalAttrib("clipchannels"):
+        raise Exception("No clipchannels attribute found! Add Character Blend Shape Channels SOP to the skeleton first.")
     value = geo.attribValue("clipchannels")
     if not value or not isinstance(value, dict):
-        raise Exception("No clipchannels attribute found!")
+        raise Exception("No clipchannels attribute found! Add Character Blend Shape Channels SOP to the skeleton first.")
     channels = value.keys()
 
     return ko_ui.menuize(channels)

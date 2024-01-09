@@ -4,6 +4,7 @@ from kinefx import utils as ku
 import ko_rigutils as ru
 import ko_math as kmath
 from hou import hmath as hm
+import math
 
 def setJointsRord(rig, skel, **kwargs):
     joint_group = kwargs['jointgroup']
@@ -869,6 +870,9 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     op_core = ru.getNode(rig, BLENDSHAPE_CORE_NODE_NAME, must_exist=False)
     if op_core == -1:
         op_core = ru.addNode(rig, BLENDSHAPE_CORE_NODE_NAME, "sop::kinefx::characterblendshapescore", new_nodes)
+    ru.updateParms(rig, op_core, {
+        "attribs": "P N tangentu",
+    })
 
     rest_skel = ru.getNode(rig, "rest")
     last_skel_port = ru.getOutPort(rig, rest_skel, f"value")
@@ -881,6 +885,8 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     for spec in specs:
         blendshape = spec['blendshape#']
         driver_type = spec['drivertype#']
+        driverpoints = spec['driverpoints#']
+        drivenpoints = spec['drivenpoints#']
 
         point_transforms = ru.getNode(rig, "pointtransform")
         set_blendshape = ru.addNode(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
@@ -904,8 +910,67 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             rig.addWire(port, ru.getInPort(rig, driver, "parm"))
         else:
             raise Exception(f"Unsupported driver type: {driver_type}")
+
+        driver_min = driverpoints[0]
+        driver_mid = driverpoints[1]
+        driver_max = driverpoints[2]
+        driven_min = drivenpoints[0]
+        driven_mid = drivenpoints[1]
+        driven_max = drivenpoints[2]
+        linear = math.isclose(driver_min + driver_max, driver_mid * 2) and math.isclose(driven_min + driven_max, driven_mid * 2)
         
-        # TODO: mapping
+        if linear:
+            op_remap = ru.addNode(rig, f"remap", "ko_remap<Float>", new_nodes)
+            ru.connect(rig, driver, "value", op_remap, "value")
+            ru.updateParms(rig, op_remap, {
+                'old_min': driver_min,
+                'old_max': driver_max,
+                'new_min': driven_min,
+                'new_max': driven_max,
+                'clamp': True,
+            })
+            ru.connect(rig, op_remap, "result", set_blendshape, "value")
+        else:
+            op_remap1 = ru.addNode(rig, f"remap1", "ko_remap<Float>", new_nodes)
+            ru.connect(rig, driver, "value", op_remap1, "value")
+            ru.updateParms(rig, op_remap1, {
+                'old_min': driver_min,
+                'old_max': driver_max,
+                'new_min': 0.0,
+                'new_max': 1.0,
+                'clamp': True,
+            })
+            vex_snippet =f"""
+                result = kspline(\"bezier\", t,
+                    0, 0,
+                    {kmath.fit01(driven_mid, driven_min, driven_max)}, {kmath.fit01(driver_mid, driver_min, driver_max)},
+                    1, 1
+                );
+            """
+            op_spline = ru.addNode(rig, f"spline", "RunVex", new_nodes)
+            ru.updateParms(rig, op_spline, {
+                "snippet": vex_snippet,
+            })
+            op_spline_inp = ru.getInPort(rig, op_spline, "inputs")
+            op_spline_outp = ru.getOutPort(rig, op_spline, "outputs")
+            t_p = rig.addSubPort(op_spline_inp, "t")
+            remap1_result = ru.getOutPort(rig, op_remap1, "result")
+            rig.addWire(remap1_result, t_p)
+
+            op_remap2 = ru.addNode(rig, f"remap2", "ko_remap<Float>", new_nodes)
+            ru.updateParms(rig, op_remap2, {
+                'old_min': 0.0,
+                'old_max': 1.0,
+                'new_min': driven_min,
+                'new_max': driven_max,
+                'clamp': True,
+            })
+            result_p = rig.addSubPort(op_spline_outp, "result")
+            remap2_value = ru.getInPort(rig, op_remap2, "value")
+            rig.addWire(result_p, remap2_value)
+
+            ru.connect(rig, op_remap2, "result", set_blendshape, "value")
+
 
     ru.setNodesColor(rig, new_nodes, color)
 
