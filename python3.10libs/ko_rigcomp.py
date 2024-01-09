@@ -865,6 +865,8 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     color = kwargs['nodecolor']
     basename = kwargs['basename']
 
+    pwd = kwargs['pwd']
+
     new_nodes = set()
 
     op_core = ru.getNode(rig, BLENDSHAPE_CORE_NODE_NAME, must_exist=False)
@@ -882,11 +884,14 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     bone_deform = ru.getNode(rig, "Bonedeformation")
     ru.connect(rig, op_core, "geo", bone_deform, "geoinput0")
 
-    for spec in specs:
+    i = 0
+    for i in range(len(specs)):
+        spec = specs[i]
         blendshape = spec['blendshape#']
         driver_type = spec['drivertype#']
-        driverpoints = spec['driverpoints#']
-        drivenpoints = spec['drivenpoints#']
+        driver_range = spec['driverrange#']
+        driven_range = spec['drivenrange#']
+        useramp = spec['useramp#']
 
         point_transforms = ru.getNode(rig, "pointtransform")
         set_blendshape = ru.addNode(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
@@ -911,26 +916,16 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         else:
             raise Exception(f"Unsupported driver type: {driver_type}")
 
-        driver_min = driverpoints[0]
-        driver_mid = driverpoints[1]
-        driver_max = driverpoints[2]
-        driven_min = drivenpoints[0]
-        driven_mid = drivenpoints[1]
-        driven_max = drivenpoints[2]
-        linear = math.isclose(driver_min + driver_max, driver_mid * 2) and math.isclose(driven_min + driven_max, driven_mid * 2)
+        driver_min = driver_range[0]
+        driver_max = driver_range[1]
+        driven_min = driven_range[0]
+        driven_max = driven_range[1]
         
-        if linear:
-            op_remap = ru.addNode(rig, f"remap", "ko_remap<Float>", new_nodes)
-            ru.connect(rig, driver, "value", op_remap, "value")
-            ru.updateParms(rig, op_remap, {
-                'old_min': driver_min,
-                'old_max': driver_max,
-                'new_min': driven_min,
-                'new_max': driven_max,
-                'clamp': True,
-            })
-            ru.connect(rig, op_remap, "result", set_blendshape, "value")
-        else:
+        if useramp:
+            sample_count = 16 # HACK: don't know how to remake the ramp in APEX... use a linear spline for now
+            (ramp, ) = pwd.parmTuple(f"ramp{i+1}").evalAsRamps()
+            sampleds = [ramp.lookup(i / (sample_count - 1)) for i in range(sample_count)]
+
             op_remap1 = ru.addNode(rig, f"remap1", "ko_remap<Float>", new_nodes)
             ru.connect(rig, driver, "value", op_remap1, "value")
             ru.updateParms(rig, op_remap1, {
@@ -941,10 +936,8 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
                 'clamp': True,
             })
             vex_snippet =f"""
-                result = kspline(\"bezier\", t,
-                    0, 0,
-                    {kmath.fit01(driven_mid, driven_min, driven_max)}, {kmath.fit01(driver_mid, driver_min, driver_max)},
-                    1, 1
+                result = spline(\"linear\", t,
+                    {", ".join([str(s) for s in sampleds])}
                 );
             """
             op_spline = ru.addNode(rig, f"spline", "RunVex", new_nodes)
@@ -970,6 +963,17 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             rig.addWire(result_p, remap2_value)
 
             ru.connect(rig, op_remap2, "result", set_blendshape, "value")
+        else:
+            op_remap = ru.addNode(rig, f"remap", "ko_remap<Float>", new_nodes)
+            ru.connect(rig, driver, "value", op_remap, "value")
+            ru.updateParms(rig, op_remap, {
+                'old_min': driver_min,
+                'old_max': driver_max,
+                'new_min': driven_min,
+                'new_max': driven_max,
+                'clamp': True,
+            })
+            ru.connect(rig, op_remap, "result", set_blendshape, "value")
 
 
     ru.setNodesColor(rig, new_nodes, color)

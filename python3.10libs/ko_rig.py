@@ -72,6 +72,7 @@ def applyRigComponent(node, fun, require_compname=True):
     rig.loadFromGeometry(rig_geo)
 
     parms = ko_sop.nodeParmsToDict(node)
+    parms['pwd'] = node
 
     if require_compname and (not "compname" in parms or not parms["compname"]):
         raise Exception("No component name specified!")
