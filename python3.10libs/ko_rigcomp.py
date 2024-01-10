@@ -865,8 +865,6 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     color = kwargs['nodecolor']
     basename = kwargs['basename']
 
-    pwd = kwargs['pwd']
-
     new_nodes = set()
 
     op_core = ru.getNode(rig, BLENDSHAPE_CORE_NODE_NAME, must_exist=False)
