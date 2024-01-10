@@ -893,7 +893,6 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             p = ru.getOutPort(rig, last_skel_geo, "value")
         rig.addWire(p, ru.getInPort(rig, set_blendshape, "geo"))
         ru.connect(rig, set_blendshape, "geo", op_core, "geoinput1")
-        ru.connect(rig, set_blendshape, "geo", point_transforms, "geo")
 
         ru.connect(rig, driver, "value", set_blendshape, "value")
 
@@ -901,10 +900,56 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             control_name = parms['singlecontrol']
             channle_name = parms['singlechannel']
             port_name = f"{control_name}_{channle_name}" if channle_name != 'none' else control_name
-            port = ru.getOutPort(rig, parms_node, port_name)
-            rig.addWire(port, ru.getInPort(rig, driver, "parm"))
+            ru.connect(rig, parms_node, port_name, driver, "parm")
         else:
-            raise Exception(f"Unsupported driver type: {driver_type}")
+            first_joint_name = parms['firstjoint']
+            center_joint_name = parms['centerjoint']
+            last_joint_name = parms['lastjoint']
+            sign_normal_index = parms['signnormal']
+            first_joint = ru.addNode(rig, f"{first_joint_name}_posed", "skel::GetPointTransform", new_nodes)
+            ru.updateParms(rig, first_joint, { "name": first_joint_name })
+            ru.connect(rig, point_transforms, "geo", first_joint, "geo")
+            center_joint = ru.addNode(rig, f"{center_joint_name}_posed", "skel::GetPointTransform", new_nodes)
+            ru.updateParms(rig, center_joint, { "name": center_joint_name })
+            ru.connect(rig, point_transforms, "geo", center_joint, "geo")
+            last_joint = ru.addNode(rig, f"{last_joint_name}_posed", "skel::GetPointTransform", new_nodes)
+            ru.updateParms(rig, last_joint, { "name": last_joint_name })
+            ru.connect(rig, point_transforms, "geo", last_joint, "geo")
+
+            op_explode_first = ru.addNode(rig, f"{first_joint_name}_xlt", "transform::Explode", new_nodes)
+            ru.connect(rig, first_joint, "xform", op_explode_first, "m")
+            op_explode_center = ru.addNode(rig, f"{center_joint_name}_xlt", "transform::Explode", new_nodes)
+            ru.connect(rig, center_joint, "xform", op_explode_center, "m")
+            op_explode_last = ru.addNode(rig, f"{last_joint_name}_xlt", "transform::Explode", new_nodes)
+            ru.connect(rig, last_joint, "xform", op_explode_last, "m")
+
+            op_sub1 = ru.addNode(rig, "sub1", "Subtract<Vector3>", new_nodes)
+            ru.connect(rig, op_explode_center, "t", op_sub1, "a")
+            ru.connect(rig, op_explode_first, "t", op_sub1, "b")
+            op_sub2 = ru.addNode(rig, "sub2", "Subtract<Vector3>", new_nodes)
+            ru.connect(rig, op_explode_last, "t", op_sub2, "a")
+            ru.connect(rig, op_explode_center, "t", op_sub2, "b")
+
+            op_degrees = ru.addNode(rig, "degrees_between", "ko_degrees_between", new_nodes)
+            ru.updateParms(rig, op_degrees, {
+                "signed": 1
+            })
+            ru.connect(rig, op_sub1, "result", op_degrees, "a")
+            ru.connect(rig, op_sub2, "result", op_degrees, "b")
+
+            op_bases = ru.addNode(rig, "bases", "ko_get_bases", new_nodes)
+            ru.connect(rig, first_joint, "xform", op_bases, "xform")
+            op_switch = ru.addNode(rig, "switch_signnormal", "Switch<Vector3>", new_nodes)
+            ru.updateParms(rig, op_switch, {
+                "index": sign_normal_index,
+            })
+            ru.connect(rig, op_bases, "x", op_switch, "input")
+            ru.connect(rig, op_bases, "y", op_switch, "input")
+            ru.connect(rig, op_bases, "z", op_switch, "input")
+            ru.connect(rig, op_switch, "out", op_degrees, "signnormal")
+
+            ru.connect(rig, op_degrees, "result", driver, "parm")
+
         
         return (driver, set_blendshape)
     
@@ -977,8 +1022,7 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
 
     i = 0
-    last_skel_geo = ru.addNode(rig, "copy_rest_skel", "Value<Geometry>", new_nodes)
-    ru.connect(rig, rest_skel, "value", last_skel_geo, "parm")
+    last_skel_geo = ru.getNode(rig, "pointtransform")
     for i in range(len(specs)):
         spec = specs[i]
 
@@ -987,6 +1031,10 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         (driver, set_blendshape) = driverLogic(spec['blendshape#'], last_skel_geo, spec['drivertype#'], {
             'singlecontrol': spec['singlecontrol#'],
             'singlechannel': spec['singlechannel#'],
+            'centerjoint': spec['centerjoint#'],
+            'firstjoint': spec['firstjoint#'],
+            'lastjoint': spec['lastjoint#'],
+            'signnormal': spec['signnormal#'],
         })
         last_skel_geo = mappingLogic(driver, set_blendshape,
                     spec['driverrange#'],
@@ -997,6 +1045,10 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             (driver, set_blendshape) = driverLogic(spec['mirrorblendshape#'], last_skel_geo, spec['drivertype#'], {
                 'singlecontrol': spec['mirrorsinglecontrol#'],
                 'singlechannel': spec['mirrorsinglechannel#'],
+                'centerjoint': spec['mirrorcenterjoint#'],
+                'firstjoint': spec['mirrorfirstjoint#'],
+                'lastjoint': spec['mirrorlastjoint#'],
+                'signnormal': spec['signnormal#'], # always the same as the non-mirror one
             })
             last_skel_geo = mappingLogic(driver, set_blendshape,
                         spec['driverrange#'],

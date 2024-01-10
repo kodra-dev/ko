@@ -132,3 +132,9 @@ def menuScriptControlChannels(rig: apex.Graph, separated: bool = False):
 def menuScriptAbstractControls(rig: apex.Graph):
     acs = rig.matchNodes("%callback(AbstractControl)")
     return ko_ui.menuize([rig.nodeName(ac) for ac in acs])
+
+def menuScriptJoints(skel: hou.Geometry, group: str = "*"):
+    joints = skel.globPoints(group)
+    if not joints:
+        raise Exception(f"No joints found in group {group}!")
+    return ko_ui.menuize([joint.attribValue("name") for joint in joints])

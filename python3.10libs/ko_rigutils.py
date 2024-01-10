@@ -389,7 +389,6 @@ def joinJointName(prefix: str, main: str, suffix: str) -> str:
     parts = list(p for p in [prefix, main, suffix] if p)
     return "_".join(parts)
 
-
 def jointSetPrefix(old_name: str, prefix: str) -> str:
     parts = splitJointName(old_name)
     return joinJointName(prefix, parts[1], parts[2])
