@@ -1,9 +1,9 @@
 import hou
 import ko_soputils as sopu
 
-def nodeParmsToDict(node):
+def nodeParmsToDict(node, flatten_ramp=True):
     verb = hou.sopNodeTypeCategory().nodeVerb("attribfromparm")
-    verb.setParms({"nodepath": node.path()})
+    verb.setParms({"nodepath": node.path(), "flattenramp": flatten_ramp})
     temp_geo = hou.Geometry()
     temp_geo.execute(verb, [])
     return temp_geo.attribValue("parms")

@@ -892,6 +892,7 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         driver_range = spec['driverrange#']
         driven_range = spec['drivenrange#']
         useramp = spec['useramp#']
+        ramp = spec['ramp#']
 
         point_transforms = ru.getNode(rig, "pointtransform")
         set_blendshape = ru.addNode(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
@@ -922,9 +923,6 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         driven_max = driven_range[1]
         
         if useramp:
-            sample_count = 16 # HACK: don't know how to remake the ramp in APEX... use a linear spline for now
-            (ramp, ) = pwd.parmTuple(f"ramp{i+1}").evalAsRamps()
-            sampleds = [ramp.lookup(i / (sample_count - 1)) for i in range(sample_count)]
 
             op_remap1 = ru.addNode(rig, f"remap1", "ko_remap<Float>", new_nodes)
             ru.connect(rig, driver, "value", op_remap1, "value")
@@ -935,11 +933,13 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
                 'new_max': 1.0,
                 'clamp': True,
             })
+            
+            ramp = ramp.replace('"', '\\"')
+            ramp = ramp.replace('\n', '')
             vex_snippet =f"""
-                result = spline(\"linear\", t,
-                    {", ".join([str(s) for s in sampleds])}
-                );
+                result = ramp_lookup(t, \"{ramp}\");
             """
+
             op_spline = ru.addNode(rig, f"spline", "RunVex", new_nodes)
             ru.updateParms(rig, op_spline, {
                 "snippet": vex_snippet,
