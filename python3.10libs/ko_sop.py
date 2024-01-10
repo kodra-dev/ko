@@ -1,5 +1,6 @@
 import hou
 import ko_soputils as sopu
+import ko_ui
 
 def nodeParmsToDict(node, flatten_ramp=False):
     verb = hou.sopNodeTypeCategory().nodeVerb("attribfromparm")
@@ -11,6 +12,30 @@ def nodeParmsToDict(node, flatten_ramp=False):
 def isPythonBased(node):
     definition = node.type().definition()
     return definition and 'PythonCook' in definition.sections().keys()
+
+
+def groupSelectMenu(node, input_index = 0, type = None):
+    # Get the currently selected group type
+    if not type:
+        parm = node.parm("grouptype")
+        type = parm.evalAsString()
+
+    geo = node.inputGeometry(input_index)
+
+    # Select the groups to work with based
+    # on the selected group type
+    if node:
+        if type == "points":
+            groups = geo.pointGroups()
+        elif type == "edges":
+            groups = geo.edgeGroups()
+        elif type == "prims":
+            groups = geo.primGroups()
+        elif type == "vertices":
+            groups = geo.vertexGroups()
+        else:
+            return []
+    return ko_ui.menuize([group.name() for group in groups])
 
 
 ## Sop/xform (Transform SOP)

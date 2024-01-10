@@ -875,52 +875,46 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     })
 
     rest_skel = ru.getNode(rig, "rest")
-    last_skel_port = ru.getOutPort(rig, rest_skel, f"value")
-    parms = ru.getParmsNode(rig)
-    shp_port = ru.getOutPort(rig, parms, f"{basename}.shp")
+    parms_node = ru.getParmsNode(rig)
+    shp_port = ru.getOutPort(rig, parms_node, f"{basename}.shp")
     rig.addWire(shp_port, ru.getInPort(rig, op_core, "geoinput0"))
     bone_deform = ru.getNode(rig, "Bonedeformation")
     ru.connect(rig, op_core, "geo", bone_deform, "geoinput0")
 
-    i = 0
-    for i in range(len(specs)):
-        spec = specs[i]
-        blendshape = spec['blendshape#']
-        driver_type = spec['drivertype#']
-        driver_range = spec['driverrange#']
-        driven_range = spec['drivenrange#']
-        useramp = spec['useramp#']
-        ramp = spec['ramp#']
-
+    def driverLogic(blendshape, last_skel_geo, driver_type, parms):
         point_transforms = ru.getNode(rig, "pointtransform")
         set_blendshape = ru.addNode(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
         ru.updateParms(rig, set_blendshape, {
             "attribname": blendshape,
         })
         driver = ru.addNode(rig, f"driver_{blendshape}", "Value<Float>", new_nodes)
-        rig.addWire(last_skel_port, ru.getInPort(rig, set_blendshape, "geo"))
+        p = ru.getOutPort(rig, last_skel_geo, "geo", must_exist=False)
+        if p == -1:
+            p = ru.getOutPort(rig, last_skel_geo, "value")
+        rig.addWire(p, ru.getInPort(rig, set_blendshape, "geo"))
         ru.connect(rig, set_blendshape, "geo", op_core, "geoinput1")
         ru.connect(rig, set_blendshape, "geo", point_transforms, "geo")
-
-        last_skel_port = ru.getOutPort(rig, set_blendshape, "geo")
 
         ru.connect(rig, driver, "value", set_blendshape, "value")
 
         if driver_type == 'single_channel':
-            control_name = spec['singlecontrol#']
-            channle_name = spec['singlechannel#']
+            control_name = parms['singlecontrol']
+            channle_name = parms['singlechannel']
             port_name = f"{control_name}_{channle_name}" if channle_name != 'none' else control_name
-            port = ru.getOutPort(rig, parms, port_name)
+            port = ru.getOutPort(rig, parms_node, port_name)
             rig.addWire(port, ru.getInPort(rig, driver, "parm"))
         else:
             raise Exception(f"Unsupported driver type: {driver_type}")
-
+        
+        return (driver, set_blendshape)
+    
+    def mappingLogic(driver, set_blendshape, driver_range, driven_range, use_ramp, ramp):
         driver_min = driver_range[0]
         driver_max = driver_range[1]
         driven_min = driven_range[0]
         driven_max = driven_range[1]
         
-        if useramp:
+        if use_ramp:
             op_remap1 = ru.addNode(rig, f"remap1", "ko_remap<Float>", new_nodes)
             ru.connect(rig, driver, "value", op_remap1, "value")
             ru.updateParms(rig, op_remap1, {
@@ -978,6 +972,37 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
                 'clamp': True,
             })
             ru.connect(rig, op_remap, "result", set_blendshape, "value")
+
+        return set_blendshape
+
+
+    i = 0
+    last_skel_geo = ru.addNode(rig, "copy_rest_skel", "Value<Geometry>", new_nodes)
+    ru.connect(rig, rest_skel, "value", last_skel_geo, "parm")
+    for i in range(len(specs)):
+        spec = specs[i]
+
+        mirror = spec["mirror#"]
+
+        (driver, set_blendshape) = driverLogic(spec['blendshape#'], last_skel_geo, spec['drivertype#'], {
+            'singlecontrol': spec['singlecontrol#'],
+            'singlechannel': spec['singlechannel#'],
+        })
+        last_skel_geo = mappingLogic(driver, set_blendshape,
+                    spec['driverrange#'],
+                    spec['drivenrange#'],
+                    spec['useramp#'],
+                    spec['ramp#'])
+        if mirror:
+            (driver, set_blendshape) = driverLogic(spec['mirrorblendshape#'], last_skel_geo, spec['drivertype#'], {
+                'singlecontrol': spec['mirrorsinglecontrol#'],
+                'singlechannel': spec['mirrorsinglechannel#'],
+            })
+            last_skel_geo = mappingLogic(driver, set_blendshape,
+                        spec['driverrange#'],
+                        spec['drivenrange#'],
+                        spec['useramp#'],
+                        spec['ramp#'])
 
 
     ru.setNodesColor(rig, new_nodes, color)

@@ -110,6 +110,8 @@ def unpackInputRig(node, basename):
     return rig
 
 
+### Menu scripts
+
 def menuScriptBlendshapeChannels(geo: hou.Geometry):
     if not geo.findGlobalAttrib("clipchannels"):
         raise Exception("No clipchannels attribute found! Add Character Blend Shape Channels SOP to the skeleton first.")
@@ -126,3 +128,7 @@ def menuScriptControlChannels(rig: apex.Graph, separated: bool = False):
     ports = [rig.portName(p) for p in ports if rig.portTypeName(p) == "Vector3" or rig.portTypeName(p) == "Float"]
     ports.sort()
     return ko_ui.menuize(ports)
+
+def menuScriptAbstractControls(rig: apex.Graph):
+    acs = rig.matchNodes("%callback(AbstractControl)")
+    return ko_ui.menuize([rig.nodeName(ac) for ac in acs])

@@ -371,6 +371,19 @@ def splitJointName(name: str) -> (str, str, str):
 
     return (prefix, main, suffix)
 
+def mirroredJointName(name: str) -> str:
+    parts = list(splitJointName(name))
+    if parts[2] == "L":
+        parts[2] = "R"
+    elif parts[2] == "R":
+        parts[2] = "L"
+    elif parts[2] == "l":
+        parts[2] = "r"
+    elif parts[2] == "r":
+        parts[2] = "l"
+    else:
+        raise Exception(f"Joint {name} has no mirrored version.")
+    return joinJointName(parts[0], parts[1], parts[2])
         
 def joinJointName(prefix: str, main: str, suffix: str) -> str:
     parts = list(p for p in [prefix, main, suffix] if p)
