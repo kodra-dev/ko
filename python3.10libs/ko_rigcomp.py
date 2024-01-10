@@ -921,7 +921,6 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         driven_max = driven_range[1]
         
         if useramp:
-
             op_remap1 = ru.addNode(rig, f"remap1", "ko_remap<Float>", new_nodes)
             ru.connect(rig, driver, "value", op_remap1, "value")
             ru.updateParms(rig, op_remap1, {
@@ -932,10 +931,17 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
                 'clamp': True,
             })
             
-            ramp = ramp.replace('"', '\\"')
-            ramp = ramp.replace('\n', '')
+            ramp_interps = ["constant", "linear", "catmullrom", "monotonecubic", "bezier", "bspline", "hermite"]
+            bases_str = ", ".join([
+                f"\"{ramp_interps[ramp[i]['ramp#_#interp']]}\"" for i in range(len(ramp))
+                ])
+            values_str = ", ".join([str(ramp[i]['ramp#_#value']) for i in range(len(ramp))])
+            poses_str = ", ".join([str(ramp[i]['ramp#_#pos']) for i in range(len(ramp))])
             vex_snippet =f"""
-                result = ramp_lookup(t, \"{ramp}\");
+                string basis[] = array({bases_str});
+                float value[] = array({values_str});
+                float pos[] = array({poses_str});
+                result = spline(basis, t, value, pos);
             """
 
             op_spline = ru.addNode(rig, f"spline", "RunVex", new_nodes)

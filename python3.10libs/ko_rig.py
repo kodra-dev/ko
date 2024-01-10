@@ -71,7 +71,7 @@ def applyRigComponent(node, fun, require_compname=True):
     rig = apex.Graph()
     rig.loadFromGeometry(rig_geo)
 
-    parms = ko_sop.nodeParmsToDict(node, flatten_ramp=True)
+    parms = ko_sop.nodeParmsToDict(node, flatten_ramp=False)
     parms['pwd'] = node
 
     if require_compname and (not "compname" in parms or not parms["compname"]):
