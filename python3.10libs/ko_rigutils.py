@@ -191,6 +191,9 @@ def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
 
 def getParmsNode(rig: apex.Graph) -> int:
     return getNode(rig, "%callback(__parms__)")
+
+def getOutputNode(rig: apex.Graph) -> int:
+    return getNode(rig, "%callback(__binding__)")
     
 
 def promoteTfo(rig: apex.Graph, tfo: int, t: bool = True, r: bool = True, s: bool = False, demote: bool = False):

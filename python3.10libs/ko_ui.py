@@ -25,13 +25,14 @@ def currentMultiparmIndex(parm: hou.Parm) -> int:
 def currentParm() -> hou.Parm:
     return hou.pwd().parm( hou.expandString('$CH') ) 
 
-def siblingMultiParm(name: str) -> hou.Parm:
+def siblingMultiParm(name: str, component_index: int | None = None, current_parm: hou.Parm = None) -> hou.Parm:
     """
     Get the multiparm instance of a sibling multiparm.
     """
-    parm = currentParm()
+    parm = current_parm if current_parm else currentParm() 
     index = currentMultiparmIndex(parm)
-    return hou.parm(name+str(index))
+    component_index = component_index if component_index != None else parm.componentIndex()
+    return hou.parmTuple(name+str(index))[component_index]
 
 def evalSiblingMultiParm(name: str) -> int:
     """

@@ -37,6 +37,25 @@ def groupSelectMenu(node, input_index = 0, type = None):
             return []
     return ko_ui.menuize([group.name() for group in groups])
 
+def allDownstreamSops(node: hou.Node):
+    visited = set()
+    nodes = []
+    def recurse(node: hou.Node, nodes: list[hou.Node]):
+        if node in visited:
+            return
+        visited.add(node)
+        for child in node.outputs():
+            nodes.append(child)
+            recurse(child, nodes)
+
+    recurse(node, nodes)
+    return nodes
+
+def findDownstreamSops(node: hou.Node, type: hou.NodeType):
+    return [n for n in allDownstreamSops(node) if n.type() == type]
+    
+
+
 
 ## Sop/xform (Transform SOP)
 

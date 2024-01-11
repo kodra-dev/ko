@@ -874,7 +874,6 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         "attribs": "P N tangentu",
     })
 
-    rest_skel = ru.getNode(rig, "rest")
     parms_node = ru.getParmsNode(rig)
     shp_port = ru.getOutPort(rig, parms_node, f"{basename}.shp")
     rig.addWire(shp_port, ru.getInPort(rig, op_core, "geoinput0"))
@@ -887,12 +886,11 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         ru.updateParms(rig, set_blendshape, {
             "attribname": blendshape,
         })
-        driver = ru.addNode(rig, f"driver_{blendshape}", "Value<Float>", new_nodes)
+        driver = ru.addNode(rig, f"_driver_{blendshape}", "Value<Float>", new_nodes)
         p = ru.getOutPort(rig, last_skel_geo, "geo", must_exist=False)
         if p == -1:
             p = ru.getOutPort(rig, last_skel_geo, "value")
         rig.addWire(p, ru.getInPort(rig, set_blendshape, "geo"))
-        ru.connect(rig, set_blendshape, "geo", op_core, "geoinput1")
 
         ru.connect(rig, driver, "value", set_blendshape, "value")
 
@@ -953,12 +951,12 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         
         return (driver, set_blendshape)
     
-    def mappingLogic(driver, set_blendshape, driver_range, driven_range, use_ramp, ramp):
+    def mappingLogic(blendshape, driver, set_blendshape, driver_range, driven_range, use_ramp, ramp):
         driver_min = driver_range[0]
         driver_max = driver_range[1]
         driven_min = driven_range[0]
         driven_max = driven_range[1]
-        
+
         if use_ramp:
             op_remap1 = ru.addNode(rig, f"remap1", "ko_remap<Float>", new_nodes)
             ru.connect(rig, driver, "value", op_remap1, "value")
@@ -1018,7 +1016,14 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             })
             ru.connect(rig, op_remap, "result", set_blendshape, "value")
 
-        return set_blendshape
+        save_driver_value = ru.addNode(rig, f"save_driver_value_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
+        ru.updateParms(rig, save_driver_value, {
+            "attribname": f"_driver_{blendshape}",
+        })
+        ru.connect(rig, set_blendshape, "geo", save_driver_value, "geo")
+        ru.connect(rig, driver, "value", save_driver_value, "value")
+        
+        return save_driver_value
 
 
     i = 0
@@ -1036,7 +1041,7 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             'lastjoint': spec['lastjoint#'],
             'signnormal': spec['signnormal#'],
         })
-        last_skel_geo = mappingLogic(driver, set_blendshape,
+        last_skel_geo = mappingLogic(spec['blendshape#'], driver, set_blendshape,
                     spec['driverrange#'],
                     spec['drivenrange#'],
                     spec['useramp#'],
@@ -1050,14 +1055,16 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
                 'lastjoint': spec['mirrorlastjoint#'],
                 'signnormal': spec['signnormal#'], # always the same as the non-mirror one
             })
-            last_skel_geo = mappingLogic(driver, set_blendshape,
-                        spec['driverrange#'],
+            last_skel_geo = mappingLogic(spec['mirrorblendshape#'], driver, set_blendshape,
+                        spec['mirrordriverrange#'] if spec['usemirrordriverrange#'] else spec['driverrange#'],
                         spec['drivenrange#'],
                         spec['useramp#'],
                         spec['ramp#'])
 
+    ru.connect(rig, last_skel_geo, "geo", op_core, "geoinput1")
+    output_node = ru.getOutputNode(rig)
+    ru.connect(rig, last_skel_geo, "geo", output_node, f"{basename}.skel")
 
     ru.setNodesColor(rig, new_nodes, color)
 
         
-    # print(specs[0]["ramp#"])
