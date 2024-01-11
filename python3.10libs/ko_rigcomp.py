@@ -928,14 +928,14 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             ru.connect(rig, op_explode_last, "t", op_sub2, "a")
             ru.connect(rig, op_explode_center, "t", op_sub2, "b")
 
-            op_degrees = ru.addNode(rig, "degrees_between", "ko_degrees_between", new_nodes)
+            op_degrees = ru.addNode(rig, "degrees_between", "ko::DegreesBetween", new_nodes)
             ru.updateParms(rig, op_degrees, {
                 "signed": 1
             })
             ru.connect(rig, op_sub1, "result", op_degrees, "a")
             ru.connect(rig, op_sub2, "result", op_degrees, "b")
 
-            op_bases = ru.addNode(rig, "bases", "ko_get_bases", new_nodes)
+            op_bases = ru.addNode(rig, "bases", "ko::GetBases", new_nodes)
             ru.connect(rig, first_joint, "xform", op_bases, "xform")
             op_switch = ru.addNode(rig, "switch_signnormal", "Switch<Vector3>", new_nodes)
             ru.updateParms(rig, op_switch, {
@@ -958,7 +958,7 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         driven_max = driven_range[1]
 
         if use_ramp:
-            op_remap1 = ru.addNode(rig, f"remap1", "ko_remap<Float>", new_nodes)
+            op_remap1 = ru.addNode(rig, f"remap1", "ko::Remap<Float>", new_nodes)
             ru.connect(rig, driver, "value", op_remap1, "value")
             ru.updateParms(rig, op_remap1, {
                 'old_min': driver_min,
@@ -991,7 +991,7 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             remap1_result = ru.getOutPort(rig, op_remap1, "result")
             rig.addWire(remap1_result, t_p)
 
-            op_remap2 = ru.addNode(rig, f"remap2", "ko_remap<Float>", new_nodes)
+            op_remap2 = ru.addNode(rig, f"remap2", "ko::Remap<Float>", new_nodes)
             ru.updateParms(rig, op_remap2, {
                 'old_min': 0.0,
                 'old_max': 1.0,
@@ -1005,7 +1005,7 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
             ru.connect(rig, op_remap2, "result", set_blendshape, "value")
         else:
-            op_remap = ru.addNode(rig, f"remap", "ko_remap<Float>", new_nodes)
+            op_remap = ru.addNode(rig, f"remap", "ko::Remap<Float>", new_nodes)
             ru.connect(rig, driver, "value", op_remap, "value")
             ru.updateParms(rig, op_remap, {
                 'old_min': driver_min,
