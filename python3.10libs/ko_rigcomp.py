@@ -857,8 +857,66 @@ def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     slider_properties['control'] = container_control_properties
     rig.setNodeProperties(slider, slider_properties)
 
-
+REST_SKEL_NODE_NAME = "rest"
+POSED_SKEL_TRANSFORMS_NODE_NAME = "pointtransform"
 BLENDSHAPE_CORE_NODE_NAME = "ApplyBlendshapes"
+
+def preparePosedTransforms(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    color = kwargs['nodecolor']
+
+    new_nodes = set()
+
+    root_points = [p for p in skel.points() if ku.getPointParent(p)]
+    visited = set()
+
+    rest_skel = ru.getNode(rig, REST_SKEL_NODE_NAME)
+    posed_skel = ru.getNode(rig, POSED_SKEL_TRANSFORMS_NODE_NAME)
+
+    def recurse(point, parent=None):
+        if point in visited:
+            return
+        visited.add(point)
+
+        name = point.attribValue("name")
+        rest = ru.safeAdd(rig, f"{name}_rest", "skel::GetPointTransform", new_nodes)
+        ru.updateParms(rig, rest, { "name": name })
+        ru.connect(rig, rest_skel, "value", rest, "geo")
+        posed = ru.safeAdd(rig, f"{name}_posed", "skel::GetPointTransform", new_nodes)
+        ru.updateParms(rig, posed, { "name": name })
+        ru.connect(rig, posed_skel, "geo", posed, "geo")
+
+        if parent:
+            parent_name = parent.attribValue("name")
+            rest_parent = ru.getNode(rig, f"{parent_name}_rest")
+            posed_parent = ru.getNode(rig, f"{parent_name}_posed")
+            rest_parent_space = ru.safeAdd(rig, f"{name}_rest_parentspace", "rig::ExtractLocalTransform", new_nodes)
+            posed_parent_space = ru.safeAdd(rig, f"{name}_posed_parentspace", "rig::ExtractLocalTransform", new_nodes)
+            ru.connect(rig, rest, "xform", rest_parent_space, "xform")
+            ru.connect(rig, rest_parent, "xform", rest_parent_space, "parent")
+            ru.connect(rig, posed, "xform", posed_parent_space, "xform")
+            ru.connect(rig, posed_parent, "xform", posed_parent_space, "parent")
+
+            op_invert = ru.addNode(rig, f"invert", "Invert<Matrix4>", new_nodes)
+            ru.connect(rig, rest_parent_space, "localxform", op_invert, "a")
+            local_pose = ru.addNode(rig, f"{name}_localpose", "Multiply<Matrix4>", new_nodes)
+            ru.connect(rig, posed_parent_space, "localxform", local_pose, "a")
+            ru.connect(rig, op_invert, "result", local_pose, "b")
+        else:
+            op_invert = ru.addNode(rig, f"invert", "Invert<Matrix4>", new_nodes)
+            ru.connect(rig, rest, "xform", op_invert, "a")
+            local_pose = ru.addNode(rig, f"{name}_localpose", "Multiply<Matrix4>", new_nodes)
+            ru.connect(rig, posed, "xform", local_pose, "a")
+            ru.connect(rig, op_invert, "result", local_pose, "b")
+
+
+        for child in ku.getPointChildren(point):
+            recurse(child, point)
+    
+    for point in root_points:
+        recurse(point)
+
+    ru.setNodesColor(rig, new_nodes, color)
+
 
 def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     specs = kwargs['specs']
@@ -867,9 +925,8 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
     new_nodes = set()
 
-    op_core = ru.getNode(rig, BLENDSHAPE_CORE_NODE_NAME, must_exist=False)
-    if op_core == -1:
-        op_core = ru.addNode(rig, BLENDSHAPE_CORE_NODE_NAME, "sop::kinefx::characterblendshapescore", new_nodes)
+    op_core = ru.safeAdd(rig, BLENDSHAPE_CORE_NODE_NAME, "sop::kinefx::characterblendshapescore",
+                         node_storage=new_nodes, get_existing=True)
     ru.updateParms(rig, op_core, {
         "attribs": "P N tangentu",
     })
@@ -881,7 +938,7 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     ru.connect(rig, op_core, "geo", bone_deform, "geoinput0")
 
     def driverLogic(blendshape, last_skel_geo, driver_type, parms):
-        point_transforms = ru.getNode(rig, "pointtransform")
+        point_transforms = ru.getNode(rig, POSED_SKEL_TRANSFORMS_NODE_NAME)
         set_blendshape = ru.addNode(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
         ru.updateParms(rig, set_blendshape, {
             "attribname": blendshape,
@@ -899,18 +956,18 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             channle_name = parms['singlechannel']
             port_name = f"{control_name}_{channle_name}" if channle_name != 'none' else control_name
             ru.connect(rig, parms_node, port_name, driver, "parm")
-        else:
+        elif driver_type == 'angle_between':
             first_joint_name = parms['firstjoint']
             center_joint_name = parms['centerjoint']
             last_joint_name = parms['lastjoint']
             sign_normal_index = parms['signnormal']
-            first_joint = ru.addNode(rig, f"{first_joint_name}_posed", "skel::GetPointTransform", new_nodes)
+            first_joint = ru.safeAdd(rig, f"{first_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
             ru.updateParms(rig, first_joint, { "name": first_joint_name })
             ru.connect(rig, point_transforms, "geo", first_joint, "geo")
-            center_joint = ru.addNode(rig, f"{center_joint_name}_posed", "skel::GetPointTransform", new_nodes)
+            center_joint = ru.safeAdd(rig, f"{center_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
             ru.updateParms(rig, center_joint, { "name": center_joint_name })
             ru.connect(rig, point_transforms, "geo", center_joint, "geo")
-            last_joint = ru.addNode(rig, f"{last_joint_name}_posed", "skel::GetPointTransform", new_nodes)
+            last_joint = ru.safeAdd(rig, f"{last_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
             ru.updateParms(rig, last_joint, { "name": last_joint_name })
             ru.connect(rig, point_transforms, "geo", last_joint, "geo")
 
@@ -947,6 +1004,10 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             ru.connect(rig, op_switch, "out", op_degrees, "signnormal")
 
             ru.connect(rig, op_degrees, "result", driver, "parm")
+        elif driver_type == 'swing_twist':
+            pass
+        else:
+            raise Exception(f"Unknown driver type: {driver_type}")
 
         
         return (driver, set_blendshape)
@@ -1027,7 +1088,7 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
 
     i = 0
-    last_skel_geo = ru.getNode(rig, "pointtransform")
+    last_skel_geo = ru.getNode(rig, POSED_SKEL_TRANSFORMS_NODE_NAME)
     for i in range(len(specs)):
         spec = specs[i]
 

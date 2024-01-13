@@ -277,10 +277,20 @@ def addNode(rig: apex.Graph, name: str, apex_cb: str, node_storage: set[int] | N
         node_storage.add(n)
     return n
 
-def safeAdd(rig: apex.Graph, name: str, apex_cb: str, node_storage: set[int] | None = None) -> int:
-    if(rig.matchNodes(name)):
-        raise Exception(f"Node with name {name} already exists.")
-    n = rig.addNode(name, apex_cb)
+def safeAdd(rig: apex.Graph, name: str, apex_cb: str, node_storage: set[int] | None = None, get_existing: bool = False) -> int:
+    existing = getNode(rig, name, must_exist=False)
+    n = -1
+    if existing != -1:
+        if get_existing:
+            cb = rig.callbackName(existing)
+            if cb == apex_cb:
+                n = existing
+            else:
+                raise Exception(f"Node {name} already exists but with a different callback {cb}.")
+        else:
+            raise Exception(f"Node with name {name} already exists.")
+    else:
+        n = rig.addNode(name, apex_cb)
     if node_storage != None:
         node_storage.add(n)
     return n
