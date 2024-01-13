@@ -1005,7 +1005,28 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
             ru.connect(rig, op_degrees, "result", driver, "parm")
         elif driver_type == 'swing_twist':
-            pass
+            twist_joint_name = parms['twistjoint']
+            twist_axis = parms['twistaxis']
+            local_pose = ru.getNode(rig, f"{twist_joint_name}_localpose")
+            op_convert = ru.addNode(rig, "convert", "Convert<Matrix4,Vector4>", new_nodes)
+            ru.connect(rig, local_pose, "result", op_convert, "a")
+            op_bases = ru.addNode(rig, "bases", "ko::GetBases", new_nodes)
+            basis_port_name = None
+            if twist_axis == 'localx':
+                basis_port_name = "x" 
+            elif twist_axis == 'localy':
+                basis_port_name = "y"
+            elif twist_axis == 'localz':
+                basis_port_name = "z"
+            else:
+                raise Exception(f"Unknown twist axis: {twist_axis}")
+            op_decomp = ru.addNode(rig, "decomp", "ko::SwingTwistDecomp2", new_nodes)
+            ru.connect(rig, op_convert, "b", op_decomp, "q")
+            ru.connect(rig, op_bases, basis_port_name, op_decomp, "twistaxis")
+            op_degrees = ru.addNode(rig, "degrees", "RadiansToDegrees<Float>", new_nodes)
+            ru.connect(rig, op_decomp, "twistradians", op_degrees, "radians")
+
+            ru.connect(rig, op_degrees, "degrees", driver, "parm")
         else:
             raise Exception(f"Unknown driver type: {driver_type}")
 
@@ -1095,12 +1116,17 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         mirror = spec["mirror#"]
 
         (driver, set_blendshape) = driverLogic(spec['blendshape#'], last_skel_geo, spec['drivertype#'], {
+            # single channel
             'singlecontrol': spec['singlecontrol#'],
             'singlechannel': spec['singlechannel#'],
+            # angle between
             'centerjoint': spec['centerjoint#'],
             'firstjoint': spec['firstjoint#'],
             'lastjoint': spec['lastjoint#'],
             'signnormal': spec['signnormal#'],
+            # swing twist
+            'twistjoint': spec['twistjoint#'],
+            'twistaxis': spec['twistaxis#'],
         })
         last_skel_geo = mappingLogic(spec['blendshape#'], driver, set_blendshape,
                     spec['driverrange#'],
@@ -1109,12 +1135,17 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
                     spec['ramp#'])
         if mirror:
             (driver, set_blendshape) = driverLogic(spec['mirrorblendshape#'], last_skel_geo, spec['drivertype#'], {
+                # single channel
                 'singlecontrol': spec['mirrorsinglecontrol#'],
                 'singlechannel': spec['mirrorsinglechannel#'],
+                # angle between
                 'centerjoint': spec['mirrorcenterjoint#'],
                 'firstjoint': spec['mirrorfirstjoint#'],
                 'lastjoint': spec['mirrorlastjoint#'],
                 'signnormal': spec['signnormal#'], # always the same as the non-mirror one
+                # swing twist
+                'twistjoint': spec['mirrortwistjoint#'],
+                'twistaxis': spec['twistaxis#'], # always the same as the non-mirror one
             })
             last_skel_geo = mappingLogic(spec['mirrorblendshape#'], driver, set_blendshape,
                         spec['mirrordriverrange#'] if spec['usemirrordriverrange#'] else spec['driverrange#'],
