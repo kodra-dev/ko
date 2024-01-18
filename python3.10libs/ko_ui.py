@@ -6,6 +6,12 @@ def reset_viewer_state(viewer):
         viewer.enterViewState()
         viewer.enterCurrentNodeState()
 
+def setShadingMode(shading_type: hou.glShadingType, display_set_type: hou.displaySetType = hou.displaySetType.DisplayModel):
+    pane = hou.ui.curDesktop().paneTabOfType(hou.paneTabType.SceneViewer)
+    settings = pane.curViewport().settings()
+    tmplset = settings.displaySet(display_set_type)
+    tmplset.setShadedMode(shading_type)
+
 def menuize(items: list[str], itemToLabel: Callable[[str], str] = lambda item: item):
     """
     Convert a list of strings to a list of dictionaries with "label" and "name" keys.

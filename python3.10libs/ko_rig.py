@@ -65,14 +65,20 @@ def applyRigComponent(node, fun, require_compname=True):
 
     geo = node.geometry()
 
+    parms = ko_sop.nodeParmsToDict(node, flatten_ramp=False)
+    parms['pwd'] = node
+
+    paths = geo.extractPackedPaths("*")
     rig_geo = geo.unpackFromFolder(rig_path)
     skel = geo.unpackFromFolder(skel_path)
+    parms['other_geos'] = {}
+    for p in (p for p in paths if p != rig_path and p != skel_path):
+        parms['other_geos'][p] = geo.unpackFromFolder(p)
+        
 
     rig = apex.Graph()
     rig.loadFromGeometry(rig_geo)
 
-    parms = ko_sop.nodeParmsToDict(node, flatten_ramp=False)
-    parms['pwd'] = node
 
     if require_compname and (not "compname" in parms or not parms["compname"]):
         raise Exception("No component name specified!")
@@ -122,19 +128,26 @@ def menuScriptBlendshapeChannels(geo: hou.Geometry):
 
     return ko_ui.menuize(channels)
 
-def menuScriptControlChannels(rig: apex.Graph, separated: bool = False):
+def menuScriptControlChannels(rig: apex.Graph):
     parms = ru.getParmsNode(rig)
     ports = rig.getOutputPorts(parms)
     ports = [rig.portName(p) for p in ports if rig.portTypeName(p) == "Vector3" or rig.portTypeName(p) == "Float"]
     ports.sort()
     return ko_ui.menuize(ports)
 
-def menuScriptAbstractControls(rig: apex.Graph):
+def menuScriptAbstractControls(rig: apex.Graph, exclude_ui=True):
     acs = rig.matchNodes("%callback(AbstractControl)")
-    return ko_ui.menuize([rig.nodeName(ac) for ac in acs])
+    names = [rig.nodeName(ac) for ac in acs]
+    if exclude_ui:
+        names = [n for n in names if not n.startswith("UI_")]
+    return ko_ui.menuize(names)
 
 def menuScriptJoints(skel: hou.Geometry, group: str = "*"):
     joints = skel.globPoints(group)
     if not joints:
         raise Exception(f"No joints found in group {group}!")
     return ko_ui.menuize([joint.attribValue("name") for joint in joints])
+
+def menuScriptKeyposes(geo: hou.Geometry):
+    names = [p.attribValue("name") for p in geo.prims()]
+    return ko_ui.menuize(names)

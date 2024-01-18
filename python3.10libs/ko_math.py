@@ -86,3 +86,22 @@ def extendedLookat(forward: hou.Vector3, up: hou.Vector3,
 def randomColor():
     import random
     return hou.Color((random.random(), random.random(), random.random()))
+
+
+def matrixEqualTo(a: hou.Matrix4 | hou.Matrix3, b: hou.Matrix4 | hou.Matrix3) -> bool:
+    if type(a) != type(b):
+        return False
+    if isinstance(a, hou.Matrix4):
+        for i in range(4):
+            for j in range(4):
+                if a.at(i, j) != b.at(i, j):
+                    return False
+        return True
+    elif isinstance(a, hou.Matrix3):
+        for i in range(3):
+            for j in range(3):
+                if a.at(i, j) != b.at(i, j):
+                    return False
+        return True
+    else:
+        raise ValueError(f"Expected hou.Matrix3 or hou.Matrix4, got {type(a)}")

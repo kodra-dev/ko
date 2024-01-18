@@ -184,8 +184,13 @@ def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
     old_parent = getParentTfo(rig, child)
     setParentTfo(rig, parent, old_parent)
 
-    restlocal = rig.getNodeParms(child)["restlocal"] or hou.Matrix4(1)
-    updateParms(rig, parent, { "restlocal": kmath.lerpMatrix4(hou.Matrix4(1), restlocal, biases) })
+    child_parms = rig.getNodeParms(child)
+    restlocal = child_parms["restlocal"] or hou.Matrix4(1)
+    updateParms(rig, parent, {
+        "restlocal": kmath.lerpMatrix4(hou.Matrix4(1), restlocal, biases),
+        "xord": child_parms["xord"],
+        "rord": child_parms["rord"],
+    })
     setParentTfo(rig, child, parent, compensate_xform=True)
 
 
