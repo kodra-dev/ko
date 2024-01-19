@@ -54,19 +54,19 @@ def getFrameRange(geo):
     return (min_start, max_end)
 
 
-def applyRigComponent(node, fun, require_compname=True):
+def applyRigComponent(node_for_parms, fun, require_compname=True):
     """
     Call this in a Python SOP or Python-based SOP
     """
-    node = hou.pwd()
-    base_name = node.evalParm("basename")
+    base_name = node_for_parms.evalParm("basename")
     rig_path = f"/{base_name}.rig"
     skel_path = f"/{base_name}.skel"
 
-    geo = node.geometry()
+    pwd = hou.pwd()
+    geo = pwd.geometry()
 
-    parms = ko_sop.nodeParmsToDict(node, flatten_ramp=False)
-    parms['pwd'] = node
+    parms = ko_sop.nodeParmsToDict(node_for_parms, flatten_ramp=False)
+    parms['pwd'] = pwd
 
     paths = geo.extractPackedPaths("*")
     rig_geo = geo.unpackFromFolder(rig_path)
@@ -78,7 +78,6 @@ def applyRigComponent(node, fun, require_compname=True):
 
     rig = apex.Graph()
     rig.loadFromGeometry(rig_geo)
-
 
     if require_compname and (not "compname" in parms or not parms["compname"]):
         raise Exception("No component name specified!")
@@ -99,17 +98,23 @@ def applyRigComponent(node, fun, require_compname=True):
         hidden_group.add(geo.prims()[-1])
 
 
-def unpackInputSkel(node, basename):
+def unpackInputSkel(node, basename, character_name=None):
     node = hou.pwd()
     geo = node.inputGeometry(0)
-    skel_path = f"/{basename}.skel"
+    if character_name:
+        skel_path = f"/{character_name}.char/{basename}.skel"
+    else:
+        skel_path = f"/{basename}.skel"
     skel = geo.unpackFromFolder(skel_path)
     return skel
 
-def unpackInputRig(node, basename):
+def unpackInputRig(node, basename, character_name=None):
     node = hou.pwd()
     geo = node.inputGeometry(0)
-    rig_path = f"/{basename}.rig"
+    if character_name:
+        rig_path = f"/{character_name}.char/{basename}.rig"
+    else:
+        rig_path = f"/{basename}.rig"
     rig_geo = geo.unpackFromFolder(rig_path)
     rig = apex.Graph()
     rig.loadFromGeometry(rig_geo)
@@ -118,10 +123,10 @@ def unpackInputRig(node, basename):
 
 ### Menu scripts
 
-def menuScriptBlendshapeChannels(geo: hou.Geometry):
-    if not geo.findGlobalAttrib("clipchannels"):
+def menuScriptBlendshapeChannels(skel: hou.Geometry):
+    if not skel.findGlobalAttrib("clipchannels"):
         raise Exception("No clipchannels attribute found! Add Character Blend Shape Channels SOP to the skeleton first.")
-    value = geo.attribValue("clipchannels")
+    value = skel.attribValue("clipchannels")
     if not value or not isinstance(value, dict):
         raise Exception("No clipchannels attribute found! Add Character Blend Shape Channels SOP to the skeleton first.")
     channels = value.keys()

@@ -199,6 +199,42 @@ def getParmsNode(rig: apex.Graph) -> int:
 
 def getOutputNode(rig: apex.Graph) -> int:
     return getNode(rig, "%callback(__binding__)")
+
+def setUpBlendshapeCoreNode(rig: apex.Graph, basename: str, node_storage: set[int]) -> int:
+    op_core = safeAdd(rig, "ApplyBlendshapes", "sop::kinefx::characterblendshapescore",
+                         node_storage=node_storage, get_existing=True)
+    updateParms(rig, op_core, {
+        "attribs": "P N tangentu",
+    })
+
+    parms_node = getParmsNode(rig)
+    shp_port = getOutPort(rig, parms_node, f"{basename}.shp")
+    rig.addWire(shp_port, getInPort(rig, op_core, "geoinput0"))
+    bone_deform = getNode(rig, "Bonedeformation")
+    connect(rig, op_core, "geo", bone_deform, "geoinput0")
+    return op_core
+
+def getLatestPosedSkelNode(rig: apex.Graph) -> int:
+    node = getNode(rig, "%tag(latest_posed_skel)", must_exist=False)
+    if node == -1:
+        return getNode(rig, "pointtransform")
+    return node
+
+def updateLatestPosedSkelNode(rig: apex.Graph, new_node: int):
+    n = getLatestPosedSkelNode(rig)
+    removeNodeTag(rig, n, "latest_posed_skel")
+    rig.setNodeTag(new_node, "latest_posed_skel")
+
+
+def removeNodeTag(rig: apex.Graph, node: int, tag: str):
+    tags = [t for t in rig.nodeTags(node)]
+    arr = apex.StringArray()
+    if tag in tags:
+        for t in tags:
+            if t != tag:
+                arr.append(t)
+        rig.setNodeTags(node, arr, True)
+
     
 
 def promoteTfo(rig: apex.Graph, tfo: int, t: bool = True, r: bool = True, s: bool = False, demote: bool = False):
@@ -356,6 +392,15 @@ def getDestNode(rig: apex.Graph, src_node: int, src_port_name: str, criteria: Ca
     nodes = getDestNodes(rig, src_node, src_port_name, criteria)
     return kou.firstFromList(nodes, default=-1, must_exist=must_exist,
                              message_on_fail=f"Node {rig.nodeName(src_node)}'s port {src_port_name} has no destination connected.")
+
+def unconnectAllInputs(rig: apex.Graph, node: int):
+    ports = rig.getInputPorts(node)
+    for p in ports:
+        wires = rig.portWires(p)
+        rig.removeWires(wires, True)
+        for sp in rig.subPorts(p):
+            wires = rig.portWires(sp)
+            rig.removeWires(wires, True)
 
 
 def updateParms(rig: apex.Graph, node: int, parms: dict):

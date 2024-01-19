@@ -690,6 +690,487 @@ def torsoTwist(rig, skel, **kwargs):
     ru.setNodesColor(rig, new_nodes, color)
 
 
+def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    specs = kwargs['specs']
+    color = kwargs['nodecolor']
+    basename = kwargs['basename']
+
+    new_nodes = set()
+
+    op_core = ru.setUpBlendshapeCoreNode(rig, basename, new_nodes)
+    parms_node = ru.getParmsNode(rig)
+
+    def driverLogic(blendshape, last_skel_geo, driver_type, parms):
+        point_transforms = ru.getNode(rig, POSED_SKEL_TRANSFORMS_NODE_NAME)
+        set_blendshape = ru.safeAdd(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
+        ru.updateParms(rig, set_blendshape, {
+            "attribname": blendshape,
+        })
+        driver = ru.addNode(rig, f"_driver_{blendshape}", "Value<Float>", new_nodes)
+        p = ru.getOutPort(rig, last_skel_geo, "geo", must_exist=False)
+        if p == -1:
+            p = ru.getOutPort(rig, last_skel_geo, "value")
+        rig.addWire(p, ru.getInPort(rig, set_blendshape, "geo"))
+
+        ru.connect(rig, driver, "value", set_blendshape, "value")
+
+        if driver_type == 'single_channel':
+            control_name = parms['singlecontrol']
+            channel_name = parms['singlechannel']
+            port_name = f"{control_name}_{channel_name}" if channel_name != 'none' else control_name
+            ru.connect(rig, parms_node, port_name, driver, "parm")
+        elif driver_type == 'angle_between':
+            first_joint_name = parms['firstjoint']
+            center_joint_name = parms['centerjoint']
+            last_joint_name = parms['lastjoint']
+            sign_normal_index = parms['signnormal']
+            first_joint = ru.safeAdd(rig, f"{first_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
+            ru.updateParms(rig, first_joint, { "name": first_joint_name })
+            ru.connect(rig, point_transforms, "geo", first_joint, "geo")
+            center_joint = ru.safeAdd(rig, f"{center_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
+            ru.updateParms(rig, center_joint, { "name": center_joint_name })
+            ru.connect(rig, point_transforms, "geo", center_joint, "geo")
+            last_joint = ru.safeAdd(rig, f"{last_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
+            ru.updateParms(rig, last_joint, { "name": last_joint_name })
+            ru.connect(rig, point_transforms, "geo", last_joint, "geo")
+
+            op_explode_first = ru.addNode(rig, f"{first_joint_name}_xlt", "transform::Explode", new_nodes)
+            ru.connect(rig, first_joint, "xform", op_explode_first, "m")
+            op_explode_center = ru.addNode(rig, f"{center_joint_name}_xlt", "transform::Explode", new_nodes)
+            ru.connect(rig, center_joint, "xform", op_explode_center, "m")
+            op_explode_last = ru.addNode(rig, f"{last_joint_name}_xlt", "transform::Explode", new_nodes)
+            ru.connect(rig, last_joint, "xform", op_explode_last, "m")
+
+            op_sub1 = ru.addNode(rig, "sub1", "Subtract<Vector3>", new_nodes)
+            ru.connect(rig, op_explode_center, "t", op_sub1, "a")
+            ru.connect(rig, op_explode_first, "t", op_sub1, "b")
+            op_sub2 = ru.addNode(rig, "sub2", "Subtract<Vector3>", new_nodes)
+            ru.connect(rig, op_explode_last, "t", op_sub2, "a")
+            ru.connect(rig, op_explode_center, "t", op_sub2, "b")
+
+            op_degrees = ru.addNode(rig, "degrees_between", "ko::DegreesBetween", new_nodes)
+            ru.updateParms(rig, op_degrees, {
+                "signed": 1
+            })
+            ru.connect(rig, op_sub1, "result", op_degrees, "a")
+            ru.connect(rig, op_sub2, "result", op_degrees, "b")
+
+            op_bases = ru.addNode(rig, "bases", "ko::GetBases", new_nodes)
+            ru.connect(rig, first_joint, "xform", op_bases, "xform")
+            op_switch = ru.addNode(rig, "switch_signnormal", "Switch<Vector3>", new_nodes)
+            ru.updateParms(rig, op_switch, {
+                "index": sign_normal_index,
+            })
+            ru.connect(rig, op_bases, "x", op_switch, "input")
+            ru.connect(rig, op_bases, "y", op_switch, "input")
+            ru.connect(rig, op_bases, "z", op_switch, "input")
+            ru.connect(rig, op_switch, "out", op_degrees, "signnormal")
+
+            ru.connect(rig, op_degrees, "result", driver, "parm")
+        elif driver_type == 'swing_twist':
+            twist_joint_name = parms['twistjoint']
+            twist_axis = parms['twistaxis']
+            local_pose = ru.getNode(rig, f"{twist_joint_name}_localpose")
+            op_convert = ru.addNode(rig, "convert", "Convert<Matrix4,Vector4>", new_nodes)
+            ru.connect(rig, local_pose, "result", op_convert, "a")
+            op_bases = ru.addNode(rig, "bases", "ko::GetBases", new_nodes)
+            basis_port_name = None
+            if twist_axis == 'localx':
+                basis_port_name = "x" 
+            elif twist_axis == 'localy':
+                basis_port_name = "y"
+            elif twist_axis == 'localz':
+                basis_port_name = "z"
+            else:
+                raise Exception(f"Unknown twist axis: {twist_axis}")
+            op_decomp = ru.addNode(rig, "decomp", "ko::SwingTwistDecomp2", new_nodes)
+            ru.connect(rig, op_convert, "b", op_decomp, "q")
+            ru.connect(rig, op_bases, basis_port_name, op_decomp, "twistaxis")
+            op_degrees = ru.addNode(rig, "degrees", "RadiansToDegrees<Float>", new_nodes)
+            ru.connect(rig, op_decomp, "twistradians", op_degrees, "radians")
+
+            ru.connect(rig, op_degrees, "degrees", driver, "parm")
+        else:
+            raise Exception(f"Unknown driver type: {driver_type}")
+
+        return (driver, set_blendshape)
+
+    i = 0
+    last_skel_geo = ru.getLatestPosedSkelNode(rig)
+    for i in range(len(specs)):
+        spec = specs[i]
+        if not spec["enable#"]:
+            continue
+
+        blendshape_name = spec['blendshape#']
+
+        mirror = spec["mirror#"]
+
+        (driver, set_blendshape) = driverLogic(blendshape_name, last_skel_geo, spec['drivertype#'], {
+            # single channel
+            'singlecontrol': spec['singlecontrol#'],
+            'singlechannel': spec['singlechannel#'],
+            # angle between
+            'centerjoint': spec['centerjoint#'],
+            'firstjoint': spec['firstjoint#'],
+            'lastjoint': spec['lastjoint#'],
+            'signnormal': spec['signnormal#'],
+            # swing twist
+            'twistjoint': spec['twistjoint#'],
+            'twistaxis': spec['twistaxis#'],
+        })
+
+        rsc.mappingLogic(rig, ru.getOutPort(rig, driver, "value"), ru.getInPort(rig, set_blendshape, "value"),
+                    spec['driverrange#'],
+                    spec['drivenrange#'],
+                    spec['useramp#'],
+                    spec['ramp#'],
+                    new_nodes)
+
+        save_driver_value = ru.addNode(rig, f"save_driver_value_{blendshape_name}", "geo::SetDetailAttribValue<Float>", new_nodes)
+        ru.updateParms(rig, save_driver_value, {
+            "attribname": f"_driver_{blendshape_name}",
+        })
+        ru.connect(rig, set_blendshape, "geo", save_driver_value, "geo")
+        ru.connect(rig, driver, "value", save_driver_value, "value")
+        last_skel_geo = save_driver_value
+        ru.updateLatestPosedSkelNode(rig, last_skel_geo)
+
+        if mirror:
+            mirror_blendshape_name = spec['mirrorblendshape#']
+            (driver, set_blendshape) = driverLogic(mirror_blendshape_name, last_skel_geo, spec['drivertype#'], {
+                # single channel
+                'singlecontrol': spec['mirrorsinglecontrol#'],
+                'singlechannel': spec['mirrorsinglechannel#'],
+                # angle between
+                'centerjoint': spec['mirrorcenterjoint#'],
+                'firstjoint': spec['mirrorfirstjoint#'],
+                'lastjoint': spec['mirrorlastjoint#'],
+                'signnormal': spec['signnormal#'], # always the same as the non-mirror one
+                # swing twist
+                'twistjoint': spec['mirrortwistjoint#'],
+                'twistaxis': spec['twistaxis#'], # always the same as the non-mirror one
+            })
+
+            rsc.mappingLogic(rig, ru.getOutPort(rig, driver, "value"), ru.getInPort(rig, set_blendshape, "value"),
+                        spec['mirrordriverrange#'] if spec['usemirrordriverrange#'] else spec['driverrange#'],
+                        spec['drivenrange#'],
+                        spec['useramp#'],
+                        spec['ramp#'],
+                        new_nodes)
+            save_driver_value = ru.addNode(rig, f"save_driver_value_{mirror_blendshape_name}",
+                                           "geo::SetDetailAttribValue<Float>", new_nodes)
+            ru.updateParms(rig, save_driver_value, {
+                "attribname": f"_driver_{mirror_blendshape_name}",
+            })
+            ru.connect(rig, set_blendshape, "geo", save_driver_value, "geo")
+            ru.connect(rig, driver, "value", save_driver_value, "value")
+            last_skel_geo = save_driver_value
+            ru.updateLatestPosedSkelNode(rig, last_skel_geo)
+
+    ru.connect(rig, last_skel_geo, "geo", op_core, "geoinput1")
+    output_node = ru.getOutputNode(rig)
+    ru.connect(rig, last_skel_geo, "geo", output_node, f"{basename}.skel")
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
+
+def rbfBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    base_name = kwargs['basename']
+    comp_name = kwargs['compname']
+    color = kwargs['nodecolor']
+    joint_specs = kwargs['joints']
+    blendshapes = kwargs['blendshapes']
+    examples = kwargs['examples']
+
+    new_nodes = set()
+
+    example_array = ru.addNode(rig, f"{comp_name}_examples", "array::Build<Float>", new_nodes)
+    example_array_port = ru.getInPort(rig, example_array, "values")  
+    index = 0
+
+    def tripleDecomp(q_node, arryr_port, order, mask_0, mask_1, mask_2):
+        nonlocal index
+        op_bases = ru.addNode(rig, f"bases", "ko::GetBases", new_nodes)
+        op_decomp1 = ru.addNode(rig, f"decomp1", "ko::SwingTwistDecomp2", new_nodes)
+        op_decomp2 = ru.addNode(rig, f"decomp2", "ko::SwingTwistDecomp2", new_nodes)
+        if order == 0 or order == 1:
+            axis_0 = "x"
+        elif order == 2 or order == 3:
+            axis_0 = "y"
+        elif order == 4 or order == 5:
+            axis_0 = "z"
+        if order == 2 or order == 4:
+            axis_1 = "x"
+        elif order == 0 or order == 5:
+            axis_1 = "y"
+        elif order == 1 or order == 3:
+            axis_1 = "z"
+        ru.connect(rig, op_bases, axis_0, op_decomp1, "twistaxis")
+        ru.connect(rig, op_bases, axis_1, op_decomp2, "twistaxis")
+        ru.connect(rig, q_node, "b", op_decomp1, "q")
+        ru.connect(rig, op_decomp1, "swing", op_decomp2, "q")
+        op_angle_axis = ru.addNode(rig, "angle_axis", "ko::QToAngleAxis", new_nodes)
+        ru.connect(rig, op_decomp2, "swing", op_angle_axis, "q")
+        if mask_0:
+            port = rig.addSubPort(arryr_port, str(index))
+            index += 1
+            rig.addWire(ru.getOutPort(rig, op_decomp1, "twistradians"), port)
+        if mask_1:
+            port = rig.addSubPort(arryr_port, str(index))
+            index += 1
+            rig.addWire(ru.getOutPort(rig, op_decomp2, "twistradians"), port)
+        if mask_2:
+            port = rig.addSubPort(arryr_port, str(index))
+            index += 1
+            rig.addWire(ru.getOutPort(rig, op_angle_axis, "radians"), port)
+
+    def twistSwing(q_node, arryr_port, twist_axis, use_twist, use_swing):
+        nonlocal index
+        op_bases = ru.addNode(rig, f"bases", "ko::GetBases", new_nodes)
+        op_decomp = ru.addNode(rig, f"decomp", "ko::SwingTwistDecomp2", new_nodes)
+        ru.connect(rig, q_node, "b", op_decomp, "q")
+        ru.connect(rig, op_bases, twist_axis, op_decomp, "twistaxis")
+        if use_twist:
+            port = rig.addSubPort(arryr_port, str(index))
+            index += 1
+            rig.addWire(ru.getOutPort(rig, op_decomp, "twistradians"), port)
+        if use_swing:
+            op_floats = ru.addNode(rig, f"floats", "Vector4ToFloat", new_nodes)
+            ru.connect(rig, op_decomp, "swing", op_floats, "vector")
+            port = rig.addSubPort(arryr_port, str(index))
+            rig.addWire(ru.getOutPort(rig, op_floats, "x"), port)
+            port = rig.addSubPort(arryr_port, str(index + 1))
+            rig.addWire(ru.getOutPort(rig, op_floats, "y"), port)
+            port = rig.addSubPort(arryr_port, str(index + 2))
+            rig.addWire(ru.getOutPort(rig, op_floats, "z"), port)
+            port = rig.addSubPort(arryr_port, str(index + 3))
+            rig.addWire(ru.getOutPort(rig, op_floats, "w"), port)
+            index += 4
+            
+
+    for i in range(len(examples)):
+        example = examples[i]
+        example_name = example['name']
+        joint_xforms = example['joint_xforms']
+        for js in joint_specs:
+            joint_name = js['joint#']
+            joint_type = js['type#']
+            joint_xform = ru.addNode(rig, f"{comp_name}_{example_name}_{joint_name}_xform", "Value<Matrix4>", new_nodes)
+            ru.updateParms(rig, joint_xform, { "parm": joint_xforms[joint_name] })
+            joint_xform_q = ru.addNode(rig, f"{comp_name}_{example_name}_{joint_name}_xform_q", "Convert<Matrix4,Vector4>", new_nodes)
+            ru.connect(rig, joint_xform, "value", joint_xform_q, "a")
+            if joint_type == 'tripledecomp':
+                tripleDecomp(joint_xform_q, example_array_port, js['order#'], js['mask0_#'], js['mask1_#'], js['mask2_#'])
+            elif joint_type == 'twistswing':
+                twistSwing(joint_xform_q, example_array_port, js['twistaxis#'], js['usetwist#'], js['useswing#'])
+            else:
+                raise Exception(f"Unknown joint type: {joint_type}")
+
+    target_array = ru.addNode(rig, f"{comp_name}_target", "array::Build<Float>", new_nodes)
+    target_array_port = ru.getInPort(rig, target_array, "values")
+    index = 0
+    for js in joint_specs:
+        joint_name = js['joint#']
+        joint_type = js['type#']
+        local_pose = ru.getNode(rig, f"{joint_name}_localpose")
+        local_pose_q = ru.addNode(rig, f"{comp_name}_{joint_name}_localpose_q", "Convert<Matrix4,Vector4>", new_nodes)
+        ru.connect(rig, local_pose, "result", local_pose_q, "a")
+        if joint_type == 'tripledecomp':
+            tripleDecomp(local_pose_q, target_array_port, js['order#'], js['mask0_#'], js['mask1_#'], js['mask2_#'])
+        elif joint_type == 'twistswing':
+            twistSwing(local_pose_q, target_array_port, js['twistaxis#'], js['usetwist#'], js['useswing#'])
+        else:
+            raise Exception(f"Unknown joint type: {joint_type}")
+
+    op_rbf = ru.safeAdd(rig, f"{comp_name}_RBF", "rig::RBFInterpolation", new_nodes)
+    ru.updateParms(rig, op_rbf, {
+        "clamp": 1,
+        "hyperplane": 0,
+        "exponent": 1.0,
+        "falloff": 1.0,
+        "damping": 0.0,
+        "iterations": 10,
+        "reload": 1,
+    })
+    ru.connect(rig, example_array, "result", op_rbf, "examples")
+    ru.connect(rig, target_array, "result", op_rbf, "target")
+
+    op_core = ru.setUpBlendshapeCoreNode(rig, base_name, new_nodes)
+
+    for i in range(len(blendshapes)):
+        bs = blendshapes[i]
+        blendshape = bs['blendshape#']
+        value_range = bs['range#']
+
+        set_blendshape = ru.safeAdd(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
+        ru.updateParms(rig, set_blendshape, {
+            "attribname": blendshape,
+        })
+        ru.connect(rig, ru.getLatestPosedSkelNode(rig), "geo", set_blendshape, "geo")
+        ru.updateLatestPosedSkelNode(rig, set_blendshape)
+        op_clamp = ru.addNode(rig, f"clamp_{blendshape}", "Clamp<Float>", new_nodes)
+        ru.connect(rig, op_clamp, "result", set_blendshape, "value")
+        ru.updateParms(rig, op_clamp, {
+            "min": value_range[0],
+            "max": value_range[1],
+        })
+
+        op_add_all = ru.addNode(rig, f"{comp_name}_{blendshape}_unclamped", "Add<Float>", new_nodes)
+        ru.connect(rig, op_add_all, "result", op_clamp, "val")
+
+        for j in range(len(examples)):
+            example = examples[j]
+            example_name = example['name']
+            blendshape_weights = example['blendshape_weights']
+
+            example_weight = blendshape_weights[blendshape]
+            op_get = ru.addNode(rig, f"{comp_name}_{example_name}_{blendshape}_weight", "array::Get<Float>", new_nodes)
+            ru.connect(rig, op_rbf, "weights", op_get, "array")
+            ru.updateParms(rig, op_get, { "index": i })
+            op_mul = ru.addNode(rig, f"mul", "Multiply<Float>", new_nodes)
+            ru.updateParms(rig, op_mul, { "a": example_weight })
+            ru.connect(rig, op_get, "value", op_mul, "b")
+            port = rig.addSubPort(ru.getInPort(rig, op_add_all, "b"), example_name)
+            rig.addWire(ru.getOutPort(rig, op_mul, "result"), port)
+
+    ru.connect(rig, ru.getLatestPosedSkelNode(rig), "geo", op_core, "geoinput1")
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
+
+# Used by RBF Blendshapes SOP internally
+def extractLocalPosesFromRBFExample(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    color = kwargs['nodecolor']
+
+    joint_specs = kwargs['joints']
+    example = kwargs['other_geos']['/Example.skel']
+
+    new_nodes = set()
+    parms_node = ru.getParmsNode(rig)
+    posed_skel = ru.getNode(rig, POSED_SKEL_TRANSFORMS_NODE_NAME)
+    ru.unconnectAllInputs(rig, posed_skel)
+    ru.connect(rig, parms_node, "next", posed_skel, "geo")
+    rig.setPortName(rig.getOutputPorts(parms_node)[-1], "Example.skel")
+
+    for js in joint_specs:
+        joint_name = js['joint#']
+        local_pose = ru.getNode(rig, f"{joint_name}_localpose")
+        output_node = ru.getOutputNode(rig)
+        ru.connect(rig, local_pose, "result", output_node, "next")
+        rig.setPortName(rig.getInputPorts(output_node)[-1], f"{joint_name}")
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
+        
+def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    comp_name = kwargs['compname']
+    color = kwargs['nodecolor']
+    specs = kwargs['keyposes']
+    geo_path = kwargs['geopath']
+
+    new_nodes = set()
+
+    keyposes_geo = kwargs['other_geos'][geo_path]
+    packed_keyposes = keyposes_geo.prims()
+
+    compute_local = hou.sopNodeTypeCategory().nodeVerb("kinefx::computetransform")
+    compute_local.setParms({'mode': 1})
+    skel = skel.freeze().execute(compute_local)
+
+    def keyposeLogic(pose_name, control_name, channel_name, driver_range, driven_range, use_ramp, ramp):
+        keypose = [p for p in packed_keyposes if p.attribValue("name") == pose_name][0].getEmbeddedGeometry()
+        keypose = keypose.freeze().execute(compute_local)
+
+        op_weight = ru.safeAdd(rig, f"weight_{comp_name}_{pose_name}", "Value<Float>", new_nodes)
+        for p in keypose.points():
+            joint_name = p.attribValue("name")
+            rest_p = ku.findPointName(skel, joint_name)
+            # local_xform is in parent's space, as KineFx's convention
+            # local_pose is in rest child's space
+            local_xform_posed = hou.Matrix4(p.attribValue("localtransform"))
+            local_xform_rest = hou.Matrix4(rest_p.attribValue("localtransform"))
+            if kmath.matrixEqualTo(local_xform_posed, local_xform_rest):
+                continue
+            local_pose_xform = local_xform_posed * local_xform_rest.inverted()
+            local_pose_name = f"{pose_name}_{joint_name}_localpose"
+            local_pose = ru.addNode(rig, local_pose_name, "Value<Matrix4>", new_nodes)
+            ru.updateParms(rig, local_pose, { "parm": local_pose_xform })
+
+            joint = ru.tfo(rig, joint_name)
+            mch_keypose_name = f"MCH_{comp_name}_{joint_name}"
+            mch_keypose = ru.getNode(rig, mch_keypose_name, must_exist=False)
+            if mch_keypose == -1:
+                mch_keypose = ru.safeAdd(rig, mch_keypose_name, "TransformObject", new_nodes, get_existing=True)
+                ru.insertBetweenParentTfo(rig, joint, mch_keypose)
+            op_srt_combine = ru.safeAdd(rig, f"combine_{comp_name}_{joint_name}",
+                                        "ko::TransformsSRTCombine", new_nodes, get_existing=True)
+            joint_parms = rig.getNodeParms(joint)
+            ru.updateParms(rig, op_srt_combine, {
+                "xord": joint_parms['xord'],
+                "rord": joint_parms['rord'],
+            })
+            op_mul1 = ru.safeAdd(rig, f"mul1_{comp_name}_{joint_name}", "Multiply<Matrix4>", new_nodes, get_existing=True)
+            op_mul2 = ru.safeAdd(rig, f"mul2_{comp_name}_{joint_name}", "Multiply<Matrix4>", new_nodes, get_existing=True)
+            ru.connect(rig, op_srt_combine, "result", op_mul1, "a")
+            ru.connect(rig, mch_keypose, "xform", op_mul1, "b")
+            ru.connect(rig, op_srt_combine, "result", op_mul2, "a")
+            ru.connect(rig, mch_keypose, "localxform", op_mul2, "b")
+            ru.connect(rig, op_mul1, "result", joint, "parent")
+            ru.connect(rig, op_mul2, "result", joint, "parentlocal")
+
+            op_xforms = ru.safeAdd(rig, f"array_xforms_{comp_name}_{joint_name}",
+                                         "array::Build<Matrix4>", new_nodes, get_existing=True)
+            op_weights = ru.safeAdd(rig, f"array_weights_{comp_name}_{joint_name}",
+                                          "array::Build<Float>", new_nodes, get_existing=True)
+            ru.connect(rig, op_xforms, "result", op_srt_combine, "transforms")
+            ru.connect(rig, op_weights, "result", op_srt_combine, "weights")
+            op_xform_port = rig.addSubPort(ru.getInPort(rig, op_xforms, "values"), pose_name)
+            rig.addWire(ru.getOutPort(rig, local_pose, "value"), op_xform_port)
+            op_weight_port = rig.addSubPort(ru.getInPort(rig, op_weights, "values"), pose_name)
+            rig.addWire(ru.getOutPort(rig, op_weight, "value"), op_weight_port)
+
+        parms_node = ru.getParmsNode(rig)
+        driver = ru.addNode(rig, f"_driver_{pose_name}", "Value<Float>", new_nodes)
+        port_name = f"{control_name}_{channel_name}"
+        ru.connect(rig, parms_node, port_name, driver, "parm")
+
+        rsc.mappingLogic(rig, ru.getOutPort(rig, driver, "value"), ru.getInPort(rig, op_weight, "parm"),
+                    driver_range,
+                    driven_range,
+                    use_ramp,
+                    ramp, 
+                    new_nodes)
+
+    for spec in specs:
+        if not spec["enable#"]:
+            continue
+
+        keyposeLogic(
+            pose_name=spec['posename#'],
+            control_name=spec['driverac#'],
+            channel_name=spec['driveracchannel#'],
+            driver_range=spec['driverrange#'],
+            driven_range=spec['drivenrange#'],
+            use_ramp=spec['useramp#'],
+            ramp=spec['ramp#'],
+        )
+        if spec['mirror#']:
+            keyposeLogic(
+                pose_name=spec['mirrorposename#'],
+                control_name=spec['mirrordriverac#'],
+                channel_name=spec['mirrordriveracchannel#'],
+                driver_range=spec['mirrordriverrange#'] if spec['usemirrordriverrange#'] else spec['driverrange#'],
+                driven_range=spec['drivenrange#'],
+                use_ramp=spec['useramp#'],
+                ramp=spec['ramp#'],
+            )
+
+    ru.setNodesColor(rig, new_nodes, color)
+
 
 ### Not so "component-like" functions below
 
@@ -860,14 +1341,13 @@ def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
 REST_SKEL_NODE_NAME = "rest"
 POSED_SKEL_TRANSFORMS_NODE_NAME = "pointtransform"
-BLENDSHAPE_CORE_NODE_NAME = "ApplyBlendshapes"
 
 def preparePosedTransforms(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     color = kwargs['nodecolor']
 
     new_nodes = set()
 
-    root_points = [p for p in skel.points() if ku.getPointParent(p)]
+    root_points = [p for p in skel.points() if not ku.getPointParent(p)]
     visited = set()
 
     rest_skel = ru.getNode(rig, REST_SKEL_NODE_NAME)
@@ -915,303 +1395,5 @@ def preparePosedTransforms(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     
     for point in root_points:
         recurse(point)
-
-    ru.setNodesColor(rig, new_nodes, color)
-
-
-def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
-    specs = kwargs['specs']
-    color = kwargs['nodecolor']
-    basename = kwargs['basename']
-
-    new_nodes = set()
-
-    op_core = ru.safeAdd(rig, BLENDSHAPE_CORE_NODE_NAME, "sop::kinefx::characterblendshapescore",
-                         node_storage=new_nodes, get_existing=True)
-    ru.updateParms(rig, op_core, {
-        "attribs": "P N tangentu",
-    })
-
-    parms_node = ru.getParmsNode(rig)
-    shp_port = ru.getOutPort(rig, parms_node, f"{basename}.shp")
-    rig.addWire(shp_port, ru.getInPort(rig, op_core, "geoinput0"))
-    bone_deform = ru.getNode(rig, "Bonedeformation")
-    ru.connect(rig, op_core, "geo", bone_deform, "geoinput0")
-
-    def driverLogic(blendshape, last_skel_geo, driver_type, parms):
-        point_transforms = ru.getNode(rig, POSED_SKEL_TRANSFORMS_NODE_NAME)
-        set_blendshape = ru.addNode(rig, f"set_blendshape_{blendshape}", "geo::SetDetailAttribValue<Float>", new_nodes)
-        ru.updateParms(rig, set_blendshape, {
-            "attribname": blendshape,
-        })
-        driver = ru.addNode(rig, f"_driver_{blendshape}", "Value<Float>", new_nodes)
-        p = ru.getOutPort(rig, last_skel_geo, "geo", must_exist=False)
-        if p == -1:
-            p = ru.getOutPort(rig, last_skel_geo, "value")
-        rig.addWire(p, ru.getInPort(rig, set_blendshape, "geo"))
-
-        ru.connect(rig, driver, "value", set_blendshape, "value")
-
-        if driver_type == 'single_channel':
-            control_name = parms['singlecontrol']
-            channel_name = parms['singlechannel']
-            port_name = f"{control_name}_{channel_name}" if channel_name != 'none' else control_name
-            ru.connect(rig, parms_node, port_name, driver, "parm")
-        elif driver_type == 'angle_between':
-            first_joint_name = parms['firstjoint']
-            center_joint_name = parms['centerjoint']
-            last_joint_name = parms['lastjoint']
-            sign_normal_index = parms['signnormal']
-            first_joint = ru.safeAdd(rig, f"{first_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
-            ru.updateParms(rig, first_joint, { "name": first_joint_name })
-            ru.connect(rig, point_transforms, "geo", first_joint, "geo")
-            center_joint = ru.safeAdd(rig, f"{center_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
-            ru.updateParms(rig, center_joint, { "name": center_joint_name })
-            ru.connect(rig, point_transforms, "geo", center_joint, "geo")
-            last_joint = ru.safeAdd(rig, f"{last_joint_name}_posed", "skel::GetPointTransform", new_nodes, get_existing=True)
-            ru.updateParms(rig, last_joint, { "name": last_joint_name })
-            ru.connect(rig, point_transforms, "geo", last_joint, "geo")
-
-            op_explode_first = ru.addNode(rig, f"{first_joint_name}_xlt", "transform::Explode", new_nodes)
-            ru.connect(rig, first_joint, "xform", op_explode_first, "m")
-            op_explode_center = ru.addNode(rig, f"{center_joint_name}_xlt", "transform::Explode", new_nodes)
-            ru.connect(rig, center_joint, "xform", op_explode_center, "m")
-            op_explode_last = ru.addNode(rig, f"{last_joint_name}_xlt", "transform::Explode", new_nodes)
-            ru.connect(rig, last_joint, "xform", op_explode_last, "m")
-
-            op_sub1 = ru.addNode(rig, "sub1", "Subtract<Vector3>", new_nodes)
-            ru.connect(rig, op_explode_center, "t", op_sub1, "a")
-            ru.connect(rig, op_explode_first, "t", op_sub1, "b")
-            op_sub2 = ru.addNode(rig, "sub2", "Subtract<Vector3>", new_nodes)
-            ru.connect(rig, op_explode_last, "t", op_sub2, "a")
-            ru.connect(rig, op_explode_center, "t", op_sub2, "b")
-
-            op_degrees = ru.addNode(rig, "degrees_between", "ko::DegreesBetween", new_nodes)
-            ru.updateParms(rig, op_degrees, {
-                "signed": 1
-            })
-            ru.connect(rig, op_sub1, "result", op_degrees, "a")
-            ru.connect(rig, op_sub2, "result", op_degrees, "b")
-
-            op_bases = ru.addNode(rig, "bases", "ko::GetBases", new_nodes)
-            ru.connect(rig, first_joint, "xform", op_bases, "xform")
-            op_switch = ru.addNode(rig, "switch_signnormal", "Switch<Vector3>", new_nodes)
-            ru.updateParms(rig, op_switch, {
-                "index": sign_normal_index,
-            })
-            ru.connect(rig, op_bases, "x", op_switch, "input")
-            ru.connect(rig, op_bases, "y", op_switch, "input")
-            ru.connect(rig, op_bases, "z", op_switch, "input")
-            ru.connect(rig, op_switch, "out", op_degrees, "signnormal")
-
-            ru.connect(rig, op_degrees, "result", driver, "parm")
-        elif driver_type == 'swing_twist':
-            twist_joint_name = parms['twistjoint']
-            twist_axis = parms['twistaxis']
-            local_pose = ru.getNode(rig, f"{twist_joint_name}_localpose")
-            op_convert = ru.addNode(rig, "convert", "Convert<Matrix4,Vector4>", new_nodes)
-            ru.connect(rig, local_pose, "result", op_convert, "a")
-            op_bases = ru.addNode(rig, "bases", "ko::GetBases", new_nodes)
-            basis_port_name = None
-            if twist_axis == 'localx':
-                basis_port_name = "x" 
-            elif twist_axis == 'localy':
-                basis_port_name = "y"
-            elif twist_axis == 'localz':
-                basis_port_name = "z"
-            else:
-                raise Exception(f"Unknown twist axis: {twist_axis}")
-            op_decomp = ru.addNode(rig, "decomp", "ko::SwingTwistDecomp2", new_nodes)
-            ru.connect(rig, op_convert, "b", op_decomp, "q")
-            ru.connect(rig, op_bases, basis_port_name, op_decomp, "twistaxis")
-            op_degrees = ru.addNode(rig, "degrees", "RadiansToDegrees<Float>", new_nodes)
-            ru.connect(rig, op_decomp, "twistradians", op_degrees, "radians")
-
-            ru.connect(rig, op_degrees, "degrees", driver, "parm")
-        else:
-            raise Exception(f"Unknown driver type: {driver_type}")
-
-        return (driver, set_blendshape)
-
-    i = 0
-    last_skel_geo = ru.getNode(rig, POSED_SKEL_TRANSFORMS_NODE_NAME)
-    for i in range(len(specs)):
-        spec = specs[i]
-        if not spec["enable#"]:
-            continue
-
-        blendshape_name = spec['blendshape#']
-
-        mirror = spec["mirror#"]
-
-        (driver, set_blendshape) = driverLogic(blendshape_name, last_skel_geo, spec['drivertype#'], {
-            # single channel
-            'singlecontrol': spec['singlecontrol#'],
-            'singlechannel': spec['singlechannel#'],
-            # angle between
-            'centerjoint': spec['centerjoint#'],
-            'firstjoint': spec['firstjoint#'],
-            'lastjoint': spec['lastjoint#'],
-            'signnormal': spec['signnormal#'],
-            # swing twist
-            'twistjoint': spec['twistjoint#'],
-            'twistaxis': spec['twistaxis#'],
-        })
-
-        rsc.mappingLogic(rig, ru.getOutPort(rig, driver, "value"), ru.getInPort(rig, set_blendshape, "value"),
-                    spec['driverrange#'],
-                    spec['drivenrange#'],
-                    spec['useramp#'],
-                    spec['ramp#'],
-                    new_nodes)
-
-        save_driver_value = ru.addNode(rig, f"save_driver_value_{blendshape_name}", "geo::SetDetailAttribValue<Float>", new_nodes)
-        ru.updateParms(rig, save_driver_value, {
-            "attribname": f"_driver_{blendshape_name}",
-        })
-        ru.connect(rig, set_blendshape, "geo", save_driver_value, "geo")
-        ru.connect(rig, driver, "value", save_driver_value, "value")
-        last_skel_geo = save_driver_value
-
-        if mirror:
-            mirror_blendshape_name = spec['mirrorblendshape#']
-            (driver, set_blendshape) = driverLogic(mirror_blendshape_name, last_skel_geo, spec['drivertype#'], {
-                # single channel
-                'singlecontrol': spec['mirrorsinglecontrol#'],
-                'singlechannel': spec['mirrorsinglechannel#'],
-                # angle between
-                'centerjoint': spec['mirrorcenterjoint#'],
-                'firstjoint': spec['mirrorfirstjoint#'],
-                'lastjoint': spec['mirrorlastjoint#'],
-                'signnormal': spec['signnormal#'], # always the same as the non-mirror one
-                # swing twist
-                'twistjoint': spec['mirrortwistjoint#'],
-                'twistaxis': spec['twistaxis#'], # always the same as the non-mirror one
-            })
-
-            rsc.mappingLogic(rig, ru.getOutPort(rig, driver, "value"), ru.getInPort(rig, set_blendshape, "value"),
-                        spec['mirrordriverrange#'] if spec['usemirrordriverrange#'] else spec['driverrange#'],
-                        spec['drivenrange#'],
-                        spec['useramp#'],
-                        spec['ramp#'],
-                        new_nodes)
-            save_driver_value = ru.addNode(rig, f"save_driver_value_{mirror_blendshape_name}",
-                                           "geo::SetDetailAttribValue<Float>", new_nodes)
-            ru.updateParms(rig, save_driver_value, {
-                "attribname": f"_driver_{mirror_blendshape_name}",
-            })
-            ru.connect(rig, set_blendshape, "geo", save_driver_value, "geo")
-            ru.connect(rig, driver, "value", save_driver_value, "value")
-            last_skel_geo = save_driver_value
-
-    ru.connect(rig, last_skel_geo, "geo", op_core, "geoinput1")
-    output_node = ru.getOutputNode(rig)
-    ru.connect(rig, last_skel_geo, "geo", output_node, f"{basename}.skel")
-
-    ru.setNodesColor(rig, new_nodes, color)
-
-        
-def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
-    comp_name = kwargs['compname']
-    color = kwargs['nodecolor']
-    specs = kwargs['keyposes']
-    geo_path = kwargs['geopath']
-
-    new_nodes = set()
-
-    keypose_geo = kwargs['other_geos'][geo_path]
-    packed_keyposes = keypose_geo.prims()
-
-    compute_local = hou.sopNodeTypeCategory().nodeVerb("kinefx::computetransform")
-    compute_local.setParms({'mode': 1})
-    skel = skel.freeze().execute(compute_local)
-
-    def keyposeLogic(pose_name, control_name, channel_name, driver_range, driven_range, use_ramp, ramp):
-        keypose = [p for p in packed_keyposes if p.attribValue("name") == pose_name][0].getEmbeddedGeometry()
-        keypose = keypose.freeze().execute(compute_local)
-
-        op_weight = ru.safeAdd(rig, f"weight_{comp_name}_{pose_name}", "Value<Float>", new_nodes)
-        for p in keypose.points():
-            joint_name = p.attribValue("name")
-            rest_p = ku.findPointName(skel, joint_name)
-            # local_xform is in parent's space, as KineFx's convention
-            # local_pose is in rest child's space
-            local_xform_posed = hou.Matrix4(p.attribValue("localtransform"))
-            local_xform_rest = hou.Matrix4(rest_p.attribValue("localtransform"))
-            if kmath.matrixEqualTo(local_xform_posed, local_xform_rest):
-                continue
-            local_pose_xform = local_xform_posed * local_xform_rest.inverted()
-            local_pose_name = f"{pose_name}_{joint_name}_localpose"
-            local_pose = ru.addNode(rig, local_pose_name, "Value<Matrix4>", new_nodes)
-            ru.updateParms(rig, local_pose, { "parm": local_pose_xform })
-
-            joint = ru.tfo(rig, joint_name)
-            mch_keypose_name = f"MCH_{comp_name}_{joint_name}"
-            mch_keypose = ru.getNode(rig, mch_keypose_name, must_exist=False)
-            if mch_keypose == -1:
-                mch_keypose = ru.safeAdd(rig, mch_keypose_name, "TransformObject", new_nodes, get_existing=True)
-                ru.insertBetweenParentTfo(rig, joint, mch_keypose)
-            op_srt_combine = ru.safeAdd(rig, f"combine_{comp_name}_{joint_name}",
-                                        "ko::TransformsSRTCombine", new_nodes, get_existing=True)
-            joint_parms = rig.getNodeParms(joint)
-            ru.updateParms(rig, op_srt_combine, {
-                "xord": joint_parms['xord'],
-                "rord": joint_parms['rord'],
-            })
-            op_mul1 = ru.safeAdd(rig, f"mul1_{comp_name}_{joint_name}", "Multiply<Matrix4>", new_nodes, get_existing=True)
-            op_mul2 = ru.safeAdd(rig, f"mul2_{comp_name}_{joint_name}", "Multiply<Matrix4>", new_nodes, get_existing=True)
-            ru.connect(rig, op_srt_combine, "result", op_mul1, "a")
-            ru.connect(rig, mch_keypose, "xform", op_mul1, "b")
-            ru.connect(rig, op_srt_combine, "result", op_mul2, "a")
-            ru.connect(rig, mch_keypose, "localxform", op_mul2, "b")
-            ru.connect(rig, op_mul1, "result", joint, "parent")
-            ru.connect(rig, op_mul2, "result", joint, "parentlocal")
-
-            op_xforms = ru.safeAdd(rig, f"array_xforms_{comp_name}_{joint_name}",
-                                         "array::Build<Matrix4>", new_nodes, get_existing=True)
-            op_weights = ru.safeAdd(rig, f"array_weights_{comp_name}_{joint_name}",
-                                          "array::Build<Float>", new_nodes, get_existing=True)
-            ru.connect(rig, op_xforms, "result", op_srt_combine, "transforms")
-            ru.connect(rig, op_weights, "result", op_srt_combine, "weights")
-            op_xform_port = rig.addSubPort(ru.getInPort(rig, op_xforms, "values"), pose_name)
-            rig.addWire(ru.getOutPort(rig, local_pose, "value"), op_xform_port)
-            op_weight_port = rig.addSubPort(ru.getInPort(rig, op_weights, "values"), pose_name)
-            rig.addWire(ru.getOutPort(rig, op_weight, "value"), op_weight_port)
-
-        parms_node = ru.getParmsNode(rig)
-        driver = ru.addNode(rig, f"_driver_{pose_name}", "Value<Float>", new_nodes)
-        port_name = f"{control_name}_{channel_name}"
-        ru.connect(rig, parms_node, port_name, driver, "parm")
-
-        rsc.mappingLogic(rig, ru.getOutPort(rig, driver, "value"), ru.getInPort(rig, op_weight, "parm"),
-                    driver_range,
-                    driven_range,
-                    use_ramp,
-                    ramp, 
-                    new_nodes)
-
-    for spec in specs:
-        if not spec["enable#"]:
-            continue
-
-        keyposeLogic(
-            pose_name=spec['posename#'],
-            control_name=spec['driverac#'],
-            channel_name=spec['driveracchannel#'],
-            driver_range=spec['driverrange#'],
-            driven_range=spec['drivenrange#'],
-            use_ramp=spec['useramp#'],
-            ramp=spec['ramp#'],
-        )
-        if spec['mirror#']:
-            keyposeLogic(
-                pose_name=spec['mirrorposename#'],
-                control_name=spec['mirrordriverac#'],
-                channel_name=spec['mirrordriveracchannel#'],
-                driver_range=spec['mirrordriverrange#'] if spec['usemirrordriverrange#'] else spec['driverrange#'],
-                driven_range=spec['drivenrange#'],
-                use_ramp=spec['useramp#'],
-                ramp=spec['ramp#'],
-            )
 
     ru.setNodesColor(rig, new_nodes, color)

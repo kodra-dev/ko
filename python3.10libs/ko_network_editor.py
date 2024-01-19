@@ -111,6 +111,9 @@ def recookUpmostPythonNodes(editor, debug_log=False):
     """
     node = editor.pwd()
     queue = list(c for c in node.children() if c.inputs() == ())
+    if node.isSubNetwork():
+        sub_inputs = node.indirectInputs()
+        queue.extend(sub_inputs)
     visited = set()
     ignored = set()
     while queue:
@@ -121,6 +124,10 @@ def recookUpmostPythonNodes(editor, debug_log=False):
 
         if debug_log:
             print(f"Visiting {node.path()}")
+
+        if isinstance(node, hou.SubnetIndirectInput):
+            queue.extend(node.outputs())
+            continue
 
         if node.type() == hou.sopNodeTypeCategory().nodeType("python") or ko_sop.isPythonBased(node):
             if debug_log:
