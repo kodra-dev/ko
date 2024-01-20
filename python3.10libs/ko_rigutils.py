@@ -175,6 +175,32 @@ def getParentTfo(rig: apex.Graph, child: int, must_exist: bool = True) -> int:
     return None
 
 
+def getOriginalParentTfo(rig: apex.Graph, skel: hou.Geometry, child: int, must_exist: bool = True) -> int:
+    child_name = rig.nodeName(child)
+    child_joint = ku.findPointName(skel, child_name)
+    if not child_joint:
+        raise Exception(f"Joint {child_name} doesn't exist.")
+    parent_joint = ku.getPointParent(child_joint)
+    if not parent_joint:
+        if must_exist:
+            raise Exception(f"Joint {child_name} has no parent.")
+        return -1
+    parent_name = parent_joint.attribValue("name")
+    return tfo(rig, parent_name, must_exist=must_exist)
+
+def computeLocalTransforms(skel: hou.Geometry) -> hou.Geometry:
+    compute_local = hou.sopNodeTypeCategory().nodeVerb("kinefx::computetransform")
+    compute_local.setParms({'mode': 1})
+    return skel.freeze().execute(compute_local)
+
+def getOriginalRestLocal(rig: apex.Graph, skel: hou.Geometry, child: int) -> hou.Matrix4:
+    child_name = rig.nodeName(child)
+    child_joint = ku.findPointName(skel, child_name)
+    if not child_joint:
+        raise Exception(f"Joint {child_name} doesn't exist.")
+    return hou.Matrix4(child_joint.attribValue("localtransform"))
+
+
 def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
                            biases: (float, float, float) = (1, 1, 1)):
     """

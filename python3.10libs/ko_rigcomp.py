@@ -1077,9 +1077,7 @@ def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     keyposes_geo = kwargs['other_geos'][geo_path]
     packed_keyposes = keyposes_geo.prims()
 
-    compute_local = hou.sopNodeTypeCategory().nodeVerb("kinefx::computetransform")
-    compute_local.setParms({'mode': 1})
-    skel = skel.freeze().execute(compute_local)
+    skel = ru.computeLocalTransforms(skel)
 
     def keyposeLogic(pose_name, control_name, channel_name, driver_range, driven_range, use_ramp, ramp):
         keypose = [p for p in packed_keyposes if p.attribValue("name") == pose_name][0].getEmbeddedGeometry()
@@ -1168,6 +1166,54 @@ def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
                 use_ramp=spec['useramp#'],
                 ramp=spec['ramp#'],
             )
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
+def volumeHolder(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    color = kwargs['nodecolor']
+    comp_name = kwargs['compname']
+
+    followed_name = kwargs['followed']
+    holder_name = kwargs['holder']
+    bias = kwargs['bias']
+
+    new_nodes = set()
+
+    skel = ru.computeLocalTransforms(skel)
+
+    followed = ru.tfo(rig, followed_name)
+    followed_ori_parent = ru.getOriginalParentTfo(rig, skel, followed)
+    followed_posed_parent_space = ru.addNode(rig, f"{comp_name}_{followed_name}_posed_parentspace",
+                                             "rig::ExtractLocalTransform", new_nodes)
+    ru.connect(rig, followed_ori_parent, "xform", followed_posed_parent_space, "parent")
+    ru.connect(rig, followed, "xform", followed_posed_parent_space, "xform")
+    followed_ori_rest_local = ru.getOriginalRestLocal(rig, skel, followed)
+    followed_rest_parent_space = ru.addNode(rig, f"{comp_name}_{followed_name}_rest_parentspace",
+                                            "Value<Matrix4>", new_nodes)
+    ru.updateParms(rig, followed_rest_parent_space, { "parm": followed_ori_rest_local })
+    op_invert = ru.addNode(rig, f"invert", "Invert<Matrix4>", new_nodes)
+    ru.connect(rig, followed_rest_parent_space, "value", op_invert, "a")
+    followed_local_pose = ru.addNode(rig, f"{comp_name}_{followed_name}_localpose", "Multiply<Matrix4>", new_nodes)
+    ru.connect(rig, followed_posed_parent_space, "localxform", followed_local_pose, "a")
+    ru.connect(rig, op_invert, "result", followed_local_pose, "b")
+
+    holder = ru.tfo(rig, holder_name)
+    holder_old_rest_local = ru.addNode(rig, f"{comp_name}_{holder_name}_old_rest_local", "Value<Matrix4>", new_nodes)
+    ru.updateParms(rig, holder_old_rest_local, { "parm": ru.tfoRestLocal(rig, holder) })
+    op_invert2 = ru.addNode(rig, f"invert", "Invert<Matrix4>", new_nodes)
+    ru.connect(rig, followed_local_pose, "result", op_invert2, "a")
+    op_ident = ru.addNode(rig, f"ident", "Value<Matrix4>", new_nodes)
+    ru.updateParms(rig, op_ident, { "parm": hou.Matrix4(1) })
+    op_slerp = ru.addNode(rig, f"slerp", "transform::Slerp<Matrix4>", new_nodes)
+    ru.updateParms(rig, op_slerp, { "bias": bias })
+    ru.connect(rig, op_invert2, "result", op_slerp, "a")
+    ru.connect(rig, op_ident, "value", op_slerp, "b")
+    holder_new_rest_local = ru.addNode(rig, f"{comp_name}_{holder_name}_new_rest_local", "Multiply<Matrix4>", new_nodes)
+    ru.connect(rig, holder_old_rest_local, "value", holder_new_rest_local, "a")
+    ru.connect(rig, op_slerp, "result", holder_new_rest_local, "b")
+
+    ru.connect(rig, holder_new_rest_local, "result", holder, "restlocal")
 
     ru.setNodesColor(rig, new_nodes, color)
 

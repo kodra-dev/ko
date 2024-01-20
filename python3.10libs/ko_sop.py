@@ -9,6 +9,7 @@ def nodeParmsToDict(node, flatten_ramp=False):
     temp_geo.execute(verb, [])
     return temp_geo.attribValue("parms")
 
+
 def isPythonBased(node):
     definition = node.type().definition()
     return definition and 'PythonCook' in definition.sections().keys()
