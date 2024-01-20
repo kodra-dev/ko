@@ -8,32 +8,33 @@ radial menu set defaultmodeling
 root {
     split 0.263072 V {
         tabs 0 1 {
-            pane panetab1 -a 0 -l 10 -H /obj/blendshape_control/ -T SOP -m neteditor
-            pane panetab2 -a 0 -l 10 -H /obj/blendshape_control/ -T SOP -m chaneditor
-            pane panetab3 -a 0 -l 10 -H /obj/blendshape_control/ -T SOP -m iprviewer
+            pane panetab1 -a 0 -l 0 -H /obj/ -T OBJ -m neteditor
+            pane panetab2 -a 0 -l 10 -H /obj/ -T OBJ -m chaneditor
+            pane panetab3 -a 0 -l 10 -H /obj/ -T OBJ -m iprviewer
             pane panetab4 -a 0 -l 10 -H /img/ -T IMG -m imageview
             pane panetab13 -a 0 -l 10 -H /ch/ -T CHOPNET -m channelview
-            pane panetab11 -a 0 -l 10 -H /obj/blendshape_control/ -T SOP -m details
+            pane panetab11 -a 0 -l 10 -H /obj/ -T OBJ -m details
+            pane panetab8 -a 0 -l 0 -H /tasks/ -T TOPNET -m neteditor
         }
         split 0.5 H {
             tabs 0 1 {
-                pane panetab6 -a 0 -l 10 -H /obj/blendshape_control/ -T SOP -m details
+                pane panetab6 -a 0 -l 10 -H /obj/ -T OBJ -m details
             }
             tabs 0 1 {
-                pane panetab5 -a 0 -l 10 -H /obj/blendshape_control/ -T SOP -m pythonpanel
-                pane panetab7 -a 0 -l 10 -H /obj/blendshape_control/ -T SOP -m pythonpanel
+                pane panetab5 -a 0 -l 10 -H /obj/ -T OBJ -m pythonpanel
+                pane panetab7 -a 0 -l 10 -H /obj/ -T OBJ -m pythonpanel
             }
         }
     }
 
-    panel panel1 -w 2573 424 1011 983 {
+    panel panel1 -w 2572 411 1142 998 {
         tabs 0 1 {
-            pane FloatingPanel2 -a 0 -l 10 -H /obj/blendshape_control/ -T SOP -m sceneview
+            pane FloatingPanel2 -a 0 -l 10 -H /obj/ -T OBJ -m sceneview
         }
     }
 }
 shelfdock -o 1 -l icon_and_text -G "0.53 0.50" add shelf_set_1 shelf_set_3
-networkeditor -p '{\n	"palettecolors":"",\n	"showspareinputdep":"1",\n	"showchilddep":"1",\n	"showdep":"0",\n	"taskgraphsortdirection":"0",\n	"showtaskgraphperf":"0",\n	"taskgraphperfstatname":"Cook Time",\n	"perfstatname":"Time",\n	"showparmdialogmax":"1",\n	"taskgraphcollapsemode":"Off",\n	"workitemcolorattribute":"",\n	"gridmode":"0",\n	"workitemattrtocollapseby":"",\n	"overviewbounds":"0.000000 0.000000 768.000000 189.600000",\n	"overviewmode":"2",\n	"showmenu":"1",\n	"showperfstats":"1",\n	"grouplistsplit":"0.75",\n	"showgrouplist":"0",\n	"palettemode":"0",\n	"useworkitemcolorattribute":"0",\n	"showtasksmenu":"1",\n	"backgroundimageediting":"0",\n	"backgroundimagebrightness":"1.0",\n	"gridystep":"1.0",\n	"showtree":"0",\n	"palettesize":"226 226",\n	"treesplit":"0.162891",\n	"typesidebarsplit":"0.25",\n	"showtypesidebar":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"gridxstep":"2.0"\n}\n' panetab1
+networkeditor -p '{\n	"palettecolors":"",\n	"showspareinputdep":"1",\n	"showchilddep":"1",\n	"showdep":"0",\n	"taskgraphsortdirection":"0",\n	"showtaskgraphperf":"0",\n	"taskgraphperfstatname":"Cook Time",\n	"perfstatname":"Time",\n	"showparmdialogmax":"1",\n	"taskgraphcollapsemode":"Off",\n	"workitemcolorattribute":"",\n	"gridmode":"0",\n	"workitemattrtocollapseby":"",\n	"overviewbounds":"0.000000 0.000000 768.000000 206.400000",\n	"overviewmode":"2",\n	"showmenu":"1",\n	"showperfstats":"1",\n	"grouplistsplit":"0.75",\n	"showgrouplist":"0",\n	"palettemode":"0",\n	"useworkitemcolorattribute":"0",\n	"showtasksmenu":"1",\n	"backgroundimageediting":"0",\n	"backgroundimagebrightness":"1.0",\n	"gridystep":"1.0",\n	"showtree":"0",\n	"palettesize":"226 226",\n	"treesplit":"0.162891",\n	"typesidebarsplit":"0.25",\n	"showtypesidebar":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"gridxstep":"2.0"\n}\n' panetab1
 netcolumns -c display,xray,select,origin,capture,bone -n OBJ panetab1
 netcolumns -c display,render,template,selectabletemplate,highlight,unload,bypass,lock -n SOP panetab1
 netcolumns -c delscript,comment -n CHOPNET panetab1
@@ -66,3 +67,21 @@ viewtype -t ortho_right ${DESKNAME}.FloatingPanel2.world.`vpname("${DESKNAME}.Fl
 viewtype -t ortho_front ${DESKNAME}.FloatingPanel2.world.`vpname("${DESKNAME}.FloatingPanel2.world",3)`
 viewtype -t ortho_top ${DESKNAME}.FloatingPanel2.world.`vpname("${DESKNAME}.FloatingPanel2.world",1)`
 viewtype -t perspective ${DESKNAME}.FloatingPanel2.world.`vpname("${DESKNAME}.FloatingPanel2.world",2)`
+networkeditor -p '{\n	"palettecolors":"",\n	"showspareinputdep":"1",\n	"showchilddep":"1",\n	"showdep":"0",\n	"taskgraphsortdirection":"0",\n	"showtaskgraphperf":"0",\n	"taskgraphperfstatname":"Cook Time",\n	"perfstatname":"Time",\n	"showparmdialogmax":"1",\n	"taskgraphcollapsemode":"Off",\n	"workitemcolorattribute":"",\n	"gridmode":"0",\n	"workitemattrtocollapseby":"",\n	"overviewbounds":"0.000000 0.000000 768.000000 206.400000",\n	"overviewmode":"2",\n	"showmenu":"1",\n	"showperfstats":"1",\n	"grouplistsplit":"0.75",\n	"showgrouplist":"0",\n	"palettemode":"0",\n	"useworkitemcolorattribute":"0",\n	"showtasksmenu":"1",\n	"backgroundimageediting":"0",\n	"backgroundimagebrightness":"1.0",\n	"gridystep":"1.0",\n	"showtree":"0",\n	"palettesize":"226 226",\n	"treesplit":"0.25",\n	"typesidebarsplit":"0.25",\n	"showtypesidebar":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"gridxstep":"2.0"\n}\n' panetab8
+netcolumns -c display,xray,select,origin,capture,bone -n OBJ panetab8
+netcolumns -c display,render,template,selectabletemplate,highlight,unload,bypass,lock -n SOP panetab8
+netcolumns -c delscript,comment -n CHOPNET panetab8
+netcolumns -c display,export,audio,bypass,lock -n CHOP panetab8
+netcolumns -c startrender,bypass,lock -n ROP panetab8
+netcolumns -c delscript,comment -n SHOP panetab8
+netcolumns -c display,render,template,bypass -n COP2 panetab8
+netcolumns -c delscript,comment -n IMG panetab8
+netcolumns -c delscript,comment,input -n VOP panetab8
+netcolumns -c delscript,comment -n VOPNET panetab8
+netcolumns -c delscript,comment -n DOP panetab8
+netcolumns -c delscript,comment -n TOP panetab8
+netcolumns -c delscript,comment -n TOPNET panetab8
+netcolumns -c display,bypass,delscript,comment,input -n LOP panetab8
+netcolumns -c delscript,comment -n MGR panetab8
+netcolumns -c delscript,comment -n DIR panetab8
+netcolumns -c delscript,comment -n DATA panetab8

@@ -14,6 +14,7 @@
     <memberTool name="reload_ko"/>
     <memberTool name="recook_python"/>
     <memberTool name="open_in_explorer"/>
+    <memberTool name="generic_cleartexcache"/>
   </toolshelf>
 
   <tool name="reload_ko" label="Reload Ko" icon="hicon:/SVGIcons.index?BUTTONS_reload.svg">
