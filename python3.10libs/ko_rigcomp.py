@@ -170,6 +170,7 @@ def ikFKSwitch(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     root_fk_name = kwargs['rootfkcontrol']
     mid_fk_name = kwargs['midfkcontrol']
     tip_fk_name = kwargs['tipfkcontrol']
+    tip_following_ik = kwargs['tipfollowingik']
 
     switch_control = ru.ac(rig, switch_control_name)
     root = ru.tfo(rig, root_name)
@@ -195,12 +196,15 @@ def ikFKSwitch(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     ru.connect(rig, switch_control, "x", mid_blend, "bias")
     ru.connect(rig, mid_blend, "result", mid, "xform")
 
-    tip_blend = ru.safeAdd(rig, f"{compname}_TipBlend", "transform::Slerp<Matrix4>")
-    tip_ik_xform_port = ru.getSourcePort(rig, tip, "xform")
-    rig.addWire(tip_ik_xform_port, ru.getInPort(rig, tip_blend, "a"))
-    ru.connect(rig, tip_fk, "xform", tip_blend, "b")
-    ru.connect(rig, switch_control, "x", tip_blend, "bias")
-    ru.connect(rig, tip_blend, "result", tip, "xform")
+    if tip_following_ik:
+        ru.connect(rig, tip_fk, "xform", tip, "xform")
+    else:
+        tip_blend = ru.safeAdd(rig, f"{compname}_TipBlend", "transform::Slerp<Matrix4>")
+        tip_ik_xform_port = ru.getSourcePort(rig, tip, "xform")
+        rig.addWire(tip_ik_xform_port, ru.getInPort(rig, tip_blend, "a"))
+        ru.connect(rig, tip_fk, "xform", tip_blend, "b")
+        ru.connect(rig, switch_control, "x", tip_blend, "bias")
+        ru.connect(rig, tip_blend, "result", tip, "xform")
 
     ru.setNodesColor(rig, new_nodes, color)
 
@@ -1081,7 +1085,7 @@ def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
     def keyposeLogic(pose_name, control_name, channel_name, driver_range, driven_range, use_ramp, ramp):
         keypose = [p for p in packed_keyposes if p.attribValue("name") == pose_name][0].getEmbeddedGeometry()
-        keypose = keypose.freeze().execute(compute_local)
+        keypose = ru.computeLocalTransforms(keypose)
 
         op_weight = ru.safeAdd(rig, f"weight_{comp_name}_{pose_name}", "Value<Float>", new_nodes)
         for p in keypose.points():
@@ -1177,18 +1181,23 @@ def volumeHolder(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     followed_name = kwargs['followed']
     holder_name = kwargs['holder']
     bias = kwargs['bias']
+    def_skel_name = kwargs['packeddefskeleton']
+    if def_skel_name == '':
+        def_skel = skel
+    else:
+        def_skel = kwargs['other_geos'][def_skel_name]
 
     new_nodes = set()
 
-    skel = ru.computeLocalTransforms(skel)
+    def_skel = ru.computeLocalTransforms(def_skel)
 
     followed = ru.tfo(rig, followed_name)
-    followed_ori_parent = ru.getOriginalParentTfo(rig, skel, followed)
+    followed_ori_parent = ru.getOriginalParentTfo(rig, def_skel, followed)
     followed_posed_parent_space = ru.addNode(rig, f"{comp_name}_{followed_name}_posed_parentspace",
                                              "rig::ExtractLocalTransform", new_nodes)
     ru.connect(rig, followed_ori_parent, "xform", followed_posed_parent_space, "parent")
     ru.connect(rig, followed, "xform", followed_posed_parent_space, "xform")
-    followed_ori_rest_local = ru.getOriginalRestLocal(rig, skel, followed)
+    followed_ori_rest_local = ru.getOriginalRestLocal(rig, def_skel, followed)
     followed_rest_parent_space = ru.addNode(rig, f"{comp_name}_{followed_name}_rest_parentspace",
                                             "Value<Matrix4>", new_nodes)
     ru.updateParms(rig, followed_rest_parent_space, { "parm": followed_ori_rest_local })
@@ -1391,9 +1400,15 @@ POSED_SKEL_TRANSFORMS_NODE_NAME = "pointtransform"
 def preparePosedTransforms(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     color = kwargs['nodecolor']
 
+    def_skel_name = kwargs['packeddefskeleton']
+    if def_skel_name == '':
+        def_skel = skel
+    else:
+        def_skel = kwargs['other_geos'][def_skel_name]
+
     new_nodes = set()
 
-    root_points = [p for p in skel.points() if not ku.getPointParent(p)]
+    root_points = [p for p in def_skel.points() if not ku.getPointParent(p)]
     visited = set()
 
     rest_skel = ru.getNode(rig, REST_SKEL_NODE_NAME)
