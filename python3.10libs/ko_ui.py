@@ -7,8 +7,10 @@ def reset_viewer_state(viewer):
         viewer.enterCurrentNodeState()
 
 def setShadingMode(shading_type: hou.glShadingType, display_set_type: hou.displaySetType = hou.displaySetType.DisplayModel):
-    pane = hou.ui.curDesktop().paneTabOfType(hou.paneTabType.SceneViewer)
-    settings = pane.curViewport().settings()
+    # pane = hou.ui.curDesktop().paneTabOfType(hou.paneTabType.SceneViewer)
+    paneTab = hou.ui.curDesktop().paneTabUnderCursor()
+
+    settings = paneTab.curViewport().settings()
     tmplset = settings.displaySet(display_set_type)
     tmplset.setShadedMode(shading_type)
 
@@ -65,7 +67,7 @@ def swapMultiParmValues(kwargs, a: str, b: str):
     pB.setFromParm(pTemp)
     templateGroup.remove(template)
     node.setParmTemplateGroup(templateGroup)
-    
+
 
 def getParamNames(kwargs, mpBlock: hou.ParmTemplate, index: int, swapIndex: int, nestingDepth: int):
     node = kwargs["node"]

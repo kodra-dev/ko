@@ -200,6 +200,16 @@ def getOriginalRestLocal(rig: apex.Graph, skel: hou.Geometry, child: int) -> hou
         raise Exception(f"Joint {child_name} doesn't exist.")
     return hou.Matrix4(child_joint.attribValue("localtransform"))
 
+def getOriginalTransform(rig: apex.Graph, skel: hou.Geometry, p: int) -> hou.Matrix4:
+    child_name = rig.nodeName(p)
+    child_joint = ku.findPointName(skel, child_name)
+    if not child_joint:
+        raise Exception(f"Joint {child_name} doesn't exist.")
+    transform = hou.Matrix3(child_joint.attribValue("transform"))
+    position = child_joint.attribValue("P")
+    return kmath.matrix3ToMatrix4(transform, position)
+    
+
 
 def insertBetweenParentTfo(rig: apex.Graph, child: int, parent: int,
                            biases: (float, float, float) = (1, 1, 1)):

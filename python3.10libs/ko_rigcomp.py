@@ -136,7 +136,7 @@ def twoBoneIK(rig, skel, **kwargs):
 
 
     smooth_ik_name = f"SmoothIK_{comp_name}"
-    smooth_ik = ru.safeAdd(rig, smooth_ik_name, "rig::TwoBoneIK")
+    smooth_ik = ru.safeAdd(rig, smooth_ik_name, "rig::TwoBoneIK", new_nodes)
     ru.connect(rig, mch_root, "xform", smooth_ik, "rootdriver")
     ru.connect(rig, ctl_target, "xform", smooth_ik, "goal")
     rig.addWire(to_twist_xform, ru.getInPort(rig, smooth_ik, "twist"))
@@ -144,6 +144,31 @@ def twoBoneIK(rig, skel, **kwargs):
     if tip_follow_control:
         # ru.setParentTfo(rig, tip, ctl_target, compensate_xform=True)
         ru.connect(rig, ctl_target, "xform", tip, "xform")
+    else:
+        pass
+        # This causes the tip to "kinda" follow the target, but not exactly... accidentially found this behavior
+        # mch_tip_name = ru.joinJointName("MCH", f"IKTipOut", "{comp_name}")
+        # mch_tip = ru.safeAdd(rig, mch_tip_name, "TransformObject", new_nodes)
+        # ru.insertBetweenParentTfo(rig, tip, mch_tip)
+
+        # tip_rest_local_xform = rig.getNodeParms(tip)["restlocal"]
+        # tip_rest_local = ru.addNode(rig, f"{comp_name}_tip_rest_local", "Value<Matrix4>", new_nodes)
+        # ru.updateParms(rig, tip_rest_local, { "parm": tip_rest_local_xform })
+        # tip_parent = ru.getParentTfo(rig, mch_tip)
+        # tip_parent_ori_xform = ru.getOriginalTransform(rig, skel, tip_parent)
+        # mid_ori_xform = ru.getOriginalTransform(rig, skel, mid)
+        # tip_parent_ori_xform_mid_space = tip_parent_ori_xform * mid_ori_xform.inverted()
+        # tip_parent_ori_mid_space = ru.addNode(rig, f"{comp_name}_tip_parent_ori_mid_space", "Value<Matrix4>", new_nodes)
+        # ru.updateParms(rig, tip_parent_ori_mid_space, { "parm": tip_parent_ori_xform_mid_space })
+        # op_mul = ru.addNode(rig, "mul", "Multiply<Matrix4>", new_nodes)
+        # ru.connect(rig, tip_parent_ori_mid_space, "value", op_mul, "a")
+        # ru.connect(rig, mid, "xform", op_mul, "b")
+        # target_in_tip_parent_space = ru.addNode(rig, f"{comp_name}_target_in_tip_parent_space", "rig::ExtractLocalTransform", new_nodes)
+        # ru.connect(rig, ctl_target, "xform", target_in_tip_parent_space, "xform")
+        # ru.connect(rig, op_mul, "result", target_in_tip_parent_space, "parent")
+        # ru.connect(rig, target_in_tip_parent_space, "localxform", mch_tip, "restlocal")
+        # ru.connect(rig, mch_tip, "xform", tip, "xform")
+
 
     ru.connect(rig, smooth_ik, "rootout", root, "xform")
     ru.connect(rig, smooth_ik, "midout", mid, "xform")
@@ -196,15 +221,15 @@ def ikFKSwitch(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     ru.connect(rig, switch_control, "x", mid_blend, "bias")
     ru.connect(rig, mid_blend, "result", mid, "xform")
 
-    if tip_following_ik:
-        ru.connect(rig, tip_fk, "xform", tip, "xform")
-    else:
-        tip_blend = ru.safeAdd(rig, f"{compname}_TipBlend", "transform::Slerp<Matrix4>")
-        tip_ik_xform_port = ru.getSourcePort(rig, tip, "xform")
-        rig.addWire(tip_ik_xform_port, ru.getInPort(rig, tip_blend, "a"))
-        ru.connect(rig, tip_fk, "xform", tip_blend, "b")
-        ru.connect(rig, switch_control, "x", tip_blend, "bias")
-        ru.connect(rig, tip_blend, "result", tip, "xform")
+    # if tip_following_ik:
+    #     ru.connect(rig, tip_fk, "xform", tip, "xform")
+    # else:
+    tip_blend = ru.safeAdd(rig, f"{compname}_TipBlend", "transform::Slerp<Matrix4>")
+    tip_ik_xform_port = ru.getSourcePort(rig, tip, "xform")
+    rig.addWire(tip_ik_xform_port, ru.getInPort(rig, tip_blend, "a"))
+    ru.connect(rig, tip_fk, "xform", tip_blend, "b")
+    ru.connect(rig, switch_control, "x", tip_blend, "bias")
+    ru.connect(rig, tip_blend, "result", tip, "xform")
 
     ru.setNodesColor(rig, new_nodes, color)
 

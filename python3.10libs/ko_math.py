@@ -87,6 +87,13 @@ def randomColor():
     import random
     return hou.Color((random.random(), random.random(), random.random()))
 
+def matrix3ToMatrix4(m: hou.Matrix3, translate: hou.Vector3) -> hou.Matrix4:
+    return hou.Matrix4((
+        m.at(0, 0), m.at(0, 1), m.at(0, 2), 0,
+        m.at(1, 0), m.at(1, 1), m.at(1, 2), 0,
+        m.at(2, 0), m.at(2, 1), m.at(2, 2), 0,
+        translate[0], translate[1], translate[2], 1
+    ))
 
 def matrixEqualTo(a: hou.Matrix4 | hou.Matrix3, b: hou.Matrix4 | hou.Matrix3) -> bool:
     if type(a) != type(b):
