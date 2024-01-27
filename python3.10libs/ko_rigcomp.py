@@ -147,6 +147,7 @@ def twoBoneIK(rig, skel, **kwargs):
     else:
         pass
         # This causes the tip to "kinda" follow the target, but not exactly... accidentially found this behavior
+        
         # mch_tip_name = ru.joinJointName("MCH", f"IKTipOut", "{comp_name}")
         # mch_tip = ru.safeAdd(rig, mch_tip_name, "TransformObject", new_nodes)
         # ru.insertBetweenParentTfo(rig, tip, mch_tip)
@@ -254,8 +255,8 @@ def reverseFoot(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     ctl_ball = ru.tfo(rig, ctl_ball_name)
     new_nodes.update([ctl_target, ctl_heel, ctl_foot_tip, ctl_ball])
 
-    (prefix, main, suffix) = ru.splitJointName(ctl_ball_name)
-    ctl_ball_rev_name = ru.joinJointName(prefix, f"{main}Rev", suffix)
+    (_, _, suffix) = ru.splitJointName(ctl_ball_name)
+    ctl_ball_rev_name = f"CTL_RevBall_{compname}"
     ctl_ball_rev = ru.duplicateNode(rig, ctl_ball, ctl_ball_rev_name, node_storage=new_nodes)
 
     # ctl_target is now controlled by ctl, so we rename it to a new MCH name
@@ -317,7 +318,7 @@ def reverseFoot(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     if use_ik_fk_switch:
         switch_control = ru.ac(rig, switch_control_name)
         op_lerp = ru.addNode(rig, f"lerp", "Lerp<Matrix4>", new_nodes)
-        ru.updateParms(rig, op_lerp, { "b": hou.Matrix4() })
+        ru.updateParms(rig, op_lerp, { "b": hou.Matrix4(1) })
         ru.connect(rig, op_mul, "result", op_lerp, "a")
         ru.connect(rig, switch_control, "x", op_lerp, "bias")
         ru.connect(rig, op_lerp, "result", op_mul2, "b")
