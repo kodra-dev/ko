@@ -1484,3 +1484,24 @@ def preparePosedTransforms(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         recurse(point)
 
     ru.setNodesColor(rig, new_nodes, color)
+
+
+def promoteTransformObjects(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    specs = kwargs['specs']
+
+    for spec in specs:
+        pattern = spec['pattern#']
+        action = spec['action#']
+        t = spec['t#']
+        r = spec['r#']
+        s = spec['s#']
+        tfos = rig.matchNodes(pattern)
+
+        for tfo in tfos:
+            if action == 'promote':
+                ru.promoteTfo(rig, tfo, t, r, s)
+            elif action == 'set':
+                ru.promoteTfo(rig, tfo, t, r, s, demote=True)
+            else:
+                raise Exception(f"Unknown action: {action}")
+    
