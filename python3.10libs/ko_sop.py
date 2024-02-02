@@ -78,5 +78,7 @@ def xform_getPreviousTransformPivotRot(pwd: hou.SopNode) -> hou.Vector3:
 
 # Sop/switchable_content
 def switchable_content_switchNodeMenu(node: hou.SopNode):
+    if not node:
+        return []
     inputs = node.inputs()
     return ko_ui.menuize([input.name() for input in inputs])

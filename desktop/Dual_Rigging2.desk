@@ -27,7 +27,7 @@ root {
         }
     }
 
-    panel panel1 -w 2571 225 1682 1173 {
+    panel panel1 -w 2588 375 1615 1031 {
         split 0.612961 H {
             tabs 0 1 {
                 pane panetab10 -a 0 -l 10 -H /obj/Iris/KEYPOSES/ -T SOP -m sceneview

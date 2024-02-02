@@ -1108,19 +1108,36 @@ def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     packed_keyposes = keyposes_geo.prims()
 
     skel = ru.computeLocalTransforms(skel)
+    joint_dict = {}
+    for p in skel.points():
+        joint_dict[p.attribValue("name")] = p.number()
 
     def keyposeLogic(pose_name, control_name, channel_name, driver_range, driven_range, use_ramp, ramp):
         keypose = [p for p in packed_keyposes if p.attribValue("name") == pose_name][0].getEmbeddedGeometry()
-        keypose = ru.computeLocalTransforms(keypose)
+        # keypose = ru.computeLocalTransforms(keypose)
+
+        posed_skel = hou.Geometry()
+        posed_skel.copy(skel)
+        for p in keypose.points():
+            joint_name = p.attribValue("name")
+            pid = joint_dict[joint_name]
+            psp = posed_skel.point(pid)
+            sp = skel.point(pid)
+            psp.setAttribValue("P", p.attribValue("P"))
+            psp.setAttribValue("transform", p.attribValue("transform"))
+        posed_skel = ru.computeLocalTransforms(posed_skel)
 
         op_weight = ru.safeAdd(rig, f"weight_{comp_name}_{pose_name}", "Value<Float>", new_nodes)
         for p in keypose.points():
             joint_name = p.attribValue("name")
-            rest_p = ku.findPointName(skel, joint_name)
+            # rest_p = ku.findPointName(skel, joint_name)
+            pid = joint_dict[joint_name]
+            sp = skel.point(pid)
+            psp = posed_skel.point(pid)
             # local_xform is in parent's space, as KineFx's convention
             # local_pose is in rest child's space
-            local_xform_posed = hou.Matrix4(p.attribValue("localtransform"))
-            local_xform_rest = hou.Matrix4(rest_p.attribValue("localtransform"))
+            local_xform_posed = hou.Matrix4(psp.attribValue("localtransform"))
+            local_xform_rest = hou.Matrix4(sp.attribValue("localtransform"))
             if kmath.matrixEqualTo(local_xform_posed, local_xform_rest):
                 continue
             local_pose_xform = local_xform_posed * local_xform_rest.inverted()
