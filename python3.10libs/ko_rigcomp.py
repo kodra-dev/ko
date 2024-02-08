@@ -1127,7 +1127,6 @@ def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         #     psp.setAttribValue("transform", p.attribValue("transform"))
         # posed_skel = ru.computeLocalTransforms(posed_skel)
 
-        printed = False
         op_weight = ru.safeAdd(rig, f"weight_{comp_name}_{pose_name}", "Value<Float>", new_nodes)
         for psp in posed_skel.points():
             joint_name = psp.attribValue("name")
@@ -1139,11 +1138,6 @@ def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
             local_xform_rest = hou.Matrix4(sp.attribValue("localtransform"))
             if kmath.matrixIsClose(local_xform_posed, local_xform_rest):
                 continue
-            if not printed:
-                print(joint_name)
-                print(local_xform_posed)
-                print(local_xform_rest)
-                printed = True
             local_pose_xform = local_xform_posed * local_xform_rest.inverted()
             local_pose_name = f"{pose_name}_{joint_name}_localpose"
             local_pose = ru.addNode(rig, local_pose_name, "Value<Matrix4>", new_nodes)
