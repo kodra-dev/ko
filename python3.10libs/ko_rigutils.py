@@ -481,7 +481,7 @@ def mirroredJointName(name: str) -> str:
     elif parts[2] == "r":
         parts[2] = "l"
     else:
-        raise Exception(f"Joint {name} has no mirrored version.")
+        return name
     return joinJointName(parts[0], parts[1], parts[2])
         
 def joinJointName(prefix: str, main: str, suffix: str) -> str:

@@ -2,6 +2,7 @@ import hou
 import apex
 import ko_ui
 import ko_sop
+import traceback
 import ko_rigutils as ru
 
 def resetRig(kwargs):
@@ -82,7 +83,11 @@ def applyRigComponent(node_for_parms, fun, require_compname=True):
     if require_compname and (not "compname" in parms or not parms["compname"]):
         raise Exception("No component name specified!")
 
-    fun(rig, skel, parms)
+    try:
+        fun(rig, skel, parms)
+    except Exception as e:
+        # Since fun can be pretty slow and Houdini will retry it if it fails, we re-raise the exception as warning
+        raise(hou.NodeWarning(traceback.format_exc()))
 
     rig.layout()
 

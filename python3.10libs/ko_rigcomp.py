@@ -1113,27 +1113,25 @@ def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         joint_dict[p.attribValue("name")] = p.number()
 
     def keyposeLogic(pose_name, control_name, channel_name, driver_range, driven_range, use_ramp, ramp):
-        keypose = [p for p in packed_keyposes if p.attribValue("name") == pose_name][0].getEmbeddedGeometry()
+        posed_skel = [p for p in packed_keyposes if p.attribValue("name") == pose_name][0].getEmbeddedGeometry()
         # keypose = ru.computeLocalTransforms(keypose)
 
-        posed_skel = hou.Geometry()
-        posed_skel.copy(skel)
-        for p in keypose.points():
-            joint_name = p.attribValue("name")
-            pid = joint_dict[joint_name]
-            psp = posed_skel.point(pid)
-            sp = skel.point(pid)
-            psp.setAttribValue("P", p.attribValue("P"))
-            psp.setAttribValue("transform", p.attribValue("transform"))
-        posed_skel = ru.computeLocalTransforms(posed_skel)
+        # posed_skel = hou.Geometry()
+        # posed_skel.copy(skel)
+        # for p in keypose.points():
+        #     joint_name = p.attribValue("name")
+        #     pid = joint_dict[joint_name]
+        #     psp = posed_skel.point(pid)
+        #     sp = skel.point(pid)
+        #     psp.setAttribValue("P", p.attribValue("P"))
+        #     psp.setAttribValue("transform", p.attribValue("transform"))
+        # posed_skel = ru.computeLocalTransforms(posed_skel)
 
         op_weight = ru.safeAdd(rig, f"weight_{comp_name}_{pose_name}", "Value<Float>", new_nodes)
-        for p in keypose.points():
-            joint_name = p.attribValue("name")
-            # rest_p = ku.findPointName(skel, joint_name)
+        for psp in posed_skel.points():
+            joint_name = psp.attribValue("name")
             pid = joint_dict[joint_name]
             sp = skel.point(pid)
-            psp = posed_skel.point(pid)
             # local_xform is in parent's space, as KineFx's convention
             # local_pose is in rest child's space
             local_xform_posed = hou.Matrix4(psp.attribValue("localtransform"))
@@ -1192,6 +1190,8 @@ def keyposeControls(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
     for spec in specs:
         if not spec["enable#"]:
+            continue
+        if not spec['posename#']:
             continue
 
         keyposeLogic(
