@@ -1,4 +1,5 @@
 import hou
+import math
 
 def fit01(value, min, max):
     return (value - min) / (max - min)
@@ -95,19 +96,19 @@ def matrix3ToMatrix4(m: hou.Matrix3, translate: hou.Vector3) -> hou.Matrix4:
         translate[0], translate[1], translate[2], 1
     ))
 
-def matrixEqualTo(a: hou.Matrix4 | hou.Matrix3, b: hou.Matrix4 | hou.Matrix3) -> bool:
+def matrixIsClose(a: hou.Matrix4 | hou.Matrix3, b: hou.Matrix4 | hou.Matrix3) -> bool:
     if type(a) != type(b):
         return False
     if isinstance(a, hou.Matrix4):
         for i in range(4):
             for j in range(4):
-                if a.at(i, j) != b.at(i, j):
+                if not math.isclose(a.at(i, j), b.at(i, j), abs_tol=1e-6):
                     return False
         return True
     elif isinstance(a, hou.Matrix3):
         for i in range(3):
             for j in range(3):
-                if a.at(i, j) != b.at(i, j):
+                if not math.isclose(a.at(i, j), b.at(i, j), abs_tol=1e-6):
                     return False
         return True
     else:
