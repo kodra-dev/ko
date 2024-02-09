@@ -84,9 +84,12 @@ def extendedLookat(forward: hou.Vector3, up: hou.Vector3,
     lookat2 = lookat(local_forward, local_up)
     return lookat2.inverted() * lookat1
 
-def randomColor():
+def randomColor() -> hou.Color:
     import random
     return hou.Color((random.random(), random.random(), random.random()))
+
+def rgbVector3(color: hou.Color) -> hou.Vector3:
+    return hou.Vector3(color.rgb())
 
 def matrix3ToMatrix4(m: hou.Matrix3, translate: hou.Vector3) -> hou.Matrix4:
     return hou.Matrix4((

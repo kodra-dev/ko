@@ -403,6 +403,14 @@ def connect(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, d
     dp = getInPort(rig, dst_node, inPortName(dst_port_name))
     rig.addWire(sp, dp)
 
+def connectToSub(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, dst_port_name: str, sub_port_name: str = None):
+    if sub_port_name == None:
+        sub_port_name = rig.nodeName(src_node) + "_" + src_port_name
+    sp = getOutPort(rig, src_node, outPortName(src_port_name))
+    super_port = getInPort(rig, dst_node, inPortName(dst_port_name))
+    sub_port = rig.addSubPort(super_port, sub_port_name)
+    rig.addWire(sp, sub_port)
+
 def getSourcePort(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int:
     port = getInPort(rig, dst_node, dst_port_name)
     srcPorts = rig.connectedPorts(port)
@@ -448,7 +456,9 @@ def updateParms(rig: apex.Graph, node: int, parms: dict):
 def xformmask(t: bool = True, r: bool = True, s: bool = True) -> int:
     return (1 if t else 0) | (2 if r else 0) | (4 if s else 0)
 
-def setNodesColor(rig: apex.Graph, nodes: set[int], color: hou.Color):
+def setNodesColor(rig: apex.Graph, nodes: set[int], color: hou.Vector3):
+    if type(color) == hou.Color:
+        color = kmath.rgbVector3(color) 
     for n in nodes:
         rig.setNodeColor(n, color)
 

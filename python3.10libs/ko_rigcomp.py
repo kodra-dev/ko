@@ -415,7 +415,9 @@ def rotationChain(rig, skel, **kwargs):
 
     primary_axis = kwargs['primaxis']
     secondary_axis = kwargs['scndaxis']
+    tertiary_axis = 3 - primary_axis - secondary_axis
     lock_secondary_axis = kwargs['lockscndaxis']
+    lock_tertiary_axis = kwargs['locktrtyaxis']
 
     joints = rig.matchNodes(tfo_pattern)
 
@@ -440,7 +442,9 @@ def rotationChain(rig, skel, **kwargs):
     op_val = ru.addNode(rig, "val", "Value<Vector3>", new_nodes)
     value = hou.Vector3(0, 0, 0)
     for i in range(3):
-        if i == primary_axis or (i == secondary_axis and not lock_secondary_axis):
+        if (i == primary_axis or
+            (i == secondary_axis and not lock_secondary_axis) or
+            (i == tertiary_axis and not lock_tertiary_axis)):
             value[i] = 1.0 / len(joints)
         else:
             value[i] = 0
@@ -478,6 +482,7 @@ def twistChain(rig, skel, **kwargs):
     kwargs['primaxis'] = kwargs['twistaxis']
     kwargs['scndaxis'] = (kwargs['twistaxis'] + 1) % 3
     kwargs['lockscndaxis'] = True
+    kwargs['locktrtyaxis'] = True
     rotationChain(rig, skel, **kwargs)
 
 
@@ -541,10 +546,14 @@ def fbikChain(rig, skel, **kwargs):
 
 
     output = ru.getNode(rig, "output")
+    op_copy = ru.addNode(rig, f"copy", "Value<Geometry>", new_nodes)
+    parmp = ru.getInPort(rig, op_copy, "parm")
+    valuep = ru.getOutPort(rig, op_copy, "value")
     outp = ru.getOutPort(rig, last_geo_op, "geo")
     inp = ru.getInPort(rig, output, "next")
     rig.setPortName(inp, "FBIKSkel")
-    rig.addWire(outp, inp)
+    rig.addWire(outp, parmp)
+    rig.addWire(valuep, inp)
 
     # Actual FBIK logic
     op_skel = ru.safeAdd(rig, f"SkelFromGeo_{compname}", "fbik::SkeletonFromGeo", new_nodes)
@@ -613,8 +622,8 @@ def fbikChain(rig, skel, **kwargs):
         driven = ru.tfo(rig, n["name"])
         ru.connect(rig, op_get_xform, "xform", driven, "xform")
 
-        # These tfos can't be manually controlled anymore, so we demote them
-        ru.promoteTfo(rig, driven, t=False, r=False, s=False, demote=True)
+        # Perhaps demoting the Tfos should be done in a separate promoteTransformObjects
+        # ru.promoteTfo(rig, driven, t=False, r=False, s=False, demote=True)
 
 
     ru.setNodesColor(rig, new_nodes, color)
@@ -678,8 +687,8 @@ def torsoTwist(rig, skel, **kwargs):
     op_invert = ru.addNode(rig, "invert", "Invert<Matrix4>", new_nodes)
     ru.connect(rig, op_mul0, "result", op_invert, "a")
     op_mul = ru.addNode(rig, "mul", "Multiply<Matrix4>", new_nodes)
-    ru.connect(rig, op_invert, "result", op_mul, "a")
-    ru.connect(rig, ctl, "xform", op_mul, "b")
+    ru.connectToSub(rig, op_invert, "result", op_mul, "b")
+    ru.connect(rig, ctl, "xform", op_mul, "a")
 
     def mch_twist_logic(driven_ctl, ratio):
         mch_name = ru.mchJointNameFromCtl(rig.nodeName(driven_ctl))
@@ -693,14 +702,19 @@ def torsoTwist(rig, skel, **kwargs):
         ru.connect(rig, op_val2, "value", op_mul2, "a")
         ru.connect(rig, mch_parent, "xform", op_mul2, "b")
         op_mul3 = ru.addNode(rig, "mul", "Multiply<Matrix4>", new_nodes)
-        ru.connect(rig, op_mul2, "result", op_mul3, "a")
         op_lerp1 = ru.addNode(rig, f"{compname}_ratio", "transform::Slerp<Matrix4>", new_nodes)
         ru.updateParms(rig, op_lerp1, {
             "a": hou.Matrix4(1),
             "bias": ratio,
         })
         ru.connect(rig, op_mul, "result", op_lerp1, "b")
-        ru.connect(rig, op_lerp1, "result", op_mul3, "b")
+        ru.connect(rig, op_mul2, "result", op_mul3, "a")
+        ru.connectToSub(rig, op_invert, "result", op_mul3, "b")
+        ru.connectToSub(rig, op_lerp1, "result", op_mul3, "b")
+        ru.connectToSub(rig, op_mul0, "result", op_mul3, "b")
+
+        # ru.connect(rig, op_lerp1, "result", op_mul3, "a")
+       # ru.connectToSub(rig, op_mul2, "result", op_mul3, "b")
         ru.connect(rig, op_mul3, "result", mch, "xform")
 
     # mch_btm: similar to mch_mid, but for ctl_btm
@@ -1324,6 +1338,9 @@ def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     slider_length = kwargs['sliderlength']
     style = kwargs['style']
     range_as_labels = kwargs['rangeaslabels']
+    fixed_orientation = kwargs['fixedorientation']
+
+    new_nodes = set()
 
     # TODO
     if style != 'xslider':
@@ -1430,12 +1447,22 @@ def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     (_, main, suffix) = ru.splitJointName(ac_name)
     slider_name = ru.joinJointName("UI", f"{main}", suffix)
     slider = ru.addNode(rig, slider_name, "AbstractControl")
-    ru.connect(rig, parent, "xform", slider, "xform")
+    if fixed_orientation:
+        op_explode = ru.addNode(rig, "explode", "transform::Explode", new_nodes)
+        ru.connect(rig, parent, "xform", op_explode, "m")
+        op_build = ru.addNode(rig, "build", "transform::Build", new_nodes)
+        ru.connect(rig, op_explode, "t", op_build, "t")
+        ru.connect(rig, op_build, "m", slider, "xform")
+        ru.connect(rig, op_build, "m", op_comb, "inputlocalxform")
+    else:
+        ru.connect(rig, parent, "xform", slider, "xform")
     slider_properties = rig.getNodeProperties(slider)
     container_control_properties = control_properties.freeze()
     container_control_properties['shapeoverride'] = slider_shape_name
     slider_properties['control'] = container_control_properties
     rig.setNodeProperties(slider, slider_properties)
+
+    ru.setNodesColor(rig, new_nodes, color)
 
 REST_SKEL_NODE_NAME = "rest"
 POSED_SKEL_TRANSFORMS_NODE_NAME = "pointtransform"

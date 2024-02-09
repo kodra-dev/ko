@@ -150,13 +150,16 @@ def menuScriptAbstractControls(rig: apex.Graph, exclude_ui=True):
     names = [rig.nodeName(ac) for ac in acs]
     if exclude_ui:
         names = [n for n in names if not n.startswith("UI_")]
+    names.sort()
     return ko_ui.menuize(names)
 
 def menuScriptJoints(skel: hou.Geometry, group: str = "*"):
     joints = skel.globPoints(group)
     if not joints:
         raise Exception(f"No joints found in group {group}!")
-    return ko_ui.menuize([joint.attribValue("name") for joint in joints])
+    names = [joint.attribValue("name") for joint in joints]
+    names.sort()
+    return ko_ui.menuize(names)
 
 def menuScriptKeyposes(geo: hou.Geometry):
     names = [p.attribValue("name") for p in geo.prims()]
