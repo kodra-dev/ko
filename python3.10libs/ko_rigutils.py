@@ -464,7 +464,7 @@ def setNodesColor(rig: apex.Graph, nodes: set[int], color: hou.Vector3):
 
 
 # CTLF = Fine control; CTLB = Blendshape control; CTLK = Keypose control
-JOINT_PREFIXES = ["CTL", "MCH", "DEF", "TGT", "CTLF", "CTLB", "CTLK", "UI"]
+JOINT_PREFIXES = ["CTL", "MCH", "DEF", "TGT", "INT", "CTLB", "CTLK", "UI"]
 JOINT_SUFFIXES = ["L", "R", "l", "r"] 
 
 def splitJointName(name: str) -> (str, str, str):
