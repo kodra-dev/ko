@@ -411,6 +411,27 @@ def connectToSub(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: i
     sub_port = rig.addSubPort(super_port, sub_port_name)
     rig.addWire(sp, sub_port)
 
+def connectFromSub(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, dst_port_name: str, sub_port_name: str = None):
+    if sub_port_name == None:
+        sub_port_name = rig.nodeName(dst_node) + "_" + dst_port_name
+    dp = getInPort(rig, dst_node, inPortName(dst_port_name))
+    super_port = getOutPort(rig, src_node, outPortName(src_port_name))
+    sub_port = rig.addSubPort(super_port, sub_port_name)
+    rig.addWire(sub_port, dp)
+
+def connectSubs(rig: apex.Graph, src_node: int, src_port_name: str, dst_node: int, dst_port_name: str,
+                src_sub_port_name: str = None, dst_sub_port_name: str = None):
+    if src_sub_port_name == None:
+        src_sub_port_name = rig.nodeName(dst_node) + "_" + dst_port_name
+    if dst_sub_port_name == None:
+        dst_sub_port_name = rig.nodeName(src_node) + "_" + src_port_name
+    sp = getOutPort(rig, src_node, outPortName(src_port_name))
+    dp = getInPort(rig, dst_node, inPortName(dst_port_name))
+    src_sub_port = rig.addSubPort(sp, src_sub_port_name)
+    dst_sub_port = rig.addSubPort(dp, dst_sub_port_name)
+    rig.addWire(src_sub_port, dst_sub_port)
+    
+
 def getSourcePort(rig: apex.Graph, dst_node: int, dst_port_name: str, must_exist: bool = True) -> int:
     port = getInPort(rig, dst_node, dst_port_name)
     srcPorts = rig.connectedPorts(port)

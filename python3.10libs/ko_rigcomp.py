@@ -1284,6 +1284,53 @@ def volumeHolder(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     ru.setNodesColor(rig, new_nodes, color)
 
 
+def simpleSpline(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    color = kwargs['nodecolor']
+    comp_name = kwargs['compname']
+
+    pattern = kwargs['tfopattern']
+    start_control_name = kwargs['startcontrol']
+    end_control_name = kwargs['endcontrol']
+    mid_control_name = kwargs['midcontrol']
+
+    order = kwargs['order'] 
+
+    new_nodes = set()
+
+    start_control = ru.tfo(rig, start_control_name)
+    end_control = ru.tfo(rig, end_control_name)
+    mid_control = ru.tfo(rig, mid_control_name)
+    tfos = rig.matchNodes(pattern)
+    tfos.sort(key=lambda tfo: rig.nodeName(tfo))
+
+
+    op_spline = ru.addNode(rig, f"{comp_name}", "rig::SplineInterpolateTransforms", new_nodes)
+    ru.updateParms(rig, op_spline, {
+        "order": order,
+    })
+    ru.connectToSub(rig, start_control, "xform", op_spline, "cvs")
+    ru.connectToSub(rig, mid_control, "xform", op_spline, "cvs")
+    ru.connectToSub(rig, end_control, "xform", op_spline, "cvs")
+
+    op_flip = ru.addNode(rig, f"rotate_around_y", "transform::Build", new_nodes)
+    ru.updateParms(rig, op_flip, {
+        "r": hou.Vector3(0, 180, 0),
+        "s": hou.Vector3(1, 1, 1),
+    })
+    index = 0
+    for tfo in tfos:
+        op_mul = ru.addNode(rig, f"mul", "Multiply<Matrix4>", new_nodes)   
+        ru.connect(rig, op_flip, "m", op_mul, "a")
+        ru.connectSubs(rig, op_spline, "resampled", op_mul, "b", str(index), str(index))
+        ru.connect(rig, op_mul, "result", tfo, "xform")
+        index += 1
+    # The last one is unused since we're going to control it with the end control directly
+    op_dummy = ru.addNode(rig, f"dummy", "Value<Matrix4>", new_nodes)
+    ru.connectFromSub(rig, op_spline, "resampled", op_dummy, "parm")
+        
+    ru.setNodesColor(rig, new_nodes, color)
+
+
 ### Not so "component-like" functions below
 
 def tagsFromJointGroups(rig: apex.Graph, skel: hou.Geometry, **kwargs):
