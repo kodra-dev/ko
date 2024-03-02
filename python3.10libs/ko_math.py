@@ -26,6 +26,15 @@ def lerp(a, b, bias):
                            a[3] + (b[3] - a[3]) * bias)
     raise ValueError(f"Can't lerp {a} and {b}")
 
+def fromPrimaryAxis(axis: int) -> hou.Vector3:
+    if axis == 0:
+        return hou.Vector3(1, 0, 0)
+    if axis == 1:
+        return hou.Vector3(0, 1, 0)
+    if axis == 2:
+        return hou.Vector3(0, 0, 1)
+    raise ValueError(f"Invalid axis {axis}")
+
 
 def lerpMatrix4(a, b, biases):
     t_bias, r_bias, s_bias = biases

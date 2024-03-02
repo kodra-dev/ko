@@ -645,8 +645,9 @@ def torsoTwist(rig, skel, **kwargs):
     mid_twist_ratio = kwargs['midtwistratio']
     btm_twist_ratio = kwargs['btmtwistratio']
 
-
     twist_axis = kwargs['twistaxis']
+    global_twist_axis = kwargs['globaltwistaxis']
+    auto_global_twist_axis = kwargs['autoglobaltwistaxis']
 
     fbik_kwargs = kwargs.copy()
     clt_btm_name = ru.ctlJointName(f"{compname}_Btm")
@@ -673,16 +674,21 @@ def torsoTwist(rig, skel, **kwargs):
     ctl = ru.safeAdd(rig, ctl_name, "TransformObject", new_nodes)
     ctl_btm = ru.tfo(rig, clt_btm_name)
     ctl_btm_xform = ru.tfoRestTransform(rig, ctl_btm)
-    ctl_xlate = ctl_btm_xform.extractTranslates()
-    ctl_xform = kmath.lookatAnyY(twist_axis, ctl_xlate)
+    ctl_top = ru.tfo(rig, clt_top_name)
+    ctl_top_xform = ru.tfoRestTransform(rig, ctl_top)
+    ctl_btm_xlate = ctl_btm_xform.extractTranslates()
+    global_axis = global_twist_axis
+    if auto_global_twist_axis:
+        global_axis = ctl_top_xform.extractTranslates() - ctl_btm_xlate
+    ctl_xform = kmath.lookatAnyY(global_axis, ctl_btm_xlate)
     ru.setParentTfo(rig, ctl, ctl_parent)
     ru.setTfoRestTransform(rig, ctl, ctl_xform)
 
     ctl_rest_local = ru.tfoRestLocal(rig, ctl)
-    op_val = ru.addNode(rig, f"{ctl_name}_restlocal", "Value<Matrix4>", new_nodes)
-    ru.updateParms(rig, op_val, { "parm": ctl_rest_local })
+    op_axis = ru.addNode(rig, f"{ctl_name}_restlocal", "Value<Matrix4>", new_nodes)
+    ru.updateParms(rig, op_axis, { "parm": ctl_rest_local })
     op_mul0 = ru.addNode(rig, f"{ctl_name}_inherited", "Multiply<Matrix4>", new_nodes)
-    ru.connect(rig, op_val, "value", op_mul0, "a")
+    ru.connect(rig, op_axis, "value", op_mul0, "a")
     ru.connect(rig, ctl_parent, "xform", op_mul0, "b")
     op_invert = ru.addNode(rig, "invert", "Invert<Matrix4>", new_nodes)
     ru.connect(rig, op_mul0, "result", op_invert, "a")
@@ -714,7 +720,7 @@ def torsoTwist(rig, skel, **kwargs):
         ru.connectToSub(rig, op_mul0, "result", op_mul3, "b")
 
         # ru.connect(rig, op_lerp1, "result", op_mul3, "a")
-       # ru.connectToSub(rig, op_mul2, "result", op_mul3, "b")
+        # ru.connectToSub(rig, op_mul2, "result", op_mul3, "b")
         ru.connect(rig, op_mul3, "result", mch, "xform")
 
     # mch_btm: similar to mch_mid, but for ctl_btm
@@ -726,10 +732,38 @@ def torsoTwist(rig, skel, **kwargs):
 
     # fbik_target = ru.getDestNode(rig, ctl_mid, "xform", lambda n: rig.callbackName(n) == "fbik::Target")
 
-    ctl_top = ru.tfo(rig, clt_top_name)
     ru.setParentTfo(rig, ctl_top, ctl, compensate_xform=True)
 
     ru.promoteTfo(rig, ctl, t=False, r=True, s=False)
+
+    if kwargs['twistparent']:
+        parent_twist_ratio = kwargs['parenttwistratio'] 
+        mch_og_parent = ru.duplicateNode(rig, ctl_parent, f"MCH_OG_{ctl_parent_name}", hijack_outputs=True, node_storage=new_nodes)
+        op_point_transforms = ru.getSetPointTransfromsNode(rig)
+        ru.connect(rig, ctl_parent, "xform", op_point_transforms, ctl_parent_name)
+        ru.connect(rig, mch_og_parent, "xform", ctl_parent, "xform")
+        ru.setParentTfo(rig, ctl, mch_og_parent, compensate_xform=False)
+        ru.promoteTfo(rig, ctl_parent, t=False, r=False, s=False, demote=True)
+        op_axis = ru.addNode(rig, f"{compname}_twist_axis", "Value<Vector3>", new_nodes)
+        ru.updateParms(rig, op_axis, { "parm": kmath.fromPrimaryAxis(twist_axis) })
+        op_angle_axis = ru.addNode(rig, f"{compname}_parent_local_twist", "transform::RotateAboutAxis<Matrix4>", new_nodes)
+        ru.updateParms(rig, op_angle_axis, { "m": hou.Matrix4(1) })
+        ru.connect(rig, op_axis, "value", op_angle_axis, "axis")
+        axis = 'x' if twist_axis == 0 else ('y' if twist_axis == 1 else 'z')
+        op_vec_float = ru.addNode(rig, f"Vector3ToFloat", "Vector3ToFloat", new_nodes)
+        ru.connect(rig, ctl, "r", op_vec_float, "vector")
+        op_mul = ru.addNode(rig, f"mul", "Multiply<Float>", new_nodes)
+        ru.updateParms(rig, op_mul, { "a": parent_twist_ratio })
+        ru.connectToSub(rig, op_vec_float, axis, op_mul, "b")
+        ru.connect(rig, op_mul, "result", op_angle_axis, "angle")
+        op_mul2 = ru.addNode(rig, f"{compname}_twisted_parent_xform", "Multiply<Matrix4>", new_nodes)
+        ru.connect(rig, op_angle_axis, "result", op_mul2, "a")
+        ru.connectToSub(rig, mch_og_parent, "xform", op_mul2, "b")
+        ru.connect(rig, op_mul2, "result", ctl_parent, "xform")
+
+        # HACK: not sure where to put this code...
+        ru.restoreDefParentingIfTgt(rig, ctl_parent)
+
 
     ru.setNodesColor(rig, new_nodes, color)
 

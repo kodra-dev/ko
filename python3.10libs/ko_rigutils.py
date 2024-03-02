@@ -174,6 +174,13 @@ def getParentTfo(rig: apex.Graph, child: int, must_exist: bool = True) -> int:
         raise Exception(f"Node {rig.nodeName(child)} has no parent.")
     return None
 
+def restoreDefParentingIfTgt(rig: apex.Graph, tgt: int):
+    tgt_name = rig.nodeName(tgt)
+    if tgt_name.startswith("TGT_"):
+        def_name = tgt_name.replace("TGT_", "DEF_")
+        def_node = tfo(rig, def_name)
+        setParentTfo(rig, def_node, tgt, compensate_xform=True)
+
 
 def getOriginalParentTfo(rig: apex.Graph, skel: hou.Geometry, child: int, must_exist: bool = True) -> int:
     child_name = rig.nodeName(child)
@@ -235,6 +242,9 @@ def getParmsNode(rig: apex.Graph) -> int:
 
 def getOutputNode(rig: apex.Graph) -> int:
     return getNode(rig, "%callback(__binding__)")
+
+def getSetPointTransfromsNode(rig: apex.Graph) -> int:
+    return getNode(rig, "%callback(SetPointTransforms) & pointtransform")
 
 def setUpBlendshapeCoreNode(rig: apex.Graph, basename: str, node_storage: set[int]) -> int:
     op_core = safeAdd(rig, "ApplyBlendshapes", "sop::kinefx::characterblendshapescore",
