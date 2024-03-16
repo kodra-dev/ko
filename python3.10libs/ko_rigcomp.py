@@ -143,7 +143,13 @@ def twoBoneIK(rig, skel, **kwargs):
 
     if tip_follow_control:
         # ru.setParentTfo(rig, tip, ctl_target, compensate_xform=True)
-        ru.connect(rig, ctl_target, "xform", tip, "xform")
+        tip_xform = ru.getOriginalTransform(rig, skel, tip)
+        ctl_xform = ru.getOriginalTransform(rig, skel, ctl_target)
+        mch_following = ru.addNode(rig, f"MCH_TipFollowing_{tip_name}", "rig::FkTransform", new_nodes)
+        rest_local = tip_xform * ctl_xform.inverted()
+        ru.updateParms(rig, mch_following, { "restlocal": rest_local })
+        ru.connect(rig, ctl_target, "xform", mch_following, "parent")
+        ru.connect(rig, mch_following, "xform", tip, "xform")
     else:
         pass
         # This causes the tip to "kinda" follow the target, but not exactly... accidentially found this behavior
