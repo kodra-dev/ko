@@ -1429,7 +1429,7 @@ def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
     new_nodes = set()
 
-    # TODO
+    # TODO: yslider, xypane
     if style != 'xslider':
         raise Exception("Only xslider style is supported at this point")
     if range_as_labels and not override_properties:
@@ -1531,8 +1531,7 @@ def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     ru.connect(rig, scaled_offset, "result", op_comb, "t")
 
     ac_name = rig.nodeName(ac)
-    (_, main, suffix) = ru.splitJointName(ac_name)
-    slider_name = ru.joinJointName("UI", f"{main}", suffix)
+    slider_name = 'UI_' + ac_name
     slider = ru.addNode(rig, slider_name, "AbstractControl")
     if fixed_orientation:
         op_explode = ru.addNode(rig, "explode", "transform::Explode", new_nodes)
