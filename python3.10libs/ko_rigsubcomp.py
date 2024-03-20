@@ -65,3 +65,7 @@ def mappingLogic(rig, value_in_port, value_out_port, driver_range, driven_range,
         })
         rig.addWire(ru.getOutPort(rig, op_remap, "result"), value_out_port)
 
+def get_local_pose(rig, node, new_nodes):
+    op_local_pose = ru.addNode(rig, f"local_pose", "ko::LocalPose", new_nodes)
+    rig.addWire(ru.getInPort(rig, op_local_pose, "input"), node)
+    return ru.getOutPort(rig, op_local_pose, "output")

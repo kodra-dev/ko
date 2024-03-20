@@ -491,6 +491,109 @@ def twistChain(rig, skel, **kwargs):
     kwargs['locktrtyaxis'] = True
     rotationChain(rig, skel, **kwargs)
 
+def autoSmoothTwist(rig, skel, **kwargs):
+    compname = kwargs['compname']
+    color = kwargs['nodecolor']
+
+    tfo_pattern = kwargs['tfopattern']
+    twist_axis = kwargs['twistaxis']
+    
+    ori_skel_name = kwargs['packedoriskeleton']
+    if ori_skel_name == '':
+        ori_skel = skel
+    else:
+        ori_skel = kwargs['other_geos'][ori_skel_name]
+
+    new_nodes = set()
+
+    ori_skel = ru.computeLocalTransforms(ori_skel)
+
+    new_nodes = set()
+
+    joints = rig.matchNodes(tfo_pattern)
+    joints.sort(key=lambda j: rig.nodeName(j))
+
+    root = joints[0]
+    src = ru.getSourceNode(rig, root, "xform")
+    if src == -1:
+        raise Exception(f"""Joint {rig.nodeName(root)} has no xform source.
+                        We only support joint that's directly controlled by xform parameter for now.""")
+    # src_name = rig.nodeName(src)
+    ori_parent = ru.getOriginalParentTfo(rig, ori_skel, root)
+    root_ori_restlocal = ru.getOriginalRestLocal(rig, ori_skel, root)
+
+    root_new_parentspace = ru.addNode(rig, f"{compname}_root_parentspace", "rig::ExtractLocalTransform", new_nodes)
+    src_port = ru.getSourcePort(rig, root, "xform")
+    dst_port = ru.getInPort(rig, root_new_parentspace, "xform")
+    rig.addWire(src_port, dst_port)
+    ru.connect(rig, ori_parent, "xform", root_new_parentspace, "parent")
+    root_ori_parentspace = ru.addNode(rig, f"{compname}_root_ori_parentspace", "Value<Matrix4>", new_nodes)
+    ru.updateParms(rig, root_ori_parentspace, { "parm": root_ori_restlocal })
+
+    root_new_localpose = ru.addNode(rig, f"{compname}_root_new_localpose", "rig::ExtractLocalTransform", new_nodes)
+    ru.connect(rig, root_new_parentspace, "localxform", root_new_localpose, "xform")
+    ru.connect(rig, root_ori_parentspace, "value", root_new_localpose, "parent")
+    
+    op_convert = ru.addNode(rig, "convert", "Convert<Matrix4,Vector4>", new_nodes)
+    ru.connect(rig, root_new_localpose, "localxform", op_convert, "a")
+
+    axis = None
+    if twist_axis == 0:
+        axis = hou.Vector3(1, 0, 0)
+    elif twist_axis == 1:
+        axis = hou.Vector3(0, 1, 0)
+    elif twist_axis == 2:
+        axis = hou.Vector3(0, 0, 1) 
+    else:
+        raise Exception(f"Invalid twist axis {twist_axis}")
+
+    op_axis = ru.addNode(rig, "val", "Value<Vector3>", new_nodes)
+    ru.updateParms(rig, op_axis, { "parm": axis })
+
+    op_decomp = ru.addNode(rig, "decomp", "ko::SwingTwistDecomp2", new_nodes)
+    ru.connect(rig, op_convert, "b", op_decomp, "q")
+    ru.connect(rig, op_axis, "value", op_decomp, "twistaxis")
+    op_explode = ru.addNode(rig, "explode", "transform::Explode", new_nodes)    
+    ru.connect(rig, root_new_localpose, "localxform", op_explode, "m")
+
+    for i in range(0, len(joints)):
+        joint = joints[i]
+        ratio = 1.0 / len(joints)
+        op_mul = ru.addNode(rig, f"mul_{i}", "Multiply<Float>", new_nodes)
+        op_ratio = ru.addNode(rig, f"ratio_{i}", "Value<Float>", new_nodes)
+        ru.updateParms(rig, op_ratio, { "parm": ratio })
+        ru.connect(rig, op_decomp, "twistradians", op_mul, "a")
+        ru.connect(rig, op_ratio, "value", op_mul, "b")
+        op_angle_axis = ru.addNode(rig, f"angle_axis_{i}", "ko::QAngleAxis", new_nodes)
+        ru.connect(rig, op_mul, "result", op_angle_axis, "radians")
+        ru.connect(rig, op_axis, "value", op_angle_axis, "axis")
+        op_q_mul = ru.addNode(rig, f"q_mul_{i}", "ko::QMultiply", new_nodes)
+        ru.connect(rig, op_decomp, "swing", op_q_mul, "a")
+        ru.connect(rig, op_angle_axis, "result", op_q_mul, "b")
+        op_convert2 = ru.addNode(rig, f"convert2_{i}", "Convert<Vector4,Matrix3>", new_nodes)
+        ru.connect(rig, op_q_mul, "result", op_convert2, "a")
+        op_make_matrix = ru.addNode(rig, f"{compname}_make_xform_{i}", "ko::MakeTransform", new_nodes)
+        ru.connect(rig, op_convert2, "b", op_make_matrix, "rotscl")
+        ru.connect(rig, op_explode, "t", op_make_matrix, "translate")
+
+        if i == 0:
+            op_smoothed_root = ru.addNode(rig, f"{compname}_smoothed_root", "rig::FkTransform", new_nodes)
+            ru.updateParms(rig, op_smoothed_root, { "restlocal": root_ori_restlocal })
+            ru.connect(rig, op_make_matrix, "xform", op_smoothed_root, "local")
+            ru.connect(rig, ori_parent, "xform", op_smoothed_root, "parent")
+            ru.connect(rig, op_smoothed_root, "xform", joint, "xform")
+            # ru.connect(rig, op_make_matrix, "xform", joint, "xform")
+        else:
+            op_mul2 = ru.addNode(rig, f"mul2_{i}", "Multiply<Vector3,Float>", new_nodes)
+            ru.connect(rig, op_axis, "value", op_mul2, "a")
+            ru.connect(rig, op_mul, "result", op_mul2, "b")
+            op_rot = ru.addNode(rig, f"rot_{rig.nodeName(joint)}", "RadiansToDegrees<Vector3>", new_nodes)
+            ru.connect(rig, op_mul2, "result", op_rot, "radians")
+            ru.connect(rig, op_rot, "degrees", joint, "r")
+    
+    ru.setNodesColor(rig, new_nodes, color)
+
+
 
 def fbikChain(rig, skel, **kwargs):
     compname = kwargs['compname']
@@ -879,8 +982,13 @@ def driveBlendshapes(rig: apex.Graph, skel: hou.Geometry, **kwargs):
 
         return (driver, set_blendshape)
 
-    i = 0
     last_skel_geo = ru.getLatestPosedSkelNode(rig)
+    op_skel = ru.addNode(rig, "skel_copy", "Value<Geometry>", new_nodes)
+    ru.connect(rig, last_skel_geo, "geo", op_skel, "parm")
+    ru.updateLatestPosedSkelNode(rig, op_skel)
+    last_skel_geo = op_skel
+
+    i = 0
     for i in range(len(specs)):
         spec = specs[i]
         if not spec["enable#"]:
@@ -1542,6 +1650,10 @@ def abstractControlConfig(rig: apex.Graph, skel: hou.Geometry, **kwargs):
         ru.connect(rig, op_build, "m", op_comb, "inputlocalxform")
     else:
         ru.connect(rig, parent, "xform", slider, "xform")
+
+    ru.addDummyInPlace(rig, slider, "x", "Float")
+    ru.addDummyInPlace(rig, slider, "y", "Float")
+
     slider_properties = rig.getNodeProperties(slider)
     container_control_properties = control_properties.freeze()
     container_control_properties['shapeoverride'] = slider_shape_name

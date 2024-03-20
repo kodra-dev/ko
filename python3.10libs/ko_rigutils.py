@@ -34,6 +34,10 @@ def tfo(rig: apex.Graph, name: str, must_exist: bool = True) -> int:
 def ac(rig: apex.Graph, name: str, must_exist: bool = True) -> int:
     return getNode(rig, f"%callback(AbstractControl) & {name}", must_exist=must_exist)
 
+def addDummyInPlace(rig: apex.Graph, dst_node: int, dst_port_name: str, type: str) -> int:
+    dummy = addNode(rig, "dummy", f"Value<{type}>")
+    connect(rig, dummy, "value", dst_node, dst_port_name)
+
 # Most of these Tfo functions support FkTransform too
 def tfoRestLocal(rig: apex.Graph, tfo: int) -> hou.Matrix4:
     return rig.getNodeParms(tfo)["restlocal"] or hou.Matrix4(1)
@@ -319,8 +323,12 @@ def promoteAc(rig: apex.Graph, ac: int, x: bool = True, y: bool = True, demote: 
     name = rig.nodeName(ac)
     if x:
         rig.promoteInput(getInPort(rig, ac, "x"), parms_node, f"{name}_x")
+    else:
+        addDummyInPlace(rig, ac, f"x", "Float")
     if y:
         rig.promoteInput(getInPort(rig, ac, "y"), parms_node, f"{name}_y")
+    else:
+        addDummyInPlace(rig, ac, f"y", "Float")
     
 
 
