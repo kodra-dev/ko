@@ -8,32 +8,33 @@ radial menu set main
 root {
     split 0.327556 V {
         tabs 0 1 {
-            pane panetab1 -a 0 -l 0 -H /obj/Iris/KEYPOSES/ -T SOP -m neteditor
-            pane panetab2 -a 0 -l 10 -H /obj/Iris/KEYPOSES/ -T SOP -m chaneditor
-            pane panetab3 -a 0 -l 10 -H /obj/Iris/KEYPOSES/ -T SOP -m iprviewer
+            pane panetab1 -a 0 -l 0 -H /obj/ -T OBJ -m neteditor
+            pane panetab2 -a 0 -l 10 -H /img/ -T IMG -m chaneditor
+            pane panetab3 -a 0 -l 10 -H /img/ -T IMG -m iprviewer
             pane panetab4 -a 0 -l 10 -H /img/ -T IMG -m imageview
             pane panetab13 -a 0 -l 10 -H /ch/ -T CHOPNET -m channelview
-            pane panetab11 -a 0 -l 10 -H /obj/Iris/KEYPOSES/ -T SOP -m details
+            pane panetab11 -a 0 -l 10 -H /img/ -T IMG -m details
             pane panetab8 -a 0 -l 0 -H /tasks/ -T TOPNET -m neteditor
         }
         split 0.5 H {
             tabs 0 1 {
-                pane panetab6 -a 0 -l 10 -H /obj/Iris/KEYPOSES/ -T SOP -m details
+                pane panetab6 -a 0 -l 10 -H /img/ -T IMG -m details
             }
             tabs 1 1 {
-                pane panetab7 -a 0 -l 10 -H /obj/Iris/KEYPOSES/ -T SOP -m pythonpanel
-                pane panetab5 -a 0 -l 10 -H /obj/Iris/KEYPOSES/ -T SOP -m pythonpanel
+                pane panetab7 -a 0 -l 10 -H /img/ -T IMG -m pythonpanel
+                pane panetab5 -a 0 -l 10 -H /img/ -T IMG -m pythonpanel
             }
         }
     }
 
-    panel panel1 -w 2588 375 1615 1031 {
-        split 0.612961 H {
+    panel panel1 -w 2587 27 1290 823 -X {
+        split 0.523958 H {
             tabs 0 1 {
-                pane panetab10 -a 0 -l 10 -H /obj/Iris/KEYPOSES/ -T SOP -m sceneview
+                pane panetab10 -a 0 -l 10 -H /obj/ -T OBJ -m sceneview
             }
-            tabs 0 1 {
-                pane panetab9 -a 0 -l 0 -H /obj/Iris/KEYPOSES/ -T SOP -m sceneview
+            tabs 1 1 {
+                pane panetab9 -a 0 -l 0 -H /obj/ -T OBJ -m sceneview
+                pane panetab12 -a 0 -l 10 -H /img/ -T IMG -m imageview
             }
         }
     }
