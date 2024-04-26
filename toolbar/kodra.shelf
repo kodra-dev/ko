@@ -24,9 +24,12 @@ ko_dev.reloadKoModules() ]]></script>
   </tool>
 
   <tool name="open_in_explorer" label="Open in Explorer" icon="hicon:/SVGIcons.index?COMMON_file.svg">
+    <helpText><![CDATA[= Open in Explorer =
+
+""" Open $HIP in Explorer (Ctrl: input any path) """]]></helpText>
     <script scriptType="python"><![CDATA[import ko_dev
 
-ko_dev.openInExplorer()]]></script>
+ko_dev.openInExplorer(show_dialog=kwargs['ctrlclick'])]]></script>
   </tool>
 
   <tool name="recook_python" label="Recook Python" icon="MISC_python">

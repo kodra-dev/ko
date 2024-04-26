@@ -1432,6 +1432,32 @@ def volumeHolder(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     ru.setNodesColor(rig, new_nodes, color)
 
 
+def temporaryParent(rig: apex.Graph, skel: hou.Geometry, **kwargs):
+    color = kwargs['nodecolor']
+    comp_name = kwargs['compname']
+
+    new_nodes = set()
+
+    specs = kwargs['specs']
+
+    for spec in specs:
+        if not spec["enable#"]:
+            continue
+
+        parent_name = spec['parent#']
+        child_name = spec['child#']
+        parent = ru.tfo(rig, parent_name)
+        child = ru.tfo(rig, child_name)
+        child_ori_xform = ru.getOriginalTransform(rig, skel, child)
+        parent_ori_xform = ru.getOriginalTransform(rig, skel, parent)
+        new_rest_local = child_ori_xform * parent_ori_xform.inverted()
+        ru.updateParms(rig, child, { "restlocal": new_rest_local })
+        ru.connect(rig, parent, "xform", child, "parent")
+        ru.connect(rig, parent, "localxform", child, "parentlocal")
+
+    ru.setNodesColor(rig, new_nodes, color)
+
+
 def simpleSpline(rig: apex.Graph, skel: hou.Geometry, **kwargs):
     color = kwargs['nodecolor']
     comp_name = kwargs['compname']

@@ -4,9 +4,13 @@ import sys
 import subprocess
 import importlib
 
-def openInExplorer():
-    path = hou.getenv("HIP")
-    os.startfile(path)
+def openInExplorer(show_dialog=False):
+    if show_dialog:
+        (_, path) = hou.ui.readInput("Opening:", buttons=("OK",), initial_contents="$HIP")
+    else:
+        path = "$HIP"
+
+    os.startfile(hou.text.expandString(path))
 
 def reloadKoModules():
     loaded_modules = list(sys.modules.keys())
