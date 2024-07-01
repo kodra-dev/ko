@@ -1435,6 +1435,13 @@ soptoolutils.genericTool(kwargs, 'groupcreate')]]></script>
     <script scriptType="python"><![CDATA[import toolutils
 import soptoolutils
 
+import os
+
+dest, name = hou.ui.readInput("Name: ", buttons=("/obj", "Sibling"))
+
+if not name:
+    name = "extracted"
+
 activepane = toolutils.activePane(kwargs)
 if activepane.type() != hou.paneTabType.SceneViewer:
     raise hou.Error("This tool cannot run in the current pane")
@@ -1453,21 +1460,36 @@ if len(selection.nodes()) == 0:
     raise hou.Error("Nothing was selected.")
 
 # Create a new SOP container with the merged geometry
-container = soptoolutils.createSopNodeContainer(scene_viewer, "extract_object1")
-merge_sop = selection.mergedNode(container, nodetypename, True, True)
+if dest == 0:
+    container = soptoolutils.createSopNodeContainer(scene_viewer, name)
+    merge_sop = selection.mergedNode(container, nodetypename, True, True)
+elif dest == 1:
+    node = selection.nodes()[0]
+    container = node.parent()
+    merge_sop = container.createNode('object_merge', 'object_merge')
+    relpath = os.path.relpath(node.path(), merge_sop.path()).replace("\\", "/")
+    merge_sop.parm('objpath1').set(relpath)
+    merge_sop.parm('group1').set(selection.mergedSelectionString())
+
+merge_sop.moveToGoodPosition()
+
 # Turn back on the display flag for merged nodes
 for sop in selection.nodes():
     sop.parent().setDisplayFlag(True)
 
+stash_sop = merge_sop.parent().createNode('stash', name)
+stash_sop.setInput(0, merge_sop)
+stash_sop.parm("stashinput").pressButton()
+
 # Change our viewer to the new object
-scene_viewer.setPwd(merge_sop.parent())
-merge_sop.setDisplayFlag(True)
-merge_sop.setRenderFlag(True)
-merge_sop.setHighlightFlag(True)
-merge_sop.setCurrent(True, True)
-merge_sop.moveToGoodPosition()
-toolutils.homeToSelectionNetworkEditorsFor(merge_sop)
-scene_viewer.enterCurrentNodeState()]]></script>
+scene_viewer.setPwd(stash_sop.parent())
+stash_sop.setDisplayFlag(True)
+stash_sop.setRenderFlag(True)
+stash_sop.setHighlightFlag(True)
+stash_sop.setCurrent(True, True)
+stash_sop.moveToGoodPosition(True, False)
+toolutils.homeToSelectionNetworkEditorsFor(stash_sop)
+# scene_viewer.enterCurrentNodeState()]]></script>
   </tool>
 
   <tool name="object_movetopivot" label="Move Center to Pivot" icon="SHELF_move_center_to_pivot">
