@@ -1,0 +1,94 @@
+{
+	"fileversion":"20.0.653",
+	"name":"textureedit",
+	"categories":"Modeling",
+	"pane":"scene",
+	"label":"UV Editing",
+	"type":"submenu",
+	"items":{
+		"0":{
+			"label":"Edit",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"UV Transform",
+					"type":"script_action",
+					"icon":"SOP_uvtransform",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_uvtransform')"
+				},
+				"1":{
+					"label":"UV Edit",
+					"type":"script_action",
+					"icon":"SOP_uvedit",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_uvedit')"
+				},
+				"2":{
+					"label":"UV Brush",
+					"type":"script_action",
+					"icon":"SOP_uvbrush",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_uvbrush')"
+				},
+				"4":{
+					"label":"UV Quick Shade",
+					"type":"script_action",
+					"icon":"SOP_uvquickshade",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_uvquickshade')"
+				},
+				"6":{
+					"label":"UV Smooth",
+					"type":"script_action",
+					"icon":"SOP_smooth",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_uvsmooth')"
+				},
+				"7":{
+					"label":"UV Fuse",
+					"type":"script_action",
+					"icon":"SOP_uvfuse",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_uvfuse')"
+				}
+			}
+		},
+		"1":{
+			"label":"UV Project",
+			"type":"script_action",
+			"icon":"SOP_uvproject",
+			"script":"radialmenu.runShelfTool(kwargs, 'sop_uvproject')"
+		},
+		"2":{
+			"label":"UV Texture",
+			"type":"script_action",
+			"icon":"SOP_texture",
+			"script":"radialmenu.runShelfTool(kwargs, 'sop_texture')"
+		},
+		"3":{
+			"label":"UV Unwrap",
+			"type":"script_action",
+			"icon":"SOP_uvunwrap",
+			"script":"radialmenu.runShelfTool(kwargs, 'sop_uvunwrap')"
+		},
+		"4":{
+			"label":"UV Layout",
+			"type":"script_action",
+			"icon":"SOP_uvlayout-3.0",
+			"script":"radialmenu.runShelfTool(kwargs, 'sop_uvlayout::3.0')"
+		},
+		"5":{
+			"label":"Labs Auto UV ",
+			"type":"script_action",
+			"icon":"opdef:/labs::Sop/autouv?IconSVG",
+			"script":"radialmenu.runShelfTool(kwargs, 'labs::sop_autouv')"
+		},
+		"6":{
+			"label":"UV Flatten",
+			"type":"script_action",
+			"icon":"SOP_uvflatten",
+			"script":"radialmenu.runShelfTool(kwargs, 'sop_uvflatten::3.0')"
+		},
+		"7":{
+			"label":"UV Pelt",
+			"type":"script_action",
+			"icon":"SOP_uvpelt",
+			"script":"radialmenu.runShelfTool(kwargs, 'sop_uvpelt::2.0')"
+		}
+	}
+}

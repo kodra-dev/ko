@@ -1,0 +1,2147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <shelfSet name="polymarvels_modeling_2" label="PolyMarvels Modeling_2">
+    <memberToolshelf name="rendering"/>
+    <memberToolshelf name="solaris_"/>
+    <memberToolshelf name="volume"/>
+    <memberToolshelf name="Attributes"/>
+    <memberToolshelf name="mask"/>
+    <memberToolshelf name="labs_toolset"/>
+  </shelfSet>
+
+  <toolshelf name="mask" label="Masks">
+    <memberTool name="sop_maskalonggeometry"/>
+    <memberTool name="sop_maskbyambientocclusion"/>
+    <memberTool name="sop_maskbyfeature"/>
+    <memberTool name="sop_maskfromgeometry"/>
+    <memberTool name="sop_maskfromtarget"/>
+    <memberTool name="sop_layoutbrushpaint"/>
+    <memberTool name="geometry_paintmask"/>
+    <memberTool name="object_crowdpaintdensity"/>
+    <memberTool name="geometry_paintcolor"/>
+    <memberTool name="sop_paint"/>
+  </toolshelf>
+
+  <toolshelf name="Attributes" label="Attributes">
+    <memberTool name="sop_attribcreate::2.0"/>
+    <memberTool name="sop_attribnoise::2.0"/>
+    <memberTool name="geometry_attribnoisefloat"/>
+    <memberTool name="geometry_attribnoisevector"/>
+    <memberTool name="sop_attribadjustcolor"/>
+    <memberTool name="sop_attribadjustfloat"/>
+    <memberTool name="sop_attribadjustinteger"/>
+    <memberTool name="sop_attribadjustvector"/>
+    <memberTool name="sop_attribexpression"/>
+    <memberTool name="sop_attribpaint"/>
+    <memberTool name="sop_attribtransfer"/>
+    <memberTool name="sop_attribblur"/>
+    <memberTool name="sop_attribcombine"/>
+    <memberTool name="sop_attribrandomize"/>
+    <memberTool name="sop_attribpromote"/>
+    <memberTool name="sop_attribcopy"/>
+    <memberTool name="sop_attribfill"/>
+    <memberTool name="geometry_attribfromgroup"/>
+    <memberTool name="sop_attribfrommap"/>
+    <memberTool name="sop_attribmirror"/>
+    <memberTool name="sop_attribdelete"/>
+    <memberTool name="sop_attribute"/>
+    <memberTool name="sop_attribvop"/>
+    <memberTool name="sop_attribwrangle"/>
+  </toolshelf>
+
+  <toolshelf name="labs_toolset" label="SideFX Labs">
+    <memberTool name="labs::enable_go_z"/>
+    <memberTool name="labs::autouv"/>
+    <memberTool name="labs::sop_fast_remesh::1.0"/>
+    <memberTool name="remeshgrid"/>
+    <memberTool name="labs::ruler"/>
+    <memberTool name="labs::sop_thicken::1.0"/>
+    <memberTool name="labs::sop_box_clip"/>
+    <memberTool name="labs::sop_2d_wavefunctioncollapse::1.1"/>
+    <memberTool name="labs::sop_av_photogrammetry::5.0"/>
+    <memberTool name="labs::sop_cable_generator::2.0"/>
+    <memberTool name="labs::calculate_occlusion::3.0"/>
+    <memberTool name="labs::sop_calculate_slope"/>
+    <memberTool name="labs::sop_calculate_thickness::1.0"/>
+    <memberTool name="labs::sop_extract_silhouette::1.0"/>
+    <memberTool name="labs::top_cut_geometry_to_partitions"/>
+    <memberTool name="labs::sop_cylinder_generator"/>
+    <memberTool name="labs::sop_delete_small_parts"/>
+    <memberTool name="labs::sop_disc_generator"/>
+    <memberTool name="labs::sop_dissolve_flat_edges::1.0"/>
+    <memberTool name="labs::sop_edge_damage::2.0"/>
+    <memberTool name="labs::sop_exoside_quadremesher::1.0"/>
+    <memberTool name="labs::sop_goz_export"/>
+    <memberTool name="labs::sop_goz_import"/>
+    <memberTool name="labs::sop_group_by_attribute::1.0"/>
+    <memberTool name="labs::sop_group_by_color"/>
+    <memberTool name="labs::sop_group_curve_corners"/>
+    <memberTool name="labs::sop_group_edge_loop"/>
+    <memberTool name="labs::sop_group_expand"/>
+    <memberTool name="labs::sop_group_invert::1.0"/>
+    <memberTool name="labs::sop_group_uv_borders"/>
+    <memberTool name="labs::sop_lot_subdivision::2.0"/>
+    <memberTool name="labs::sop_maps_baker::5.0"/>
+    <memberTool name="labs::sop_measure_curvature::3.0"/>
+    <memberTool name="labs::sop_multi_bounding_box"/>
+    <memberTool name="labs::sop_polyslice::1.0"/>
+    <memberTool name="labs::sop_quick_basic_tree"/>
+    <memberTool name="labs::sop_quickmaterial::2.2"/>
+    <memberTool name="labs::sop_splatter"/>
+    <memberTool name="labs::sop_split_prim_by_normal"/>
+    <memberTool name="labs::sop_star"/>
+    <memberTool name="labs::sop_superformula_shapes::1.0"/>
+    <memberTool name="labs::sop_symmetrize"/>
+    <memberTool name="labs::sop_triplanar_displace"/>
+    <memberTool name="labs::sop_turntable"/>
+    <memberTool name="labs::voxelmesh::3.0"/>
+    <memberTool name="labs::sop_wang_tiles_sample"/>
+  </toolshelf>
+
+  <toolshelf name="rendering" label="Rendering">
+    <memberTool name="object_cam"/>
+    <memberTool name="object_envlight"/>
+    <memberTool name="object_distantlight"/>
+    <memberTool name="object_arealight"/>
+    <memberTool name="object_spotlight"/>
+    <memberTool name="object_pointlight"/>
+    <memberTool name="obj_geolight"/>
+    <memberTool name="lop_lightfilterlibrary"/>
+    <memberTool name="lop_lightmixer"/>
+    <memberTool name="lop_lightlinker"/>
+    <memberTool name="lop_materiallibrary"/>
+    <memberTool name="lop_assignmaterial"/>
+    <memberTool name="lop_materiallinker"/>
+    <memberTool name="lop_rendersettings"/>
+    <memberTool name="lop_karma"/>
+  </toolshelf>
+
+  <toolshelf name="simplefx" label="Simple FX">
+    <memberTool name="geometry_vellumsimplecloth"/>
+    <memberTool name="geometry_vellumsimplesoftbody"/>
+    <memberTool name="geometry_rbdsimplefracture"/>
+    <memberTool name="geometry_rbdsimpleguided"/>
+    <memberTool name="geometry_muzzleflash"/>
+    <memberTool name="geometry_pyrosimplebillowysmoke"/>
+    <memberTool name="geometry_spyro_gpuburst"/>
+    <memberTool name="geometry_spyro_gputorch"/>
+    <memberTool name="geometry_pyrosimplefireball"/>
+    <memberTool name="geometry_spyro_airexplosion"/>
+    <memberTool name="geometry_spyro_groundexplosion"/>
+    <memberTool name="geometry_spyro_shockwave"/>
+    <memberTool name="geometry_spyro_campfire"/>
+    <memberTool name="geometry_pyrosimplefirespread"/>
+  </toolshelf>
+
+  <toolshelf name="volume" label="Volume">
+    <memberTool name="geometry_fogvolume"/>
+    <memberTool name="geometry_vdbfrompolygons"/>
+    <memberTool name="geometry_vdbfromparticles"/>
+    <memberTool name="geometry_paintcolorvolume"/>
+    <memberTool name="geometry_paintfogvolume"/>
+    <memberTool name="geometry_paintsdfvolume"/>
+    <memberTool name="geometry_volumerasterizepoints"/>
+    <memberTool name="geometry_volumerasterizeparticles"/>
+    <memberTool name="geometry_volumerasterizecurve"/>
+    <memberTool name="geometry_convertvdb"/>
+  </toolshelf>
+
+  <toolshelf name="solaris_" label="Solaris">
+    <memberTool name="lop_sopcreate"/>
+    <memberTool name="lop_sopimport"/>
+    <memberTool name="lop_assetreference"/>
+    <memberTool name="lop_reference::2.0"/>
+    <memberTool name="lop_sceneimport::2.0"/>
+    <memberTool name="lop_sceneimportall"/>
+    <memberTool name="lop_collection::2.0"/>
+    <memberTool name="lop_merge"/>
+    <memberTool name="lop_sopmodify"/>
+    <memberTool name="lop_edit"/>
+    <memberTool name="lop_xform"/>
+    <memberTool name="lop_instancer"/>
+    <memberTool name="lop_parentconstraint"/>
+    <memberTool name="lop_duplicate"/>
+    <memberTool name="lop_configureprimitive"/>
+    <memberTool name="lop_usd_rop"/>
+    <memberTool name="lop_mesh"/>
+    <memberTool name="lop_mesh_edit"/>
+  </toolshelf>
+
+  <tool name="geometry_attribnoisefloat" label="Noise Float" icon="SOP_attribnoise">
+    <helpURL>operator:Sop/attribnoise</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribnoise</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import soptoolutils
+import toolutils
+
+kwargs['parms'] = {
+    'attribtype': 'float',
+    'attribs': 'pscale' }
+soptoolutils.genericTool(kwargs, 'attribnoise::2.0', force_filter=True, nodename = 'attribnoisefloat1')
+]]></script>
+  </tool>
+
+  <tool name="geometry_attribnoisevector" label="Noise Vector" icon="SOP_attribnoise">
+    <helpURL>operator:Sop/attribnoise</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribnoise</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import soptoolutils
+import toolutils
+
+kwargs['parms'] = {
+    'attribs': 'v',
+    'noiserange': 'zcentered' }
+soptoolutils.genericTool(kwargs, 'attribnoise::2.0', force_filter=True, nodename = 'attribnoisevector1')
+]]></script>
+  </tool>
+
+  <tool name="sop_attribfill" label="Fill" icon="SOP_attribfill">
+    <helpURL>operator:Sop/attribfill</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribfill</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribfill')]]></script>
+  </tool>
+
+  <tool name="sop_attribcreate::2.0" label="Create" icon="SOP_attribcreate-2.0">
+    <helpURL>operator:Sop/attribcreate?version=2.0</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribcreate::2.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribcreate::2.0')]]></script>
+  </tool>
+
+  <tool name="sop_attribcopy" label="Copy" icon="SOP_attribcopy">
+    <helpURL>operator:Sop/attribcopy</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribcopy</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribcopy')]]></script>
+  </tool>
+
+  <tool name="sop_attribcombine" label="Combine" icon="SOP_attribcombine">
+    <helpURL>operator:Sop/attribcombine</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribcombine</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribcombine')]]></script>
+  </tool>
+
+  <tool name="sop_attribadjustvector" label="Adjust Vector" icon="SOP_attribadjustvector">
+    <helpURL>operator:Sop/attribadjustvector</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribadjustvector</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribadjustvector', force_filter=True)]]></script>
+  </tool>
+
+  <tool name="sop_attribadjustinteger" label="Adjust Integer" icon="SOP_attribadjustinteger">
+    <helpURL>operator:Sop/attribadjustinteger</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribadjustinteger</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribadjustinteger', force_filter=True)]]></script>
+  </tool>
+
+  <tool name="sop_attribadjustfloat" label="Adjust Float" icon="SOP_attribadjustfloat">
+    <helpURL>operator:Sop/attribadjustfloat</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribadjustfloat</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribadjustfloat', force_filter=True)]]></script>
+  </tool>
+
+  <tool name="sop_attribadjustcolor" label="Adjust Color" icon="SOP_attribadjustcolor">
+    <helpURL>operator:Sop/attribadjustcolor</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribadjustcolor</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribadjustcolor', force_filter=True)]]></script>
+  </tool>
+
+  <tool name="labs::ruler" label="Ruler" icon="$SIDEFXLABS/help/icons/ruler.svg">
+    <helpURL>/shelf/labs--ruler.txt</helpURL>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import stateutils
+
+# We want to launch a SOP state, so we need to make sure the
+# viewer is at the SOP level first
+viewer = stateutils.findSceneViewer()
+network = viewer.pwd()
+if network.childTypeCategory() != hou.sopNodeTypeCategory():
+    # The user pressed Enter without selecting an object
+    raise hou.Error("You must be in a sop network to use this tool.")
+if network.displayNode() == None:
+    raise hou.Error("You must have the display flag set on a node.")
+# Set the viewer's current state to my state
+viewer.setCurrentState("labs::ruler")
+]]></script>
+  </tool>
+
+  <tool name="labs::enable_go_z" label="Start GoZ" icon="GoZBrush.png">
+    <script scriptType="python"><![CDATA[import hrpyc
+already_running = True
+
+try:
+    connection = hrpyc.rpyc.classic.connect("127.0.0.1", 18811)
+except:
+    already_running = False
+
+if already_running:
+    hou.ui.displayMessage("Go Z Already Running")
+else:
+    hrpyc.start_server()
+    hou.ui.displayMessage("Go Z Port Opened")
+
+temp_goz_node = hou.node("/obj").createNode("geo", "tmp_zbrush")
+temp_goz_node.createNode("labs::goz_export", exact_type_name=False)
+temp_goz_node.destroy()]]></script>
+  </tool>
+
+  <tool name="remeshgrid" label="Remesh to Grid" icon="SOP_remeshgrid">
+    <helpURL>operator:Sop/voxelmesh?namespace=labs</helpURL>
+    <script scriptType="python"><![CDATA[import soptoolutils
+soptoolutils.genericTool(kwargs, 'remeshgrid', exact_node_type=False)]]></script>
+  </tool>
+
+  <tool name="labs::autouv" label="Auto UV" icon="opdef:/labs::Sop/autouv?IconSVG">
+    <helpURL>operator:Sop/autouv?namespace=labs</helpURL>
+    <script scriptType="python"><![CDATA[import soptoolutils
+soptoolutils.genericTool(kwargs, 'labs::autouv', exact_node_type=False)]]></script>
+  </tool>
+
+  <tool name="labs::calculate_occlusion::3.0" label="Labs Calculate Occlusion" icon="SOP_maskbyfeature">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import soptoolutils
+node = soptoolutils.genericTool(kwargs, 'maskbyfeature', exact_node_type=False)
+node.setParms({"enabledirection": 0, "castshadows":0, "enableao":1, "aobluriterations":30, "combinedmaskattrib":"Cd"})
+]]></script>
+  </tool>
+
+  <tool name="labs::voxelmesh::3.0" label="Labs Voxel Mesh" icon="$SIDEFXLABS/help/icons/voxel_mesh_alt.svg">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import soptoolutils
+soptoolutils.genericTool(kwargs, 'remeshgrid', exact_node_type=False)
+]]></script>
+  </tool>
+
+  <tool name="object_crowdpaintdensity" label="Paint Density" icon="SOP_paint">
+    <helpURL>tool:crowds_paintdensity</helpURL>
+    <toolSubmenu>Create</toolSubmenu>
+    <script scriptType="python"><![CDATA[import crowdstoolutils
+crowdstoolutils.crowdpaintdensity(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="lop_xform" label="Transform" icon="LOP_xform">
+    <helpURL>operator:Lop/xform</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/xform</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Transform</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+import loputils
+
+node = loptoolutils.genericTool(kwargs, 'xform')
+prims = loputils.getAffectedPrims(node)
+if prims:
+    loputils.setPivotParmsToPrimTransform(
+            node, prims)]]></script>
+  </tool>
+
+  <tool name="lop_sceneimportall" label="Scene Import (All)" icon="LOP_sceneimport">
+    <helpURL>operator:Lop/sceneimport</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/sceneimport</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Import</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+node = loptoolutils.genericTool(kwargs, 'sceneimport::2.0', nodename='sceneimportall1')
+node.parm('objects').set('*')
+node.parm('materials').set('*')
+]]></script>
+  </tool>
+
+  <tool name="lop_collection::2.0" label="Collection" icon="LOP_collection">
+    <helpURL>operator:Lop/collection</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/collection::2.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Collections</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+node = loptoolutils.genericTool(kwargs, 'collection::2.0', selection_parm_name = 'includepattern1', selection_allow_pattern = True)
+]]></script>
+  </tool>
+
+  <tool name="lop_duplicate" label="Duplicate" icon="LOP_duplicate">
+    <helpURL>operator:Lop/duplicate</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/duplicate</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Utility</toolSubmenu>
+    <toolSubmenu>Instancing</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+import loputils
+node = loptoolutils.genericTool(kwargs, 'duplicate', selection_parm_name = 'sourceprims', selection_allow_pattern = True)
+prims = loputils.getAffectedPrims(node,'sourceprims')
+if prims:
+    loputils.setPivotParmsToPrimTransform(
+            node, prims)]]></script>
+  </tool>
+
+  <tool name="lop_karma" label="Karma" icon="LOP_karma">
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Rendering</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+node = loptoolutils.genericTool(kwargs, 'karmarenderproperties', 'karmarendersettings')
+node.setCurrent(True)
+nodename = node.name()
+kwargs['inputnodename'] = nodename
+kwargs['inputs'] = [(nodename, 0)]
+kwargs['nodepositionx'] = str(node.position().x())
+kwargs['nodepositiony'] = str(node.position().y() - 0.5)
+rop = loptoolutils.genericTool(kwargs, 'usdrender_rop')
+rop.parm("rendersettings").setExpression('chs("../%s/primpath")' % nodename)
+rop.parm("husk_instantshutter").setExpression('1 - ch("../%s/enablemblur")' % nodename)
+node.setCurrent(True)
+node.setSelected(True)]]></script>
+  </tool>
+
+  <tool name="sop_attribpaint" label="Attribute Paint" icon="SOP_attribpaint">
+    <helpURL>operator:Sop/attribpaint</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribpaint</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribpaint', force_filter=True)]]></script>
+  </tool>
+
+  <tool name="sop_attribwrangle" label="Attribute Wrangle" icon="SOP_attribwrangle">
+    <helpURL>operator:Sop/attribwrangle</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribwrangle</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribwrangle', force_filter=True)]]></script>
+  </tool>
+
+  <tool name="sop_maskalonggeometry" label="Mask along Geometry" icon="SOP_distancealonggeometry">
+    <helpURL>operator:SOP/distancealonggeometry</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Mask</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+kwargs['parms'] = {
+    'enableoutattrib': 0,
+    'enableoutmask': 1 }
+soptoolutils.genericTool(kwargs, "distancealonggeometry", "maskalonggeometry1")
+]]></script>
+  </tool>
+
+  <tool name="sop_maskfromgeometry" label="Mask from Geometry" icon="SOP_distancefromgeometry">
+    <helpURL>operator:SOP/distancefromgeometry</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Mask</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+kwargs['parms'] = {
+    'enableoutattrib': 0,
+    'enableoutmask': 1 }
+soptoolutils.genericTool(kwargs, "distancefromgeometry", "maskfromgeometry1")
+]]></script>
+  </tool>
+
+  <tool name="sop_maskfromtarget" label="Mask from Target" icon="SOP_distancefromtarget">
+    <helpURL>operator:SOP/distancefromtarget</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Mask</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+newnode = soptoolutils.genericTool(kwargs, "distancefromtarget", "maskfromtarget1")
+newnode.parm("enableoutattrib").set(0)
+newnode.parm("enableoutmask").set(1)]]></script>
+  </tool>
+
+  <tool name="sop_maskbyambientocclusion" label="Mask by Ambient Occlusion" icon="SOP_maskbyfeature">
+    <helpURL>operator:SOP/maskbyfeature</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Mask</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+kwargs['parms'] = {
+    'enabledirection': 0,
+    'castshadows': 0,
+    'enableao': 1,
+    'aomaxraydist': 0.2,
+    'aobluriterations': 30 }
+soptoolutils.genericTool(kwargs, "maskbyfeature", "maskbyambientocclusion")
+]]></script>
+  </tool>
+
+  <tool name="geometry_attribfromgroup" label="Attribute from Group" icon="SOP_grouppromote">
+    <helpURL>operator:Sop/grouppromote</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+kwargs['parms'] = { 'toattrib1': 1 }
+soptoolutils.genericTool(kwargs, 'grouppromote')
+]]></script>
+  </tool>
+
+  <tool name="object_spotlight" label="Spot Light" icon="OBJ_light_spot">
+    <helpURL>operator:Lop/light#spot</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import toolutils
+pane = toolutils.activePane(kwargs)
+
+# When launched from a scene view, always create a camera that matches
+# the current viewpoint.
+clicktoplace = False
+lock_to_view = kwargs['ctrlclick'] or kwargs['cmdclick']
+
+import loptoolutils
+if (loptoolutils.getToolCategoryForPane(pane) == hou.lopNodeTypeCategory()):
+    newnode = loptoolutils.genericCameraLightTool(kwargs, 'light::2.0',
+                'spotlight1', clicktoplace, lock_to_view)
+    newnode.parm("lighttype").set("UsdLuxDiskLight")
+    newnode.parm("spotlightenable").set(1)
+    loptoolutils.setGoodLightExposure(kwargs, newnode)
+
+else:
+    import objecttoolutils
+    kwargs['bbox_min'] = hou.Vector3(-1.5, -1.5, -1.5)
+    kwargs['bbox_max'] = hou.Vector3(1.5, 1.5, 1.5)
+    newnode = objecttoolutils.genericCameraLightTool(kwargs, 'hlight::2.0',
+                'spotlight1', clicktoplace, lock_to_view)
+    objecttoolutils.setGoodLightExposure(kwargs, newnode)
+    newnode.parm("light_type").set("point")
+    newnode.parm("coneenable").set(1)]]></script>
+  </tool>
+
+  <tool name="object_pointlight" label="Point Light" icon="OBJ_light_point">
+    <helpURL>operator:Lop/light#point</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import toolutils
+pane = toolutils.activePane(kwargs)
+
+# When launched from a scene view, always create a camera that matches
+# the current viewpoint.
+clicktoplace = False
+lock_to_view = kwargs['ctrlclick'] or kwargs['cmdclick']
+
+import loptoolutils
+if (loptoolutils.getToolCategoryForPane(pane) == hou.lopNodeTypeCategory()):
+    newnode = loptoolutils.genericCameraLightTool(kwargs, 'light::2.0',
+                'pointlight1', clicktoplace, lock_to_view)
+    newnode.parm("lighttype").set("point")
+    loptoolutils.setGoodLightExposure(kwargs, newnode)
+
+else:
+    import objecttoolutils
+    kwargs['bbox_min'] = hou.Vector3(-1.5, -1.5, -1.5)
+    kwargs['bbox_max'] = hou.Vector3(1.5, 1.5, 1.5)
+    newnode = objecttoolutils.genericCameraLightTool(kwargs, 'hlight::2.0',
+                'pointlight1', clicktoplace, lock_to_view)
+    objecttoolutils.setGoodLightExposure(kwargs, newnode)
+    newnode.parm("light_type").set("point")]]></script>
+  </tool>
+
+  <tool name="object_arealight" label="Area Light" icon="OBJ_light_area">
+    <helpURL>operator:Lop/light#area</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import toolutils
+pane = toolutils.activePane(kwargs)
+
+# When launched from a scene view, always create a camera that matches
+# the current viewpoint.
+clicktoplace = False
+lock_to_view = kwargs['ctrlclick'] or kwargs['cmdclick']
+
+import loptoolutils
+if (loptoolutils.getToolCategoryForPane(pane) == hou.lopNodeTypeCategory()):
+    newnode = loptoolutils.genericCameraLightTool(kwargs, 'light::2.0',
+                'arealight1', clicktoplace, lock_to_view)
+    newnode.parm("lighttype").set('UsdLuxRectLight')
+    loptoolutils.setGoodLightExposure(kwargs, newnode)
+
+else:
+    import objecttoolutils
+    kwargs['bbox'] = hou.BoundingBox(-0.5, -0.5, 0.0, 0.5, 0.5, 0.0)
+    newnode = objecttoolutils.genericCameraLightTool(kwargs, 'hlight::2.0',
+                'arealight1', clicktoplace, lock_to_view)
+    newnode.parmTuple("stdswitcher4")[0].set(1)
+    newnode.parmTuple("atten_folder_1")[0].set(1)
+    objecttoolutils.setGoodLightExposure(kwargs, newnode)
+    newnode.parm("light_type").set('grid')]]></script>
+  </tool>
+
+  <tool name="obj_geolight" label="Geometry Light" icon="OBJ_light_geo">
+    <helpURL>operator:Lop/light#geo</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import toolutils
+pane = toolutils.activePane(kwargs)
+
+import loptoolutils
+if (loptoolutils.getToolCategoryForPane(pane) == hou.lopNodeTypeCategory()):
+    if pane.pwd().childTypeCategory() != hou.lopNodeTypeCategory():
+        hou.ui.displayMessage('Error Creating Geometry Light',
+            title='Geometry Light',
+            help='Geometry Lights must be created directly in a\n' +
+            'Lop context. This tool cannot be run within a\n' +
+            pane.pwd().childTypeCategory().name() +
+            ' context nested inside a Lop context.')
+
+    else:
+        newnode = loptoolutils.genericTool(kwargs, 'rendergeometrysettings')
+        newnode.parmTuple("xn__primvarskarmaobjecttreat_as_lightsource_control_oicfg")[0].set('set')
+        newnode.parmTuple("xn__primvarskarmaobjecttreat_as_lightsource_n4bfg")[0].set('Yes')
+
+else:
+    import objecttoolutils
+    kwargs['bbox'] = hou.BoundingBox(-0.5, -0.5, 0.0, 0.5, 0.5, 0.0)
+
+    # Get selection
+    scene_viewer = toolutils.sceneViewer()
+    targets = scene_viewer.selectObjects(
+                    prompt = toolutils.selectionPrompt(hou.objNodeTypeCategory()),
+                    allow_multisel = False,
+                    allowed_types = ("geo",))
+    newnode = objecttoolutils.genericTool(kwargs, 'hlight::2.0',
+                    'geolight1', False)
+    newnode.parmTuple("stdswitcher4")[0].set(1)
+    newnode.parmTuple("atten_folder_1")[0].set(1)
+    if len( targets ) > 0:
+        target = targets[0]
+        target_path = newnode.relativePathTo( target )
+        newnode.setWorldTransform( target.worldTransform() )
+        newnode.parm("areageometry").set( target_path )
+        target.setDisplayFlag( False )
+    newnode.parm("light_type").set('geo')
+    newnode.parm("normalizearea").set(0)
+]]></script>
+  </tool>
+
+  <tool name="object_distantlight" label="Distant Light" icon="OBJ_light_directional">
+    <helpURL>operator:Lop/distantlight</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import toolutils
+pane = toolutils.activePane(kwargs)
+
+# When launched from a scene view, always create a camera that matches
+# the current viewpoint.
+clicktoplace = False
+lock_to_view = kwargs['ctrlclick'] or kwargs['cmdclick']
+
+import loptoolutils
+if (loptoolutils.getToolCategoryForPane(pane) == hou.lopNodeTypeCategory()):
+    newnode = loptoolutils.genericCameraLightTool(kwargs, 'distantlight::2.0',
+                'distantlight1', clicktoplace, lock_to_view)
+
+else:
+    import objecttoolutils
+    kwargs['bbox_min'] = hou.Vector3(-1.5, -1.5, -1.5)
+    kwargs['bbox_max'] = hou.Vector3(1.5, 1.5, 1.5)
+    newnode = objecttoolutils.genericCameraLightTool(kwargs, 'hlight::2.0',
+                'distantlight1', clicktoplace, lock_to_view)
+    newnode.parm("light_type").set('distant')]]></script>
+  </tool>
+
+  <tool name="object_envlight" label="Environment Light" icon="OBJ_light_environment">
+    <helpURL>operator:Object/envlight</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import toolutils
+pane = toolutils.activePane(kwargs)
+
+import loptoolutils
+if (loptoolutils.getToolCategoryForPane(pane) == hou.lopNodeTypeCategory()):
+    newnode   = loptoolutils.genericTool(kwargs, 'domelight::2.0',
+                'domelight1', clicktoplace=False)
+
+else:
+    import objecttoolutils
+    from objecttoolutils import OrientInfo
+    objecttoolutils.genericTool(kwargs, 'envlight',
+        None, False, orient=OrientInfo('r'))]]></script>
+  </tool>
+
+  <tool name="object_cam" label="Camera" icon="OBJ_camera">
+    <helpURL>operator:Object/cam</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Cameras</toolSubmenu>
+    <script scriptType="python"><![CDATA[import toolutils
+pane = toolutils.activePane(kwargs)
+
+# When launched from a scene view, always create a camera that matches
+# the current viewpoint.
+clicktoplace = False
+lock_to_view = kwargs['ctrlclick'] or kwargs['cmdclick']
+
+import loptoolutils
+if (loptoolutils.getToolCategoryForPane(pane) == hou.lopNodeTypeCategory()):
+    newnode = loptoolutils.genericCameraLightTool(kwargs, 'camera',
+                'camera1', clicktoplace, lock_to_view)
+
+else:
+    import objecttoolutils
+    kwargs['bbox_min'] = hou.Vector3(-0.1, -0.1, 0.0001)
+    kwargs['bbox_max'] = hou.Vector3(0.1, 0.236, 0.431)
+    newnode = objecttoolutils.genericCameraLightTool(kwargs, 'cam', 'cam1',
+                clicktoplace, lock_to_view)
+    ]]></script>
+  </tool>
+
+  <tool name="geometry_fogvolume" label="Volume" icon="SOP_volume">
+    <helpURL>operator:Sop/isooffset</helpURL>
+    <script scriptType="python"><![CDATA[
+import soptoolutils
+
+kwargs['parms'] = {
+    'output': 'fogvolume',
+    'samplediv': 30 }
+soptoolutils.genericTool(kwargs, 'isooffset', 'converttofog1')
+]]></script>
+  </tool>
+
+  <tool name="geometry_spyro_groundexplosion" label="Simple Ground Explosion" icon="SHELF_explosion">
+    <helpURL>tool:spyro_simplegroundexplosion</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.createGroundExplosion(kwargs, False)
+]]></script>
+  </tool>
+
+  <tool name="geometry_spyro_airexplosion" label="Simple Aerial Explosion" icon="SHELF_aerial_explosion">
+    <helpURL>tool:spyro_simpleairexplosion</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.createAerialExplosion(kwargs, False)
+]]></script>
+  </tool>
+
+  <tool name="geometry_spyro_gputorch" label="Simple GPU Torch" icon="SHELF_torch">
+    <helpURL>tool:spyro_gputorch</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.sopGPUTorch(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_spyro_gpuburst" label="Simple GPU Ground Explosion" icon="SHELF_spyro_gpuburst">
+    <helpURL>tool:spyro_simplegpuexplosion</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.sopGPUBurst(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_muzzleflash" label="Simple Muzzle Flash" icon="SHELF_muzzle_flash">
+    <helpURL>tool:pyrosimplemuzzleflash</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.sopMuzzleFlash(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_spyro_shockwave" label="Simple Shockwave" icon="SHELF_shockwave">
+    <helpURL>tool:pyrosimpleshockwave</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.createFireballShockwave(kwargs, False)
+]]></script>
+  </tool>
+
+  <tool name="geometry_spyro_campfire" label="Simple Bonfire" icon="SHELF_campfire">
+    <helpURL>tool:spyro_simplecampfire</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.createBonfire(kwargs, False)
+]]></script>
+  </tool>
+
+  <tool name="geometry_pyrosimplefirespread" label="Simple Spreading Fire" icon="SHELF_spyro_firespread">
+    <helpURL>tool:pyrosimplefirespread</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+
+node = dopsparsepyrotools.createSopSpreadingFire(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_pyrosimplefireball" label="Simple Fireball" icon="SHELF_fireball">
+    <helpURL>tool:pyrosimplefireball</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.createFireball(kwargs, False)
+]]></script>
+  </tool>
+
+  <tool name="geometry_pyrosimplebillowysmoke" label="Simple Billowy Smoke" icon="SHELF_smoke_heavy">
+    <helpURL>tool:pyrosimplebillowysmoke</helpURL>
+    <script scriptType="python"><![CDATA[
+import dopsparsepyrotools
+dopsparsepyrotools.createBillowySmoke(kwargs, False)
+]]></script>
+  </tool>
+
+  <tool name="geometry_vellumsimplecloth" label="Simple Cloth" icon="SHELF_vellum_simplecloth">
+    <helpURL>tool:vellumsimplecloth</helpURL>
+    <script scriptType="python"><![CDATA[
+import doptoolutils
+import doppoptoolutils
+
+node = doppoptoolutils.createSopVellum(kwargs, 'cloth')
+]]></script>
+  </tool>
+
+  <tool name="geometry_vellumsimplesoftbody" label="Simple Softbody" icon="SHELF_vellum_softbody">
+    <helpURL>tool:vellumsimplesoftbody</helpURL>
+    <script scriptType="python"><![CDATA[
+import doptoolutils
+import doppoptoolutils
+
+node = doppoptoolutils.createSopVellum(kwargs, 'softbody')
+]]></script>
+  </tool>
+
+  <tool name="geometry_rbdsimplefracture" label="Simple Fracture" icon="SOP_rbdmaterialfracture">
+    <helpURL>operator:Sop/rbdmaterialfracture</helpURL>
+    <script scriptType="python"><![CDATA[
+import doprbdtoolutils
+
+node = doprbdtoolutils.createSopRBD(kwargs, 'fracture')
+]]></script>
+  </tool>
+
+  <tool name="geometry_rbdsimpleguided" label="Simple Guided RBDs" icon="SHELF_rbd_guided">
+    <helpURL>tool:rbdsimpleguided</helpURL>
+    <script scriptType="python"><![CDATA[
+import doprbdtoolutils
+
+node = doprbdtoolutils.createSopRBD(kwargs, 'guided sim')
+]]></script>
+  </tool>
+
+  <tool name="geometry_paintmask" label="Paint a Mask" icon="SOP_attribpaint">
+    <helpURL>operator:Sop/attribpaint</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribpaint</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribpaint', force_filter=True)
+]]></script>
+  </tool>
+
+  <tool name="geometry_paintcolor" label="Paint Color" icon="SOP_attribpaint">
+    <helpURL>operator:Sop/attribpaint</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribpaint</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import soptoolutils
+
+kwargs['parms'] = {
+    'attribname1': 'Cd',
+    'attribtype1': 'color' }
+soptoolutils.genericTool(kwargs, 'attribpaint', force_filter=True)
+]]></script>
+  </tool>
+
+  <tool name="geometry_paintcolorvolume" label="Volume Paint Color" icon="SOP_paintcolorvolume">
+    <helpURL>operator:Sop/paintcolorvolume</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import stroketoolutils
+
+kwargs['type'] = "color"
+stroketoolutils.strokeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_paintfogvolume" label="Volume Paint Fog" icon="SOP_paintfogvolume">
+    <helpURL>operator:Sop/paintfogvolume</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import stroketoolutils
+
+kwargs['type'] = "fog"
+stroketoolutils.strokeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_paintsdfvolume" label="Volume Paint SDF" icon="SOP_paintsdfvolume">
+    <helpURL>operator:Sop/paintsdfvolume</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import stroketoolutils
+
+kwargs['type'] = "sdf"
+stroketoolutils.strokeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_volumerasterizepoints" label="Fog Points" icon="SOP_volumerasterizepoints">
+    <helpURL>operator:Sop/volumerasterizepoints</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import stroketoolutils
+
+kwargs['type'] = "points"
+stroketoolutils.volumerasterizeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_volumerasterizeparticles" label="Fog Particles" icon="SOP_volumerasterizeparticles">
+    <helpURL>operator:Sop/volumerasterizeparticles</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import stroketoolutils
+
+kwargs['type'] = "particles"
+stroketoolutils.volumerasterizeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_volumerasterizecurve" label="Fog Curve" icon="SOP_volumerasterizecurve">
+    <helpURL>operator:Sop/volumerasterizecurve</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import stroketoolutils
+
+kwargs['type'] = "curve"
+stroketoolutils.volumerasterizeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_vdbfrompolygons" label="SDF Polys" icon="SOP_vdbfrompolygons">
+    <helpURL>operator:Sop/vdbfrompolygons</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import volumetoolutils
+
+kwargs['volumetype'] = "vdb"
+kwargs['optype'] = "frompolygons"
+
+volumetoolutils.volumeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_vdbfromparticles" label="SDF Particles" icon="SOP_vdbfromparticles">
+    <helpURL>operator:Sop/vdbfromparticles</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+import volumetoolutils
+
+kwargs['volumetype'] = "vdb"
+kwargs['optype'] = "fromparticles"
+
+volumetoolutils.volumeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="geometry_convertvdb" label="Convert VDB" icon="SOP_convertvdb">
+    <helpURL>operator:Sop/convertvdb</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolSubmenu>Volume</toolSubmenu>
+    <script scriptType="python"><![CDATA[
+
+import volumetoolutils
+
+kwargs['volumetype'] = "vdb"
+kwargs['optype'] = "convert"
+
+volumetoolutils.volumeSource(kwargs)
+]]></script>
+  </tool>
+
+  <tool name="lop_configureprimitive" label="Configure Primitive" icon="LOP_configureprimitive">
+    <helpURL>operator:Lop/configureprimitive</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/configureprimitive</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Utility</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'configureprimitive')]]></script>
+  </tool>
+
+  <tool name="lop_assignmaterial" label="Assign Material" icon="LOP_assignmaterial">
+    <helpURL>operator:Lop/assignmaterial</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/assignmaterial</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Materials</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'assignmaterial')]]></script>
+  </tool>
+
+  <tool name="lop_lightfilterlibrary" label="Light Filter Library" icon="LOP_lightfilterlibrary">
+    <helpURL>operator:Lop/lightfilterlibrary</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/lightfilterlibrary</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'lightfilterlibrary')]]></script>
+  </tool>
+
+  <tool name="lop_materiallibrary" label="Material Library" icon="LOP_materiallibrary">
+    <helpURL>operator:Lop/materiallibrary</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/materiallibrary</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Materials</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'materiallibrary')]]></script>
+  </tool>
+
+  <tool name="lop_lightlinker" label="Light Linker" icon="LOP_lightlinker">
+    <helpURL>operator:Lop/lightlinker</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/lightlinker</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'lightlinker')]]></script>
+  </tool>
+
+  <tool name="lop_edit" label="Edit" icon="LOP_edit">
+    <helpURL>operator:Lop/edit</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/edit</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Transform</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'edit')]]></script>
+  </tool>
+
+  <tool name="lop_usd_rop" label="USD ROP" icon="ROP_usd">
+    <helpURL>operator:Lop/usd_rop</helpURL>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/usd_rop</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Managers</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'usd_rop')]]></script>
+  </tool>
+
+  <tool name="lop_sopimport" label="SOP Import" icon="LOP_sopimport">
+    <helpURL>operator:Lop/sopimport</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/sopimport</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Import</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'sopimport')]]></script>
+  </tool>
+
+  <tool name="lop_sceneimport::2.0" label="Scene Import" icon="LOP_sceneimport">
+    <helpURL>operator:Lop/sceneimport?version=2.0</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/sceneimport::2.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Import</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'sceneimport::2.0')]]></script>
+  </tool>
+
+  <tool name="lop_reference::2.0" label="Reference" icon="LOP_reference">
+    <helpURL>operator:Lop/reference?version=2.0</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/reference::2.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Import</toolSubmenu>
+    <toolSubmenu>Combine</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'reference::2.0')]]></script>
+  </tool>
+
+  <tool name="lop_merge" label="Merge" icon="LOP_merge">
+    <helpURL>operator:Lop/merge</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/merge</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Combine</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'merge')]]></script>
+  </tool>
+
+  <tool name="lop_materiallinker" label="Material Linker" icon="LOP_materiallinker">
+    <helpURL>operator:Lop/materiallinker</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/materiallinker</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Materials</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'materiallinker')]]></script>
+  </tool>
+
+  <tool name="lop_lightmixer" label="Light Mixer" icon="LOP_lightmixer">
+    <helpURL>operator:Lop/lightmixer</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/lightmixer</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Lights</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'lightmixer')]]></script>
+  </tool>
+
+  <tool name="lop_instancer" label="Instancer" icon="LOP_instancer">
+    <helpURL>operator:Lop/instancer</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/instancer</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Instancing</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'instancer')]]></script>
+  </tool>
+
+  <tool name="sop_paint" label="Paint Color" icon="SOP_paint">
+    <helpURL>operator:Sop/paint</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/paint</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.customStateTool(kwargs, 'paint')]]></script>
+  </tool>
+
+  <tool name="sop_attribute" label="Attribute Rename" icon="SOP_attribute">
+    <helpURL>operator:Sop/attribute</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribute</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <toolSubmenu>Material</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribute')]]></script>
+  </tool>
+
+  <tool name="sop_attribtransfer" label="Attribute Transfer" icon="SOP_attribtransfer">
+    <helpURL>operator:Sop/attribtransfer</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribtransfer</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribtransfer')]]></script>
+  </tool>
+
+  <tool name="sop_attribpromote" label="Attribute Promote" icon="SOP_attribpromote">
+    <helpURL>operator:Sop/attribpromote</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribpromote</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribpromote')]]></script>
+  </tool>
+
+  <tool name="sop_attribmirror" label="Attribute Mirror" icon="SOP_attribmirror">
+    <helpURL>operator:Sop/attribmirror</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribmirror</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribmirror')]]></script>
+  </tool>
+
+  <tool name="sop_attribvop" label="Attribute VOP" icon="SOP_attribvop">
+    <helpURL>operator:Sop/attribvop</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribvop</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribvop')]]></script>
+  </tool>
+
+  <tool name="sop_attribfrommap" label="Attribute from Map" icon="SOP_attribfrommap">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribfrommap</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribfrommap')]]></script>
+  </tool>
+
+  <tool name="sop_attribdelete" label="Attribute Delete" icon="SOP_attribdelete">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribdelete</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribdelete')]]></script>
+  </tool>
+
+  <tool name="labs::sop_polyslice::1.0" label="Labs PolySlice" icon="opdef:/labs::Sop/polyslice::1.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/polyslice::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::polyslice::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_calculate_slope" label="Labs Calculate Slope" icon="opdef:/labs::Sop/calculate_slope?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/calculate_slope</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Utils</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::calculate_slope')]]></script>
+  </tool>
+
+  <tool name="labs::sop_quickmaterial::2.2" label="Labs Quick Material" icon="VOP_pbrmetallic">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/quickmaterial::2.2</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::quickmaterial::2.2')]]></script>
+  </tool>
+
+  <tool name="labs::sop_goz_import" label="Labs GoZ Import" icon="opdef:/labs::Sop/goz_import?IconImage">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/goz_import</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/GoZ</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::goz_import')]]></script>
+  </tool>
+
+  <tool name="labs::sop_lot_subdivision::2.0" label="Labs Lot Subdivision" icon="opdef:/labs::Sop/lot_subdivision::2.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/lot_subdivision::2.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Utils</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::lot_subdivision::2.0')]]></script>
+  </tool>
+
+  <tool name="sop_attribexpression" label="Attribute Expression" icon="SOP_attribexpression">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribexpression</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribexpression')]]></script>
+  </tool>
+
+  <tool name="labs::sop_delete_small_parts" label="Labs Delete Small Parts" icon="SOP_delete">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/delete_small_parts</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/CleanUp</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::delete_small_parts')]]></script>
+  </tool>
+
+  <tool name="labs::sop_measure_curvature::3.0" label="Labs Measure Curvature" icon="VOP_curvature">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/measure_curvature::3.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Utils</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::measure_curvature::3.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_thicken::1.0" label="Labs Thicken" icon="opdef:/labs::Sop/thicken::1.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/thicken::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+import stateutils
+
+scene_viewer = stateutils.findSceneViewer()
+selection = scene_viewer.currentGeometrySelection()
+
+node = soptoolutils.genericTool(kwargs, 'labs::thicken::1.0')
+
+if selection:
+    selection.setGeometryType(hou.geometryType.Primitives)
+    node.parm("group").set(str(selection))
+
+]]></script>
+  </tool>
+
+  <tool name="labs::sop_group_curve_corners" label="Labs Group Curve Corners" icon="opdef:/labs::Sop/group_curve_corners?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/group_curve_corners</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Group</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::group_curve_corners')]]></script>
+  </tool>
+
+  <tool name="sop_layoutbrushpaint" label="Paint" icon="SOP_layoutbrushpaint">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/layoutbrushpaint</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Layout Brushes</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+soptoolutils.genericTool(kwargs, 'layoutbrushpaint')]]></script>
+  </tool>
+
+  <tool name="sop_attribblur" label="Attribute Blur" icon="SOP_attribblur">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribblur</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribblur')]]></script>
+  </tool>
+
+  <tool name="labs::sop_av_photogrammetry::5.0" label="Labs AV Photogrammetry" icon="opdef:/labs::Sop/av_photogrammetry::5.0?IconImage">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/av_photogrammetry::5.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/AliceVision</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::av_photogrammetry::5.0')]]></script>
+  </tool>
+
+  <tool name="sop_maskbyfeature" label="Mask by Feature" icon="SOP_maskbyfeature">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/maskbyfeature</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Mask</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'maskbyfeature')]]></script>
+  </tool>
+
+  <tool name="labs::sop_goz_export" label="Labs GoZ Export" icon="opdef:/labs::Sop/goz_export?IconImage">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/goz_export</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/GoZ</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::goz_export')]]></script>
+  </tool>
+
+  <tool name="labs::top_cut_geometry_to_partitions" label="Labs Cut Geometry to Partitions" icon="opdef:/labs::Top/cut_geometry_to_partitions?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>TOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Top/cut_geometry_to_partitions</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geometry</toolSubmenu>
+    <script scriptType="python"><![CDATA[import toptoolutils
+
+toptoolutils.genericTool(kwargs, 'labs::cut_geometry_to_partitions')]]></script>
+  </tool>
+
+  <tool name="lop_sopcreate" label="SOP Create" icon="LOP_sopcreate">
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/sopcreate</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Geometry</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+sopcreate = loptoolutils.genericTool(kwargs, 'sopcreate')]]></script>
+  </tool>
+
+  <tool name="lop_rendersettings" label="Render Settings" icon="LOP_rendersettings">
+    <helpURL>operator:Lop/rendersettings</helpURL>
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/rendersettings</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Rendering</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'rendersettings')]]></script>
+  </tool>
+
+  <tool name="lop_assetreference" label="Asset Reference" icon="LOP_assetreference">
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/assetreference</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>USD Model Assets</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'assetreference')]]></script>
+  </tool>
+
+  <tool name="lop_parentconstraint" label="Parent Constraint" icon="LOP_parentconstraint">
+    <toolMenuContext name="network">
+      <contextOpType>Lop/parentconstraint</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Constraints</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'parentconstraint')]]></script>
+  </tool>
+
+  <tool name="lop_sopmodify" label="SOP Modify" icon="LOP_sopmodify">
+    <toolMenuContext name="viewer">
+      <contextNetType>LOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Lop/sopmodify</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Geometry</toolSubmenu>
+    <script scriptType="python"><![CDATA[import loptoolutils
+
+loptoolutils.genericTool(kwargs, 'sopmodify')]]></script>
+  </tool>
+
+  <tool name="labs::sop_fast_remesh::1.0" label="Labs Fast Remesh" icon="opdef:/labs::Sop/fast_remesh::1.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/fast_remesh::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+soptoolutils.genericTool(kwargs, 'labs::fast_remesh::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_triplanar_displace" label="Labs Triplanar Displace" icon="opdef:/labs::Sop/triplanar_displace?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/triplanar_displace</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::triplanar_displace')]]></script>
+  </tool>
+
+  <tool name="labs::sop_superformula_shapes::1.0" label="Labs Superformula Shapes" icon="opdef:/labs::Sop/superformula_shapes::1.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/superformula_shapes::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+soptoolutils.genericTool(kwargs, 'labs::superformula_shapes::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_star" label="Labs Star" icon="opdef:/labs::Sop/star?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/star</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::star')]]></script>
+  </tool>
+
+  <tool name="labs::sop_quick_basic_tree" label="Labs Quick Basic Tree" icon="SHELF_tree_conifer">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/quick_basic_tree</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/WorldBuilding</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::quick_basic_tree')]]></script>
+  </tool>
+
+  <tool name="labs::sop_multi_bounding_box" label="Labs Multi Bounding Box" icon="VIEW_layout_quad">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/multi_bounding_box</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::multi_bounding_box')]]></script>
+  </tool>
+
+  <tool name="labs::sop_maps_baker::5.0" label="Labs Maps Baker" icon="opdef:/labs::Sop/maps_baker::5.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/maps_baker::5.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Output</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::maps_baker::5.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_group_invert::1.0" label="Labs Group Invert" icon="opdef:/labs::Sop/group_invert::1.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/group_invert::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Group</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+soptoolutils.genericTool(kwargs, 'labs::group_invert::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_group_expand" label="Labs Group Expand" icon="CHOP_joystick">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/group_expand</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Group</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::group_expand')]]></script>
+  </tool>
+
+  <tool name="labs::sop_group_edge_loop" label="Labs Group Edge Loop" icon="SHELF_edgeloop">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/group_edge_loop</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Group</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::group_edge_loop')]]></script>
+  </tool>
+
+  <tool name="labs::sop_group_by_color" label="Labs Group By Color" icon="VIEW_show_group_colors">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/group_by_color</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Group</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::group_by_color')]]></script>
+  </tool>
+
+  <tool name="labs::sop_extract_silhouette::1.0" label="Labs Extract Silhouette" icon="opdef:/labs::Sop/extract_silhouette::1.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/extract_silhouette::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::extract_silhouette::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_group_uv_borders" label="Labs Group UV Borders" icon="opdef:/labs::Sop/group_uv_borders?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/group_uv_borders</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/UV</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::group_uv_borders')]]></script>
+  </tool>
+
+  <tool name="labs::sop_exoside_quadremesher::1.0" label="Labs Exoside QuadRemesher" icon="opdef:/labs::Sop/exoside_quadremesher::1.0?IconImage">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/exoside_quadremesher::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::exoside_quadremesher::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_dissolve_flat_edges::1.0" label="Labs Dissolve Flat Edges" icon="opdef:/labs::Sop/dissolve_flat_edges::1.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/dissolve_flat_edges::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::dissolve_flat_edges::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_disc_generator" label="Labs Disc Generator" icon="SOP_circle">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/disc_generator</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::disc_generator')]]></script>
+  </tool>
+
+  <tool name="labs::sop_cylinder_generator" label="Labs Cylinder Generator" icon="SOP_tube">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/cylinder_generator</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::cylinder_generator')]]></script>
+  </tool>
+
+  <tool name="labs::sop_box_clip" label="Labs Box Clip" icon="DOP_emptyobject">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/box_clip</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Utils</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::box_clip')]]></script>
+  </tool>
+
+  <tool name="labs::sop_group_by_attribute::1.0" label="Labs Group by Attribute" icon="SOP_groupcreate">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/group_by_attribute::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Group</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::group_by_attribute::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_wang_tiles_sample" label="Labs Wang Tiles Sample" icon="opdef:/labs::Sop/wang_tiles_sample?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/wang_tiles_sample</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::wang_tiles_sample')]]></script>
+  </tool>
+
+  <tool name="labs::sop_turntable" label="Labs Turntable" icon="SHELF_turntable">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/turntable</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Misc</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::turntable')]]></script>
+  </tool>
+
+  <tool name="labs::sop_split_prim_by_normal" label="Labs Split Primitives by Normal" icon="opdef:/labs::Sop/split_prim_by_normal?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/split_prim_by_normal</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::split_prim_by_normal')]]></script>
+  </tool>
+
+  <tool name="labs::sop_edge_damage::2.0" label="Labs Edge Damage" icon="opdef:/labs::Sop/edge_damage::2.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/edge_damage::2.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::edge_damage::2.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_2d_wavefunctioncollapse::1.1" label="Labs 2D WaveFunctionCollapse" icon="opdef:/labs::Sop/2d_wavefunctioncollapse::1.1?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/2d_wavefunctioncollapse::1.1</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Misc</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::2d_wavefunctioncollapse::1.1')]]></script>
+  </tool>
+
+  <tool name="labs::sop_cable_generator::2.0" label="Labs Cable Generator" icon="opdef:/labs::Sop/cable_generator::2.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/cable_generator::2.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/WorldBuilding</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::cable_generator::2.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_calculate_thickness::1.0" label="Labs Calculate Thickness" icon="opdef:/labs::Sop/calculate_thickness::1.0?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/calculate_thickness::1.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Utils</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+soptoolutils.genericTool(kwargs, 'labs::calculate_thickness::1.0')]]></script>
+  </tool>
+
+  <tool name="labs::sop_symmetrize" label="Labs Symmetrize" icon="SOP_mirror">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/symmetrize</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Geo</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::symmetrize')]]></script>
+  </tool>
+
+  <tool name="labs::sop_splatter" label="Labs Splatter" icon="opdef:/labs::Sop/splatter?IconSVG">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>labs::Sop/splatter</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Labs/Fluid</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'labs::splatter')]]></script>
+  </tool>
+
+  <tool name="sop_attribrandomize" label="Attribute Randomize" icon="SOP_attribrandomize">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribrandomize</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribrandomize', force_filter=True)]]></script>
+  </tool>
+
+  <tool name="sop_attribnoise::2.0" label="Attribute Noise" icon="SOP_attribnoise">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextOpType>Sop/attribnoise::2.0</contextOpType>
+    </toolMenuContext>
+    <toolSubmenu>Attribute</toolSubmenu>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'attribnoise::2.0')]]></script>
+  </tool>
+</shelfDocument>

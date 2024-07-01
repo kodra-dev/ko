@@ -1,0 +1,38 @@
+{
+	"fileversion":"19.5.363",
+	"name":"snapping",
+	"categories":"Standard",
+	"pane":"scene",
+	"label":"Snapping",
+	"type":"submenu",
+	"items":{
+		"0":{
+			"label":"Primitive ",
+			"type":"script_action",
+			"icon":"TOOLS_snap_curve",
+			"check":"radialmenu.snappingMode(kwargs) == hou.snappingMode.Prim",
+			"script":"radialmenu.setSnappingMode(kwargs, hou.snappingMode.Prim if radialmenu.snappingMode(kwargs) != hou.snappingMode.Prim else hou.snappingMode.Off)"
+		},
+		"2":{
+			"label":"Point",
+			"type":"script_action",
+			"icon":"TOOLS_snap_point",
+			"check":"radialmenu.snappingMode(kwargs) == hou.snappingMode.Point",
+			"script":"radialmenu.setSnappingMode(kwargs, hou.snappingMode.Point if radialmenu.snappingMode(kwargs) != hou.snappingMode.Point else hou.snappingMode.Off)"
+		},
+		"4":{
+			"label":"Multi-Snap",
+			"type":"script_action",
+			"icon":"TOOLS_snap",
+			"check":"radialmenu.snappingMode(kwargs) == hou.snappingMode.Multi",
+			"script":"radialmenu.setSnappingMode(kwargs, hou.snappingMode.Multi if radialmenu.snappingMode(kwargs) != hou.snappingMode.Multi else hou.snappingMode.Off)"
+		},
+		"6":{
+			"label":"Grid ",
+			"type":"script_action",
+			"icon":"TOOLS_snap_grid",
+			"check":"radialmenu.snappingMode(kwargs) == hou.snappingMode.Grid",
+			"script":"radialmenu.setSnappingMode(kwargs, hou.snappingMode.Grid if radialmenu.snappingMode(kwargs) != hou.snappingMode.Grid else hou.snappingMode.Off)"
+		}
+	}
+}

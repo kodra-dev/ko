@@ -1,0 +1,562 @@
+{
+	"fileversion":"20.0.590",
+	"name":"multitools",
+	"categories":"Modeling",
+	"pane":"scene",
+	"label":"Multi Tools",
+	"type":"submenu",
+	"items":{
+		"0":{
+			"label":"Attributes",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"...",
+					"type":"submenu",
+					"items":{
+						"0":{
+							"label":"Attribute Delete",
+							"type":"script_action",
+							"icon":"SOP_attribdelete",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_attribdelete')"
+						},
+						"1":{
+							"label":"Attribute from Map",
+							"type":"script_action",
+							"icon":"SOP_attribfrommap",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_attribfrommap')"
+						},
+						"2":{
+							"label":"Attribute from Pieces",
+							"type":"script_action",
+							"icon":"SOP_attribfrompieces",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_attribfrompieces')"
+						},
+						"3":{
+							"label":"Attribute Combine",
+							"type":"script_action",
+							"icon":"SOP_attribcombine",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_attribcombine')"
+						},
+						"4":{
+							"label":"Attribute Transfer",
+							"type":"script_action",
+							"icon":"SOP_attribtransfer",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_attribtransfer')"
+						},
+						"5":{
+							"label":"Attribute Promote",
+							"type":"script_action",
+							"icon":"SOP_attribpromote",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_attribpromote')"
+						},
+						"6":{
+							"label":"Attribute Copy",
+							"type":"script_action",
+							"icon":"SOP_attribcopy",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_attribcopy')"
+						},
+						"7":{
+							"label":"Point Velocity",
+							"type":"script_action",
+							"icon":"SOP_pointvelocity",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_pointvelocity')"
+						}
+					}
+				},
+				"1":{
+					"label":"Attribute Blur",
+					"type":"script_action",
+					"icon":"SOP_attribblur",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_attribblur')"
+				},
+				"2":{
+					"label":"Attribute Noise",
+					"type":"script_action",
+					"icon":"SOP_attribnoise",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_attribnoise::2.0')"
+				},
+				"3":{
+					"label":"Attribute Paint",
+					"type":"script_action",
+					"icon":"SOP_attribpaint",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_attribpaint')"
+				},
+				"4":{
+					"label":"Adjust Color",
+					"type":"script_action",
+					"icon":"SOP_attribadjustcolor",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_attribadjustcolor')"
+				},
+				"5":{
+					"label":"Adjust Vector",
+					"type":"script_action",
+					"icon":"SOP_attribadjustvector",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_attribadjustvector')"
+				},
+				"6":{
+					"label":"Adjust Float",
+					"type":"script_action",
+					"icon":"SOP_attribadjustfloat",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_attribadjustfloat')"
+				},
+				"7":{
+					"label":"Create",
+					"type":"script_action",
+					"icon":"SOP_attribcreate-2.0",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_attribcreate::2.0')"
+				}
+			}
+		},
+		"1":{
+			"label":"Pyro",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Pyro Source",
+					"type":"script_action",
+					"icon":"SOP_pyrosource",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pyrosource')"
+				},
+				"1":{
+					"label":"Pyro Burst Source",
+					"type":"script_action",
+					"icon":"SOP_pyroburstsource",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pyroburstsource')"
+				},
+				"2":{
+					"label":"Pyro Trail Source",
+					"type":"script_action",
+					"icon":"SOP_pyrotrailsource",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pyrotrailsource')"
+				},
+				"3":{
+					"label":"Pyro Spawn Sources",
+					"type":"script_action",
+					"icon":"SOP_pyrospawnsources",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pyrospawnsources')"
+				},
+				"4":{
+					"label":"Pyro Solver",
+					"type":"script_action",
+					"icon":"SOP_pyrosolver",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pyrosolver')"
+				},
+				"5":{
+					"label":"Pyro Bake Volume",
+					"type":"script_action",
+					"icon":"SOP_pyrobakevolume",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pyrobakevolume')"
+				},
+				"6":{
+					"label":"Pyro Trail Path",
+					"type":"script_action",
+					"icon":"SOP_pyrotrailpath",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pyrotrailpath')"
+				},
+				"7":{
+					"label":"Pyro Source Spread",
+					"type":"script_action",
+					"icon":"SOP_pyrosourcespread",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pyrosourcespread')"
+				}
+			}
+		},
+		"2":{
+			"label":"VDB's",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"VDB Combine",
+					"type":"script_action",
+					"icon":"SOP_OpenVDB",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vdbcombine')"
+				},
+				"1":{
+					"label":"VDB from Particles",
+					"type":"script_action",
+					"icon":"SOP_OpenVDB",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vdbfromparticles')"
+				},
+				"2":{
+					"label":"VDB from Polygons",
+					"type":"script_action",
+					"icon":"SOP_OpenVDB",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vdbfrompolygons')"
+				},
+				"3":{
+					"label":"VDB Smooth SDF",
+					"type":"script_action",
+					"icon":"SOP_OpenVDB",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vdbsmoothsdf')"
+				},
+				"4":{
+					"label":"VDB Merge",
+					"type":"script_action",
+					"icon":"SOP_OpenVDB",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vdbmerge')"
+				},
+				"5":{
+					"label":"VDB Fracture",
+					"type":"script_action",
+					"icon":"SOP_OpenVDB",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vdbfracture')"
+				},
+				"6":{
+					"label":"Convert VDB",
+					"type":"script_action",
+					"icon":"SOP_OpenVDB",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_convertvdb')"
+				},
+				"7":{
+					"label":"VDB Reshape SDF",
+					"type":"script_action",
+					"icon":"SOP_OpenVDB",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vdbreshapesdf')"
+				}
+			}
+		},
+		"3":{
+			"label":"KineFX",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Capture Layer Paint",
+					"type":"script_action",
+					"icon":"SOP_capturelayerpaint",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_capturelayerpaint::2.0')"
+				},
+				"1":{
+					"label":"Orient Joints",
+					"type":"script_action",
+					"icon":"SOP_kinefx-orientjoints",
+					"script":"radialmenu.runShelfTool(kwargs, 'kinefx::sop_orientjoints')"
+				},
+				"2":{
+					"label":"Rig Pose",
+					"type":"script_action",
+					"icon":"SOP_kinefx-rigpose",
+					"script":"radialmenu.runShelfTool(kwargs, 'kinefx::sop_rigpose')"
+				},
+				"3":{
+					"label":"Edit",
+					"type":"submenu",
+					"items":{
+						"0":{
+							"label":"Skeleton",
+							"type":"script_action",
+							"icon":"SOP_kinefx-skeleton",
+							"script":"radialmenu.runShelfTool(kwargs, 'kinefx::sop_skeleton')"
+						},
+						"2":{
+							"label":"Rig Doctor",
+							"type":"script_action",
+							"icon":"SOP_kinefx-rigdoctor",
+							"script":"radialmenu.runShelfTool(kwargs, 'kinefx::sop_rigdoctor')"
+						},
+						"4":{
+							"label":"Delete Joints",
+							"type":"script_action",
+							"icon":"SOP_kinefx-deletejoints",
+							"script":"radialmenu.runShelfTool(kwargs, 'kinefx::sop_deletejoints')"
+						},
+						"6":{
+							"label":"Parent Joints",
+							"type":"script_action",
+							"icon":"SOP_kinefx-parentjoints",
+							"script":"radialmenu.runShelfTool(kwargs, 'kinefx::sop_parentjoints')"
+						}
+					}
+				},
+				"4":{
+					"label":"Joint Deform",
+					"type":"script_action",
+					"icon":"SOP_kinefx-jointdeform",
+					"script":"radialmenu.runShelfTool(kwargs, 'kinefx::sop_jointdeform')"
+				},
+				"5":{
+					"label":"Skeleton Mirror",
+					"type":"script_action",
+					"icon":"SOP_kinefx-skeletonmirror",
+					"script":"radialmenu.runShelfTool(kwargs, 'kinefx::sop_skeletonmirror')"
+				},
+				"6":{
+					"label":"Bone Capture Biharmonic",
+					"type":"script_action",
+					"icon":"SOP_bonecapturebiharmonic",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_bonecapturebiharmonic')"
+				},
+				"7":{
+					"label":"Bone Capture Lines",
+					"type":"script_action",
+					"icon":"SOP_bonecapturelines",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_bonecapturelines')"
+				}
+			}
+		},
+		"4":{
+			"label":"Masks",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Mask from Target",
+					"type":"script_action",
+					"icon":"SOP_distancefromtarget",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_maskfromtarget')"
+				},
+				"1":{
+					"label":"Mask along Geometry",
+					"type":"script_action",
+					"icon":"SOP_distancealonggeometry",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_maskalonggeometry')"
+				},
+				"2":{
+					"label":"Mask by Ambient Occlusion",
+					"type":"script_action",
+					"icon":"SOP_maskbyfeature",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_maskbyambientocclusion')"
+				},
+				"3":{
+					"label":"Mask from Geometry",
+					"type":"script_action",
+					"icon":"SOP_distancefromgeometry",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_maskfromgeometry')"
+				},
+				"4":{
+					"label":"Mask by Feature",
+					"type":"script_action",
+					"icon":"SOP_maskbyfeature",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_maskbyfeature')"
+				},
+				"5":{
+					"label":"Labs Measure Curvature",
+					"type":"script_action",
+					"icon":"VOP_curvature",
+					"script":"radialmenu.runShelfTool(kwargs, 'labs::sop_measure_curvature::3.0')"
+				},
+				"6":{
+					"label":"Paint Density",
+					"type":"script_action",
+					"icon":"SOP_paint",
+					"script":"radialmenu.runShelfTool(kwargs, 'object_crowdpaintdensity')"
+				},
+				"7":{
+					"label":"Paint a Mask",
+					"type":"script_action",
+					"icon":"SOP_attribpaint",
+					"script":"radialmenu.runShelfTool(kwargs, 'geometry_paintmask')"
+				}
+			}
+		},
+		"5":{
+			"label":"RBD Bullet",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"RBD Material Fracture",
+					"type":"script_action",
+					"icon":"SOP_rbdmaterialfracture",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_rbdmaterialfracture::3.0')"
+				},
+				"1":{
+					"label":"RBD Deform Pieces",
+					"type":"script_action",
+					"icon":"SOP_rbddeformpieces",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_rbddeformpieces')"
+				},
+				"2":{
+					"label":"RBD Convert Constraints",
+					"type":"script_action",
+					"icon":"SOP_rbdconvertconstraints",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_rbdconvertconstraints')"
+				},
+				"3":{
+					"label":"RBD Exploded View",
+					"type":"script_action",
+					"icon":"SOP_rbdexplodedview",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_rbdexplodedview')"
+				},
+				"4":{
+					"label":"RBD Bullet Solver",
+					"type":"script_action",
+					"icon":"SOP_rbdbulletsolver",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_rbdbulletsolver')"
+				},
+				"5":{
+					"label":"RBD Constraint Properties",
+					"type":"script_action",
+					"icon":"SOP_rbdconstraintproperties",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_rbdconstraintproperties::2.0')"
+				},
+				"6":{
+					"label":"RBD Interior Detail",
+					"type":"script_action",
+					"icon":"SOP_rbdinteriordetail",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_rbdinteriordetail')"
+				},
+				"7":{
+					"label":"RBD Configure",
+					"type":"script_action",
+					"icon":"SOP_rbdconfigure",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_rbdconfigure')"
+				}
+			}
+		},
+		"6":{
+			"label":"Volume",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Points from Volume",
+					"type":"script_action",
+					"icon":"SOP_pointsfromvolume",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_pointsfromvolume')"
+				},
+				"1":{
+					"label":"Extrude Volume",
+					"type":"script_action",
+					"icon":"SOP_extrudevolume",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_extrudevolume')"
+				},
+				"2":{
+					"label":"Volume Trail",
+					"type":"script_action",
+					"icon":"SOP_volumetrail",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_volumetrail')"
+				},
+				"3":{
+					"label":"IsoOffset",
+					"type":"script_action",
+					"icon":"SOP_isooffset",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_isooffset')"
+				},
+				"4":{
+					"label":"Convert Volume",
+					"type":"script_action",
+					"icon":"SOP_convertvolume",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_convertvolume')"
+				},
+				"5":{
+					"label":"Volume Adjust Fog",
+					"type":"script_action",
+					"icon":"SOP_volumeadjustfog",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_volumeadjustfog')"
+				},
+				"6":{
+					"label":"Volume Rasterize Attributes",
+					"type":"script_action",
+					"icon":"SOP_volumerasterizeattributes",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_volumerasterizeattributes')"
+				},
+				"7":{
+					"label":"Volume Noise SDF",
+					"type":"script_action",
+					"icon":"SOP_volumenoisesdf",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_volumenoisesdf')"
+				}
+			}
+		},
+		"7":{
+			"label":"Vellum",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Vellum Constraints",
+					"type":"script_action",
+					"icon":"SOP_vellumconstraints",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vellumconstraints')"
+				},
+				"1":{
+					"label":"Vellum Rest Blend",
+					"type":"script_action",
+					"icon":"SOP_vellumrestblend",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vellumrestblend')"
+				},
+				"2":{
+					"label":"Vellum Attach Constraints",
+					"type":"script_action",
+					"icon":"SOP_vellumattachconstraints",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vellumattachconstraints')"
+				},
+				"3":{
+					"label":"Vellum I/O",
+					"type":"script_action",
+					"icon":"SOP_vellumio",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vellumio::2.0')"
+				},
+				"4":{
+					"label":"Vellum Solver",
+					"type":"script_action",
+					"icon":"SOP_vellumsolver",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vellumsolver')"
+				},
+				"5":{
+					"label":"Vellum Post-Process",
+					"type":"script_action",
+					"icon":"SOP_vellumpostprocess",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vellumpostprocess')"
+				},
+				"6":{
+					"label":"Vellum Brush",
+					"type":"script_action",
+					"icon":"SOP_vellumbrush",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_vellumbrush')"
+				},
+				"7":{
+					"label":"Configure",
+					"type":"submenu",
+					"items":{
+						"0":{
+							"label":"Vellum Cloth",
+							"type":"script_action",
+							"icon":"SHELF_vellum_cloth",
+							"script":"radialmenu.runShelfTool(kwargs, 'dynamics_vellumcloth')"
+						},
+						"1":{
+							"label":"Surface Collider",
+							"type":"script_action",
+							"icon":"DOP_clothbodycollider",
+							"script":"radialmenu.runShelfTool(kwargs, 'dop_surfacecollider')"
+						},
+						"2":{
+							"label":"Vellum Grains",
+							"type":"script_action",
+							"icon":"SHELF_vellum_grains",
+							"script":"radialmenu.runShelfTool(kwargs, 'dynamics_vellumgrains')"
+						},
+						"3":{
+							"label":"Vellum I/O",
+							"type":"script_action",
+							"icon":"SOP_vellumio",
+							"script":"radialmenu.runShelfTool(kwargs, 'sop_vellumio::2.0')"
+						},
+						"4":{
+							"label":"Vellum Hair",
+							"type":"script_action",
+							"icon":"SHELF_vellum_hair",
+							"script":"radialmenu.runShelfTool(kwargs, 'dynamics_vellumhair')"
+						},
+						"5":{
+							"label":"Vellum Tetrahedral Softbody",
+							"type":"script_action",
+							"icon":"SHELF_vellum_softbody_tetrahedral",
+							"script":"radialmenu.runShelfTool(kwargs, 'dynamics_vellumtetsoftbody')"
+						},
+						"6":{
+							"label":"Vellum Balloon",
+							"type":"script_action",
+							"icon":"SHELF_vellum_balloon",
+							"script":"radialmenu.runShelfTool(kwargs, 'dynamics_vellumballoon')"
+						},
+						"7":{
+							"label":"Vellum Strut Softbody",
+							"type":"script_action",
+							"icon":"SHELF_vellum_softbody_struts",
+							"script":"radialmenu.runShelfTool(kwargs, 'dynamics_vellumsoftbody')"
+						}
+					}
+				}
+			}
+		}
+	}
+}

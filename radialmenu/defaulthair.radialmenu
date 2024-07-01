@@ -1,0 +1,136 @@
+{
+	"fileversion":"20.0.653",
+	"name":"defaulthair",
+	"categories":"Hair",
+	"pane":"scene",
+	"label":"Hair",
+	"type":"submenu",
+	"items":{
+		"0":{
+			"label":"Initialize",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Add Fur",
+					"type":"script_action",
+					"icon":"FUR_add_fur",
+					"script":"radialmenu.runShelfTool(kwargs, 'object_groom_addfur')"
+				},
+				"1":{
+					"label":"Create Guides",
+					"type":"script_action",
+					"icon":"FUR_guidegroom",
+					"script":"radialmenu.runShelfTool(kwargs, 'object_groom_guidegroom')"
+				},
+				"3":{
+					"label":"Reguide",
+					"type":"script_action",
+					"icon":"FUR_reguide",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_reguide')"
+				},
+				"4":{
+					"label":"Merge Groom Objects",
+					"type":"script_action",
+					"icon":"FUR_groommerge",
+					"script":"radialmenu.runShelfTool(kwargs, 'object_groom_groommerge')"
+				},
+				"5":{
+					"label":"Add White Hairs",
+					"type":"script_action",
+					"icon":"FUR_paint_white_density",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_whitehair')"
+				},
+				"6":{
+					"label":"Draw Hair",
+					"type":"script_action",
+					"icon":"SOP_drawhair",
+					"script":"radialmenu.runShelfTool(kwargs, 'object_drawhairguides')"
+				},
+				"7":{
+					"label":"Generate Hair",
+					"type":"script_action",
+					"icon":"FUR_hairgen",
+					"script":"radialmenu.runShelfTool(kwargs, 'object_groom_hairgen')"
+				}
+			}
+		},
+		"1":{
+			"label":"Guide Tools",
+			"type":"submenu",
+			"items":{
+				"1":{
+					"label":"Set Length",
+					"type":"script_action",
+					"icon":"FUR_paint_length",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_guideprocess_length')"
+				},
+				"2":{
+					"label":"Bend",
+					"type":"script_action",
+					"icon":"FUR_orientation",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_guideprocess_bend')"
+				},
+				"3":{
+					"label":"Set Direction",
+					"type":"script_action",
+					"icon":"FUR_comb",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_guideprocess_setdir')"
+				},
+				"4":{
+					"label":"Clump",
+					"type":"script_action",
+					"icon":"FUR_paint_clumping",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_hairclump')"
+				},
+				"5":{
+					"label":"Smooth",
+					"type":"script_action",
+					"icon":"FUR_smooth",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_guideprocess_smooth')"
+				},
+				"6":{
+					"label":"Frizz",
+					"type":"script_action",
+					"icon":"FUR_paint_frizz",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_guideprocess_frizz')"
+				},
+				"7":{
+					"label":"Lift",
+					"type":"script_action",
+					"icon":"FUR_lift_hair",
+					"script":"radialmenu.runShelfTool(kwargs, 'sop_groom_guideprocess_lift')"
+				}
+			}
+		},
+		"2":{
+			"label":"Jump into Guides",
+			"type":"script_action",
+			"icon":"FUR_jump_guides",
+			"script":"radialmenu.runShelfTool(kwargs, 'object_groom_jumpintoguidegroom')"
+		},
+		"3":{
+			"label":"Jump to Guides",
+			"type":"script_action",
+			"icon":"FUR_jump_guides",
+			"script":"radialmenu.runShelfTool(kwargs, 'object_groom_jumptoguidegroom')"
+		},
+		"5":{
+			"label":"Jump to Hair",
+			"type":"script_action",
+			"icon":"FUR_jump_generate",
+			"script":"radialmenu.runShelfTool(kwargs, 'object_groom_jumptohairgen')"
+		},
+		"6":{
+			"label":"Jump into Hair",
+			"type":"script_action",
+			"icon":"FUR_jump_generate",
+			"script":"radialmenu.runShelfTool(kwargs, 'object_groom_jumpintohairgen')"
+		},
+		"7":{
+			"label":"Hide/Unhide Hair",
+			"type":"script_action",
+			"icon":"FUR_toggle_display",
+			"script":"radialmenu.runShelfTool(kwargs, 'object_groom_togglehairdisplay')"
+		}
+	}
+}
