@@ -53,7 +53,15 @@ def animationPlayback(kwargs, command):
         hou.setFrame(range[0])
 
 
+def icon_for_quickmark(qm):
+    if not qm:
+        return "VIEW_display_point"
+    if not qm.currentnode:
+        return "VIEW_display_point"
+    return qm.currentnode.type().icon()
+
 def SetQuickmarkMenu(editor):
+        
     def create_quickmark_item(index):
         def wrapper(**kwargs):
             nodegraphview.createQuickMark(editor, index)
@@ -65,7 +73,7 @@ def SetQuickmarkMenu(editor):
             "type": "script_action",
             "label": nodegraphview.quickmarkMenuLabel(index).removeprefix("Quickmark "),
             "script": wrapper,
-            "icon": "BUTTONS_quickmark" if qm is None else qm.currentnode.type().icon(),
+            "icon": icon_for_quickmark(qm),
         }
 
     menu = {
@@ -91,7 +99,7 @@ def GoQuickmarkMenu(editor):
             "type": "script_action",
             "label": nodegraphview.quickmarkMenuLabel(index).removeprefix("Quickmark "),
             "script": wrapper,
-            "icon": "VIEW_display_point" if qm is None else qm.currentnode.type().icon(),
+            "icon": icon_for_quickmark(qm),
         }
 
     menu = {
