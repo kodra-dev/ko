@@ -8,6 +8,7 @@
   <toolshelf name="ko_modeling" label="KoModeling">
     <memberTool name="connect"/>
     <memberTool name="remove_visibility_ops"/>
+    <memberTool name="toggle_highlight"/>
   </toolshelf>
 
   <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
@@ -35,5 +36,29 @@ else:
 for child in viewer.pwd().allSubChildren(top_down=False, recurse_in_locked_nodes=False):
     if child.type() == hou.nodeType(hou.sopNodeTypeCategory(), "visibility"):
         child.destroy()]]></script>
+  </tool>
+
+  <tool name="toggle_highlight" label="Toggle Highlight" icon="VIEW_show_group_colors">
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import ko_ui
+
+editor = ko_ui.oneNetworkEditor(kwargs)
+network_path = editor.pwd()
+node = network_path.displayNode()
+
+is_set = node.isGenericFlagSet(hou.nodeFlag.Highlight)
+to_set = not is_set
+node.setGenericFlag(hou.nodeFlag.Highlight, to_set)
+
+editor.flashMessage("SCENEGRAPH_active_on" if to_set else "SCENEGRAPH_loaded_off",
+    f"Highlight flag " + ("on" if to_set else "off") + f" for {node.name()}",
+    1)]]></script>
   </tool>
 </shelfDocument>

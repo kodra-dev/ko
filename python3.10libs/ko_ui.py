@@ -199,3 +199,12 @@ def swapMultiParmTo(kwargs, targetSwapIndex: int):
     #Get the other parameters inside this multiparm block so we can start swapping.
     mpBlock = node.parm(mpFolder.name()).parmTemplate().parmTemplates()
     getParamNames(kwargs, mpBlock, index, targetSwapIndex, 0)
+
+
+def allActiveNetworkEditors():
+    return [pane for pane in hou.ui.paneTabs() if isinstance(pane, hou.NetworkEditor) and pane.isCurrentTab()]
+
+def oneNetworkEditor(kwargs):
+    if 'pane' in kwargs and isinstance(kwargs['pane'], hou.NetworkEditor):
+        return kwargs['pane']
+    return allActiveNetworkEditors()[-1]
