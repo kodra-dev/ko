@@ -9,6 +9,7 @@
     <memberTool name="connect"/>
     <memberTool name="remove_visibility_ops"/>
     <memberTool name="toggle_highlight"/>
+    <memberTool name="rename_pwd"/>
   </toolshelf>
 
   <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
@@ -60,5 +61,48 @@ node.setGenericFlag(hou.nodeFlag.Highlight, to_set)
 editor.flashMessage("SCENEGRAPH_active_on" if to_set else "SCENEGRAPH_loaded_off",
     f"Highlight flag " + ("on" if to_set else "off") + f" for {node.name()}",
     1)]]></script>
+  </tool>
+
+  <tool name="rename_pwd" label="Rename PWD" icon="hicon:/SVGIcons.index?BUTTONS_label.svg">
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import ko_ui
+
+
+def rename_pwd(editor):
+    current_network = editor.pwd()
+
+    current_name = current_network.name()
+        
+    # Prompt the user for a new name
+    index, new_name = hou.ui.readInput("Rename Network", 
+                                buttons=("Rename", "Cancel"),
+                                initial_contents=current_name, 
+                                title=f"Rename '{current_name}'",
+                                close_choice=1)
+    
+    if index == 1:
+        return
+
+    # Check if the user canceled the operation
+    if not new_name:
+        print("Rename operation canceled.")
+        return
+
+    # Attempt to rename the network
+    try:
+        current_network.setName(new_name)
+        editor.flashMessage("BUTTONS_label", f"Renamed {current_name} to {new_name}", 1)
+    except hou.OperationFailed as e:
+        print(f"Failed to rename network: {str(e)}")
+
+editor = ko_ui.oneNetworkEditor(kwargs)
+rename_pwd(editor)]]></script>
   </tool>
 </shelfDocument>
