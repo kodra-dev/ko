@@ -10,6 +10,7 @@
     <memberTool name="remove_visibility_ops"/>
     <memberTool name="toggle_highlight"/>
     <memberTool name="rename_pwd"/>
+    <memberTool name="create_null"/>
   </toolshelf>
 
   <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
@@ -104,5 +105,30 @@ def rename_pwd(editor):
 
 editor = ko_ui.oneNetworkEditor(kwargs)
 rename_pwd(editor)]]></script>
+  </tool>
+
+  <tool name="create_null" label="Create Null" icon="hicon:/SVGIcons.index?COMMON_null.svg">
+    <script scriptType="python"><![CDATA[import toolutils
+import soptoolutils
+
+import os
+
+def createNullFor(editor, name):
+    node = editor.currentNode()
+    null = node.parent().createNode('null', name)
+    null.setInput(0, node)
+    null.moveToGoodPosition()
+    null.setDisplayFlag(True)
+    null.setRenderFlag(True)
+    editor.setCurrentNode(null)
+
+editor = kwargs["pane"]
+if editor and editor.type() == hou.paneTabType.NetworkEditor:
+    choice, name = hou.ui.readInput("Name: ", buttons=("OK", "Cancel"), close_choice=1, initial_contents="null")
+    if choice == 0:
+        createNullFor(editor, name)
+else:
+    raise hou.Error("This tool cannot run in the current pane")
+]]></script>
   </tool>
 </shelfDocument>
