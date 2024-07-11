@@ -11,6 +11,7 @@
     <memberTool name="toggle_highlight"/>
     <memberTool name="rename_pwd"/>
     <memberTool name="create_null"/>
+    <memberTool name="ko_normal"/>
   </toolshelf>
 
   <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
@@ -134,5 +135,17 @@ if editor and editor.type() == hou.paneTabType.NetworkEditor:
 else:
     raise hou.Error("This tool cannot run in the current pane")
 ]]></script>
+  </tool>
+
+  <tool name="ko_normal" label="KoNormal" icon="hicon:/SVGIcons.index?SOP_normal.svg">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+soptoolutils.genericTool(kwargs, 'normal')]]></script>
   </tool>
 </shelfDocument>
