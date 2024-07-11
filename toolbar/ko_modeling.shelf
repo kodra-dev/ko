@@ -108,6 +108,10 @@ rename_pwd(editor)]]></script>
   </tool>
 
   <tool name="create_null" label="Create Null" icon="hicon:/SVGIcons.index?COMMON_null.svg">
+    <toolMenuContext name="network">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
     <script scriptType="python"><![CDATA[import toolutils
 import soptoolutils
 
