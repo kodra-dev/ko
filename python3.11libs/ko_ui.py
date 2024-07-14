@@ -14,11 +14,14 @@ def setShadingMode(shading_type: hou.glShadingType, display_set_type: hou.displa
     tmplset = settings.displaySet(display_set_type)
     tmplset.setShadedMode(shading_type)
 
-def menuize(items: list[str], itemToLabel: Callable[[str], str] = lambda item: item):
+def menuize(items: list[str], itemToLabel: Callable[[str], str] = lambda item: item, with_empty: bool = False) -> list[dict]:
     """
     Convert a list of strings to a list of dictionaries with "label" and "name" keys.
     """
     labels = [itemToLabel(item) for item in items]
+    if with_empty:
+        items = [" "] + items
+        labels = ["None"] + labels
     return [item for pair in zip(labels, items) for item in pair]
 
 # multiparm index is 1-based

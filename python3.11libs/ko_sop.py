@@ -38,6 +38,29 @@ def groupSelectMenu(node, input_index = 0, type = None):
             return []
     return ko_ui.menuize([group.name() for group in groups])
 
+def attribSelectMenu(node, attrib = "name", attrib_type = hou.attribType.Prim, input_index = 0):
+    if not node:
+        return []
+
+    geo = node.inputGeometry(input_index)
+
+    if not geo:
+        return []
+
+
+    attribs = ()
+    if attrib_type == hou.attribType.Point:
+        attribs = geo.pointStringAttribValues(attrib)
+    elif attrib_type == hou.attribType.Vertex:
+        attribs = geo.vertexStringAttribValues(attrib)
+    elif attrib_type == hou.attribType.Prim:
+        attribs = geo.primStringAttribValues(attrib)
+    elif attrib_type == hou.attribType.Global:
+        raise ValueError("Global attribs are not supported")
+
+    return ko_ui.menuize([a for a in attribs], with_empty=True)
+
+
 def allDownstreamSops(node: hou.Node):
     visited = set()
     nodes = []

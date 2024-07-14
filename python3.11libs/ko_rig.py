@@ -22,7 +22,11 @@ def resetRig(kwargs):
 def isApexGraph(node):
     if not node or not isinstance(node, hou.SopNode):
         return False
-    if node.type() == hou.nodeType(hou.sopNodeTypeCategory(), "apex::editgraph"):
+    if (node.type() == hou.nodeType(hou.sopNodeTypeCategory(), "apex::editgraph") or
+        node.type() == hou.nodeType(hou.sopNodeTypeCategory(), "apex::autorigcomponent::2.0") or
+        node.type() == hou.nodeType(hou.sopNodeTypeCategory(), "apex::rigscriptcomponent::2.0") or
+        node.type() == hou.nodeType(hou.sopNodeTypeCategory(), "apex::script")):
+
         return True
 
     geo = node.geometry()

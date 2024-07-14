@@ -30,18 +30,17 @@ def open_in_apex_editor(editor, node, reuse_existing=True):
     if reuse_existing and existing_panel:
         panel = existing_panel
     else:
-        panel = hou.ui.curDesktop().createFloatingPanel(hou.paneTabType.ApexEditor, (20, 550), (1200, 800),
+        panel = hou.ui.curDesktop().createFloatingPanel(hou.paneTabType.ApexEditor, (20, 500), (1300, 900),
                                                                 immediate=True)
     apex_editor = panel.panes()[0].tabs()[0]
     apex_editor.showNetworkControls(False)
     apex_editor.setPref("showmenu", "0")
     old_current_node = editor.currentNode()
 
-    apex_editor.setPin(hou.paneLinkType.FollowSelection)
     editor.setCurrentNode(node)
+    apex_editor.setPin(False)
     apex_editor.setPwd(node.parent())
-    apex_editor.setPin(hou.paneLinkType.Pinned)
-    editor.setCurrentNode(old_current_node)
+    # editor.setCurrentNode(old_current_node)
     home_all(apex_editor)
 
 
@@ -88,7 +87,7 @@ def open_in_floating_window(editor, node, reuse_existing=True):
                                                         immediate=True)
 
     if editor.linkGroup() == hou.paneLinkType.FollowSelection:
-        editor.setPin(hou.paneLinkType.Pinned)
+        editor.setPin(True)
     new_editor = panel.panes()[0].tabs()[0]
     new_editor.showNetworkControls(False)
     new_editor.setPref("showmenu", "0")
