@@ -96,11 +96,12 @@ def open_in_floating_window(editor, node, reuse_existing=True):
 
 
 def home_all(editor):
-    items = (it for (it, _, _) in editor.networkItemsInBox(hou.Vector2(-1000, -1000), hou.Vector2(1000, 1000)))
+    items = (it for (it, _, _) in editor.networkItemsInBox(hou.Vector2(-2000, -2000), hou.Vector2(2000, 2000)))
     boxes = (editor.itemRect(it) for it in items if isinstance(it, hou.NetworkMovableItem))
     bounds = hou.BoundingRect(0, 0, 0.1, 0.1)
     for b in boxes:
         bounds.enlargeToContain(b)
+    bounds.expand((0.5, 0.25))
     editor.setVisibleBounds(bounds)
 
 
