@@ -12,6 +12,7 @@
     <memberTool name="rename_pwd"/>
     <memberTool name="create_null"/>
     <memberTool name="ko_normal"/>
+    <memberTool name="ko_extract"/>
   </toolshelf>
 
   <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
@@ -147,5 +148,80 @@ else:
     <script scriptType="python"><![CDATA[import soptoolutils
 
 soptoolutils.genericTool(kwargs, 'normal')]]></script>
+  </tool>
+
+  <tool name="ko_extract" label="KoExtract" icon="SHELF_extract_object">
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import toolutils
+import soptoolutils
+
+activepane = toolutils.activePane(kwargs)
+if activepane.type() != hou.paneTabType.SceneViewer:
+    raise hou.Error("This tool cannot run in the current pane")
+
+scene_viewer = toolutils.sceneViewer()
+nodetypename = "delete"
+
+# Obtain a geometry selection
+geo_types = (hou.geometryType.Primitives, )
+selection = scene_viewer.selectGeometry(
+                "Select the primitives to extract and press Enter to complete",
+                geometry_types = geo_types,
+                allow_obj_sel = True)
+# The following will raise an exception if nothing was selected.
+if len(selection.nodes()) == 0:
+    raise hou.Error("Nothing was selected.")
+
+
+choice, name = hou.ui.readInput("Extract:", 
+                            buttons=("Sibling", "/obj", "Stashed sibling", "Stashed /obj", "Cancel"),
+                            initial_contents = "extract_object1",
+                            close_choice=4)
+stashed = choice in (2, 3)
+obj_new = choice in (1, 3)
+
+# Create a new SOP container with the merged geometry
+if obj_new:
+    container = soptoolutils.createSopNodeContainer(scene_viewer, name)
+else:
+    container = scene_viewer.pwd()
+
+merge_sop = selection.mergedNode(container, nodetypename, True, True)
+if merge_sop == selection.nodes()[0]:
+    merge_sop = container.createNode("object_merge")
+    merge_sop.parm("objpath1").set(merge_sop.relativePathTo(selection.nodes()[0]))
+    merge_sop.parm("group1").set(selection.selectionStrings()[0])
+merge_sop.setName(name, True)
+
+# Turn back on the display flag for merged nodes
+for sop in selection.nodes():
+    sop.parent().setDisplayFlag(True)
+
+
+# Change our viewer to the new object
+scene_viewer.setPwd(merge_sop.parent())
+merge_sop.setDisplayFlag(True)
+merge_sop.setRenderFlag(True)
+merge_sop.setHighlightFlag(True)
+merge_sop.setCurrent(True, True)
+merge_sop.moveToGoodPosition(move_inputs=False)
+
+if stashed:
+    stash_node = container.createNode("stash")
+    stash_node.setInput(0, merge_sop)
+    stash_node.parm("stash").pressButton()
+    stash_node.setDisplayFlag(True)
+    stash_node.setRenderFlag(True)
+    stash_node.setCurrent(True, True)
+    stash_node.moveToGoodPosition(move_inputs=False)
+
+toolutils.homeToSelectionNetworkEditorsFor(merge_sop)
+# scene_viewer.enterCurrentNodeState()
+]]></script>
   </tool>
 </shelfDocument>

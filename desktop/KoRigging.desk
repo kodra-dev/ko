@@ -8,28 +8,28 @@ radial menu set defaultmodeling
 root {
     split 0.342396 V {
         tabs 0 1 {
-            pane panetab1 -a 0 -l 10 -H /obj/eye_target/ -T SOP -m neteditor
-            pane panetab2 -a 0 -l 10 -H /obj/eye_target/ -T SOP -m chaneditor
-            pane panetab3 -a 0 -l 10 -H /obj/eye_target/ -T SOP -m iprviewer
+            pane panetab1 -a 0 -l 10 -H /obj/ -T OBJ -m neteditor
+            pane panetab2 -a 0 -l 10 -H /obj/ -T OBJ -m chaneditor
+            pane panetab3 -a 0 -l 10 -H /obj/ -T OBJ -m iprviewer
             pane panetab4 -a 0 -l 10 -H /img/ -T IMG -m imageview
             pane panetab13 -a 0 -l 10 -H /ch/ -T CHOPNET -m channelview
-            pane panetab11 -a 0 -l 10 -H /obj/eye_target/ -T SOP -m details
+            pane panetab11 -a 0 -l 10 -H /obj/ -T OBJ -m details
             pane panetab8 -a 0 -l 0 -H /tasks/ -T TOPNET -m neteditor
         }
         split 0.5 H R {
             tabs 0 1 {
-                pane panetab6 -a 0 -l 0 -H /obj/eye_target/ -T SOP -m details
+                pane panetab6 -a 0 -l 10 -H /obj/ -T OBJ -m details
             }
             tabs 1 1 {
-                pane panetab7 -a 0 -l 10 -H /obj/eye_target/ -T SOP -m pythonpanel
-                pane panetab5 -a 0 -l 10 -H /obj/eye_target/ -T SOP -m pythonpanel
+                pane panetab7 -a 0 -l 10 -H /obj/ -T OBJ -m pythonpanel
+                pane panetab5 -a 0 -l 10 -H /obj/ -T OBJ -m pythonpanel
             }
         }
     }
 
-    panel panel2 -w 2631 406 1590 983 {
+    panel panel2 -w 2630 611 1270 785 {
         tabs 0 1 {
-            pane FloatingPanel -a 0 -l 10 -H /obj/eye_target/ -T SOP -m sceneview
+            pane FloatingPanel -a 0 -l 10 -H /obj/ -T OBJ -m sceneview
         }
     }
 }
