@@ -408,8 +408,12 @@ def eyesTarget(rig, skel, **kwargs):
             driven=kwargs['driven'] + "_R",
             target=kwargs['target'] + "_R",
             mirrored=True)
+    target_left = ru.tfo(rig, kwargs['target'] + "_L")
+    target_right = ru.tfo(rig, kwargs['target'] + "_R")
+    ru.updateParms(rig, target_left, { "scaleinheritance": 1 })
+    ru.updateParms(rig, target_right, { "scaleinheritance": 1 })
     target_center = ru.tfo(rig, kwargs['targetcenter'])
-    ru.promoteTfo(rig, target_center, t=True, r=False, s=False, demote=True)
+    ru.promoteTfo(rig, target_center, t=True, r=True, s=True, demote=True)
 
 
 def rotationChain(rig, skel, **kwargs):

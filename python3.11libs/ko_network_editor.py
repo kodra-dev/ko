@@ -25,8 +25,11 @@ def add_comment_sticky_note(ref_node):
 
 
 def open_in_apex_editor(editor, node, reuse_existing=True):
-    existing_panel = next((p for p in hou.ui.floatingPanels() if p.panes()[0].tabs()[0].type() == hou.paneTabType.ApexEditor),
-                          None)
+    existing_panel = None
+    for p in hou.ui.floatingPanels():
+        if p.panes() and p.panes()[0].tabs() and p.panes()[0].tabs()[0].type() == hou.paneTabType.ApexEditor:
+            existing_panel = p
+
     if reuse_existing and existing_panel:
         panel = existing_panel
     else:

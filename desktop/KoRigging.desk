@@ -6,35 +6,37 @@ menubar      -1
 statusbar    -1
 radial menu set defaultmodeling
 root {
-    split 0.342396 V {
+    split 0.342396 V R {
         tabs 0 1 {
-            pane panetab1 -a 0 -l 10 -H /obj/ -T OBJ -m neteditor
-            pane panetab2 -a 0 -l 10 -H /obj/ -T OBJ -m chaneditor
-            pane panetab3 -a 0 -l 10 -H /obj/ -T OBJ -m iprviewer
-            pane panetab4 -a 0 -l 10 -H /img/ -T IMG -m imageview
+            pane panetab1 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m neteditor
+            pane panetab2 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m chaneditor
+            pane panetab3 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m iprviewer
+            pane panetab4 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m imageview
             pane panetab13 -a 0 -l 10 -H /ch/ -T CHOPNET -m channelview
-            pane panetab11 -a 0 -l 10 -H /obj/ -T OBJ -m details
+            pane panetab11 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m details
             pane panetab8 -a 0 -l 0 -H /tasks/ -T TOPNET -m neteditor
         }
-        split 0.5 H R {
+        split 0.5 H {
             tabs 0 1 {
-                pane panetab6 -a 0 -l 10 -H /obj/ -T OBJ -m details
+                pane panetab6 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m details
             }
-            tabs 1 1 {
-                pane panetab7 -a 0 -l 10 -H /obj/ -T OBJ -m pythonpanel
-                pane panetab5 -a 0 -l 10 -H /obj/ -T OBJ -m pythonpanel
+            tabs 2 1 {
+                pane panetab7 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m pythonpanel
+                pane panetab5 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m pythonpanel
+                pane panetab9 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m pythonpanel
             }
         }
     }
 
-    panel panel2 -w 2630 611 1270 785 {
+    panel panel2 -w 2565 241 1226 670 -X {
         tabs 0 1 {
-            pane FloatingPanel -a 0 -l 10 -H /obj/ -T OBJ -m sceneview
+            pane FloatingPanel -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m sceneview
+            pane panetab10 -a 0 -l 10 -H /obj/geo1/copnet1/ -T COP -m imageview
         }
     }
 }
 shelfdock -o 1 -l icon_and_text -G "0.53 0.50" add shelf_set_1 shelf_set_3
-networkeditor -p '{\n	"taskgraphcollapsemode":"Off",\n	"backgroundimageediting":"0",\n	"gridxstep":"2.0",\n	"overviewmode":"2",\n	"workitemattrtocollapseby":"",\n	"showparmdialogmax":"1",\n	"showtaskgraphperf":"0",\n	"palettecolors":"",\n	"showtree":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"showspareinputdep":"1",\n	"taskgraphperfstatname":"Cook Time",\n	"showmenu":"1",\n	"taskgraphsortdirection":"0",\n	"sop:listmode":"0",\n	"typesidebarsplit":"0.25",\n	"showdep":"1",\n	"showtasksmenu":"1",\n	"showcopsmenu":"1",\n	"treesplit":"0.162891",\n	"palettemode":"0",\n	"gridmode":"0",\n	"showgrouplist":"0",\n	"gridystep":"1.0",\n	"showperfstats":"1",\n	"overviewbounds":"0.000000 0.000000 768.000000 202.200000",\n	"perfstatname":"Time",\n	"palettesize":"226 226",\n	"grouplistsplit":"0.75",\n	"showchilddep":"1",\n	"backgroundimagebrightness":"1.0",\n	"workitemcolorattribute":"",\n	"useworkitemcolorattribute":"1",\n	"showtypesidebar":"0"\n}\n' panetab1
+networkeditor -p '{\n	"taskgraphcollapsemode":"Off",\n	"backgroundimageediting":"0",\n	"gridxstep":"2.0",\n	"overviewmode":"2",\n	"workitemattrtocollapseby":"",\n	"showparmdialogmax":"1",\n	"showtaskgraphperf":"0",\n	"palettecolors":"",\n	"showtree":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"showspareinputdep":"1",\n	"taskgraphperfstatname":"Cook Time",\n	"showmenu":"1",\n	"taskgraphsortdirection":"0",\n	"sop:listmode":"0",\n	"typesidebarsplit":"0.25",\n	"showdep":"1",\n	"showtasksmenu":"1",\n	"showcopsmenu":"1",\n	"treesplit":"0.162891",\n	"palettemode":"0",\n	"gridmode":"0",\n	"showgrouplist":"0",\n	"gridystep":"1.0",\n	"showperfstats":"1",\n	"overviewbounds":"0.000000 0.000000 767.400000 297.300000",\n	"perfstatname":"Time",\n	"palettesize":"226 226",\n	"grouplistsplit":"0.75",\n	"showchilddep":"1",\n	"backgroundimagebrightness":"1.0",\n	"workitemcolorattribute":"",\n	"useworkitemcolorattribute":"1",\n	"showtypesidebar":"0"\n}\n' panetab1
 netcolumns -c display,xray,select,origin,capture,bone -n OBJ panetab1
 netcolumns -c display,render,template,selectabletemplate,highlight,unload,bypass,lock -n SOP panetab1
 netcolumns -c delscript,comment -n CHOPNET panetab1
@@ -57,7 +59,7 @@ iprview -t 0.1 -l 0 -e 1 -u 1  panetab3
 chopview -a 0 -c "" -k 1 -m 1 -b 1 -e 1 -f 0 -g 0 -H 1 -i 0 -j 1 -l 0 -n 1 -V 0 -y 0 -B 0 -s 0 -S 0.034375 -u 0 -v 0 -h -10 310 -r -1.5 1.5 panetab13
 geospreadsheet -c 0 -l horizontal -s 0.5 -m none -f 0 panetab11
 scenegraphtree -S 0.25 -m 2 -p "/collections /lights" -c  -i  -o  -x 1 -s 1 -M 0 -C primtype,descendants,kind,populated,loaded,activation,visibility,solo,selectability  panetab11
-networkeditor -p '{\n	"taskgraphcollapsemode":"Off",\n	"backgroundimageediting":"0",\n	"gridxstep":"2.0",\n	"overviewmode":"2",\n	"workitemattrtocollapseby":"",\n	"showparmdialogmax":"1",\n	"showtaskgraphperf":"0",\n	"palettecolors":"",\n	"showtree":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"showspareinputdep":"1",\n	"taskgraphperfstatname":"Cook Time",\n	"showmenu":"1",\n	"taskgraphsortdirection":"0",\n	"typesidebarsplit":"0.25",\n	"showdep":"0",\n	"showtasksmenu":"1",\n	"showcopsmenu":"1",\n	"treesplit":"0.25",\n	"palettemode":"0",\n	"gridmode":"0",\n	"showgrouplist":"0",\n	"gridystep":"1.0",\n	"showperfstats":"1",\n	"overviewbounds":"0.000000 0.000000 768.000000 202.200000",\n	"perfstatname":"Time",\n	"palettesize":"226 226",\n	"grouplistsplit":"0.75",\n	"showchilddep":"1",\n	"backgroundimagebrightness":"1.0",\n	"workitemcolorattribute":"",\n	"useworkitemcolorattribute":"0",\n	"showtypesidebar":"0"\n}\n' panetab8
+networkeditor -p '{\n	"taskgraphcollapsemode":"Off",\n	"backgroundimageediting":"0",\n	"gridxstep":"2.0",\n	"overviewmode":"2",\n	"workitemattrtocollapseby":"",\n	"showparmdialogmax":"1",\n	"showtaskgraphperf":"0",\n	"palettecolors":"",\n	"showtree":"0",\n	"taskgraphsortcriteria":"Automatic",\n	"showparmdialog":"1",\n	"showspareinputdep":"1",\n	"taskgraphperfstatname":"Cook Time",\n	"showmenu":"1",\n	"taskgraphsortdirection":"0",\n	"typesidebarsplit":"0.25",\n	"showdep":"0",\n	"showtasksmenu":"1",\n	"showcopsmenu":"1",\n	"treesplit":"0.25",\n	"palettemode":"0",\n	"gridmode":"0",\n	"showgrouplist":"0",\n	"gridystep":"1.0",\n	"showperfstats":"1",\n	"overviewbounds":"0.000000 0.000000 767.400000 306.600000",\n	"perfstatname":"Time",\n	"palettesize":"226 226",\n	"grouplistsplit":"0.75",\n	"showchilddep":"1",\n	"backgroundimagebrightness":"1.0",\n	"workitemcolorattribute":"",\n	"useworkitemcolorattribute":"0",\n	"showtypesidebar":"0"\n}\n' panetab8
 netcolumns -c display,xray,select,origin,capture,bone -n OBJ panetab8
 netcolumns -c display,render,template,selectabletemplate,highlight,unload,bypass,lock -n SOP panetab8
 netcolumns -c delscript,comment -n CHOPNET panetab8
@@ -80,6 +82,7 @@ geospreadsheet -c 0 -l horizontal -s 0.5 -m none -f 0 panetab6
 scenegraphtree -S 0.25 -m 2 -p "/collections /lights" -c  -i  -o  -x 1 -s 1 -M 0 -C primtype,descendants,kind,populated,loaded,activation,visibility,solo,selectability  panetab6
 pythonpanel -s on -t off -n apexselectionmanager panetab7
 pythonpanel -s on -t off -n rig_tree panetab5
+pythonpanel -s on -t off -n apexanimationlayersmanager panetab9
 viewerstow -x open -b stow -l stow -m hide -c hide -d open ${DESKNAME}.FloatingPanel.world
 vieweroption -a 0 ${DESKNAME}.FloatingPanel.world
 viewlayout -s 2 ${DESKNAME}.FloatingPanel.world

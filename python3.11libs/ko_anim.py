@@ -8,7 +8,8 @@ except NameError:
 
 def bookmarkFilePath(node_name):
     hip = hou.text.expandString("$HIP")
-    return os.path.join(hip, 'bookmarks', node_name + ".json")
+    basename = os.path.splitext(hou.hipFile.basename())[0]
+    return os.path.join(hip, 'bookmarks', basename + '_' + node_name + ".json")
 
 def saveBookmarks(kwargs):
     node = kwargs['node']
