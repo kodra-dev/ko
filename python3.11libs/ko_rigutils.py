@@ -248,7 +248,7 @@ def getOutputNode(rig: apex.Graph) -> int:
     return getNode(rig, "%callback(__binding__)")
 
 def getSetPointTransfromsNode(rig: apex.Graph) -> int:
-    return getNode(rig, "%callback(SetPointTransforms) & pointtransform")
+    return getNode(rig, "%callback(skel::SetPointTransforms) & pointtransform")
 
 def setUpBlendshapeCoreNode(rig: apex.Graph, basename: str, node_storage: set[int]) -> int:
     op_core = safeAdd(rig, "ApplyBlendshapes", "sop::kinefx::characterblendshapescore",
@@ -489,7 +489,8 @@ def unconnectAllInputs(rig: apex.Graph, node: int):
 def updateParms(rig: apex.Graph, node: int, parms: dict):
     old_parms = rig.getNodeParms(node)
     for k in parms:
-        old_parms[k] = parms[k]
+        if parms[k] != None:
+            old_parms[k] = parms[k]
     rig.setNodeParms(node, old_parms)
 
 def xformmask(t: bool = True, r: bool = True, s: bool = True) -> int:

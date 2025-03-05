@@ -11,3 +11,7 @@ Default-Icons
 __pycache__/
 *.py[cod]
 *$py.class
+
+
+# Google Drive
+.tmp.driveupload
