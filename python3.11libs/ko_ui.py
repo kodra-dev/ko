@@ -14,9 +14,9 @@ def setShadingMode(shading_type: hou.glShadingType, display_set_type: hou.displa
     tmplset = settings.displaySet(display_set_type)
     tmplset.setShadedMode(shading_type)
 
-def menuize(items: list[str], itemToLabel: Callable[[str], str] = lambda item: item, with_empty: bool = False) -> list[dict]:
+def menuize(items: list[str], itemToLabel: Callable[[str], str] = lambda item: item, with_empty: bool = False) -> list[str]:
     """
-    Convert a list of strings to a list of dictionaries with "label" and "name" keys.
+    Convert a list of strings to a list of alternating labels and items.
     """
     labels = [itemToLabel(item) for item in items]
     if with_empty:

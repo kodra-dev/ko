@@ -1,0 +1,1 @@
+- scd.edgeloops.hdalc: https://www.sidefx.com/forum/topic/87148/?page=1#post-378356
