@@ -19,6 +19,8 @@
     <memberTool name="sop_splitpoints"/>
     <memberTool name="ko_fuse"/>
     <memberTool name="retopo"/>
+    <memberTool name="ko_edit"/>
+    <memberTool name="ko_edit_mirror"/>
   </toolshelf>
 
   <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
@@ -237,15 +239,17 @@ toolutils.homeToSelectionNetworkEditorsFor(merge_sop)
     </toolMenuContext>
     <script scriptType="python"><![CDATA[import soptoolutils
 
+kwargs['parms'] = {
+    'negate': True
+}
 node = soptoolutils.genericTool(kwargs, 'blast')
-node.parm('negate').set(True)
 node.setName("isolate", unique_name=True)]]></script>
   </tool>
 
   <tool name="ko_fuse" label="KoFuse" icon="H:/Painting/Assets_2D/Houdini-Icons/SOP/fuse.svg">
     <helpText><![CDATA[= KoFuse =
 
-""" Similar to built-in Fuse but not limited by distance """]]></helpText>
+"""Similar to built-in Fuse but not limited by distance"""]]></helpText>
     <toolMenuContext name="viewer">
       <contextNetType>SOP</contextNetType>
     </toolMenuContext>
