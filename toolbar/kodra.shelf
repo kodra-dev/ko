@@ -121,6 +121,7 @@ for n in reversed(ancestors):
   </tool>
 
   <tool name="ko_stowbar" label="KoStowbar" icon="H:/Painting/Assets_2D/Houdini-Icons/KO/kostowbar.svg">
+    <helpText><![CDATA["""Toggle stowbar, but keep 'Operation Controls' visible"""]]></helpText>
     <toolMenuContext name="viewer">
       <contextNetType>OBJ</contextNetType>
       <contextNetType>SOP</contextNetType>
