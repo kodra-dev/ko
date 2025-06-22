@@ -97,6 +97,9 @@ def open_in_floating_window(editor, node, reuse_existing=True):
     new_editor.setPwd(node)
     home_all(new_editor)
 
+def open_parent_in_floating_window(editor, node, reuse_existing=True):
+    open_in_floating_window(editor, node.parent(), reuse_existing=reuse_existing)
+
 
 def home_all(editor):
     items = (it for (it, _, _) in editor.networkItemsInBox(hou.Vector2(-2000, -2000), hou.Vector2(2000, 2000)))

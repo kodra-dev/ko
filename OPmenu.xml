@@ -39,7 +39,7 @@ ko_network_editor.add_title_sticky_note(kwargs["node"])
         </scriptCode>
     </scriptItem>
 
-    <scriptItem id="opmenu.ko_add_comment_note">
+    <!-- <scriptItem id="opmenu.ko_add_comment_note">
         <label>Add Comment Note</label>
         <context>
             <expression>
@@ -53,7 +53,7 @@ import ko_network_editor
 ko_network_editor.add_comment_sticky_note(kwargs["node"])
 ]]>
         </scriptCode>
-    </scriptItem>
+    </scriptItem> -->
 
     <scriptItem id="opmenu.ko_open_in_apex_editor">
         <label>Open in Apex</label>
@@ -103,6 +103,22 @@ ko_network_editor.unpack_open_in_apex_editor(kwargs["networkeditor"], kwargs["no
 <![CDATA[
 import ko_network_editor
 ko_network_editor.open_in_floating_window(kwargs["networkeditor"], kwargs["node"])
+]]>
+        </scriptCode>
+    </scriptItem>
+
+    <scriptItem id="opmenu.ko_open_parent_in_floating_window">
+        <label>Open Parent in Floating Window</label>
+        <context>
+            <expression>
+                return True
+            </expression>
+        </context>
+        <insertBefore>opmenu.preview</insertBefore>
+        <scriptCode>
+<![CDATA[
+import ko_network_editor
+ko_network_editor.open_parent_in_floating_window(kwargs["networkeditor"], kwargs["node"])
 ]]>
         </scriptCode>
     </scriptItem>
