@@ -10,6 +10,7 @@
     <memberTool name="last_operator"/>
     <memberTool name="prev_operator"/>
     <memberTool name="next_operator"/>
+    <memberTool name="toggle_template"/>
   </toolshelf>
 
   <tool name="first_operator" label="FirstOperator" icon="H:/Painting/Assets_2D/Houdini-Icons/KO/firstoperator.svg">
@@ -168,5 +169,48 @@ if next_node and next_node.parent() == node.parent():
         
     pane.setCurrentNode(node)
     pane.frameSelection()]]></script>
+  </tool>
+
+  <tool name="toggle_template" label="Toggle Template" icon="hicon:/SVGIcons.index?NODEFLAGS_template.svg">
+    <script scriptType="python"><![CDATA[import nodesearch
+
+pane = kwargs['pane']
+
+if(pane.type() != hou.paneTabType.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    
+parent = pane.pwd()
+
+key = 'ko_saved_template_flags'
+flags = getattr(hou.session, key, [])
+matcher = nodesearch.State("template", True)
+nodes = matcher.nodes(parent)
+
+if nodes:
+    flags = []
+    for n in nodes:
+        selectable = n.isSelectableTemplateFlagSet()
+        datum = { 'path': n.path(), 'selectable': selectable }
+        flags.append(datum)
+        if selectable:
+            n.setSelectableTemplateFlag(False)
+            n.setTemplateFlag(False)
+        else:
+            n.setTemplateFlag(False)
+            
+    setattr(hou.session, key, flags)
+    
+else:
+    flags = getattr(hou.session, key, [])
+    for f in flags:
+        n = hou.node(f['path'])
+        if n:
+            if f['selectable']:
+                n.setTemplateFlag(True)
+                n.setSelectableTemplateFlag(True)
+            else:
+                n.setTemplateFlag(True)
+    
+]]></script>
   </tool>
 </shelfDocument>
