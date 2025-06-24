@@ -349,10 +349,27 @@ else:
       <contextNetType>SOP</contextNetType>
     </toolMenuContext>
     <script scriptType="python"><![CDATA[import soptoolutils
+import ko_geo
+
+viewer = kwargs['pane']
+selection = viewer.currentGeometrySelection()
+complete_loops = False
+if (len(selection.selections()) == 1 and 
+    selection.geometryType() == hou.geometryType.Edges and
+    len(selection.nodes()) == 1):
+    
+    # we only try to be smart in this case
+    geo = selection.nodes()[0].geometry()
+    s = selection.selections()[0]
+    edges = s.edges(geo)
+    
+    connected = ko_geo.are_edges_connected(edges)
+    if not connected:
+        complete_loops = True
 
 kwargs['parms'] = {
     'fillmode': 0,
-    'completeloops': False,
+    'completeloops': complete_loops,
 }
 soptoolutils.genericTool(kwargs, 'polyfill')]]></script>
   </tool>
