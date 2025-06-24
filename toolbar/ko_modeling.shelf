@@ -23,6 +23,8 @@
     <memberTool name="ko_edit_mirror"/>
     <memberTool name="ko_edge_cusp"/>
     <memberTool name="deform_by_delta"/>
+    <memberTool name="ko_polyfill"/>
+    <memberTool name="ko_polyfill_grid"/>
   </toolshelf>
 
   <tool name="connect" label="Connect" icon="hicon:/SVGIcons.index?SOP_add.svg">
@@ -337,5 +339,33 @@ else:
     subnet.shiftPosition(hou.Vector2(-2, 0))
     subnet.layoutChildren()
 ]]></script>
+  </tool>
+
+  <tool name="ko_polyfill" label="KoPolyFill" icon="H:/Painting/Assets_2D/Houdini-Icons/KO/kopolyfill.svg">
+    <helpText><![CDATA[= KoPolyFill =
+
+"""Similar to built-in PolyFill but just simply create a single polygon without completing bourndaries by default"""]]></helpText>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+kwargs['parms'] = {
+    'fillmode': 0,
+    'completeloops': False,
+}
+soptoolutils.genericTool(kwargs, 'polyfill')]]></script>
+  </tool>
+
+  <tool name="ko_polyfill_grid" label="KoPolyFill Grid" icon="H:/Painting/Assets_2D/Houdini-Icons/SOP/polyfill.svg">
+    <helpText><![CDATA[= KoPolyFill Grid =
+
+"""Similar to built-in PolyFill but creates quad grid by default"""]]></helpText>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+kwargs['parms'] = {
+    'fillmode': 5,
+}
+soptoolutils.genericTool(kwargs, 'polyfill')]]></script>
   </tool>
 </shelfDocument>
