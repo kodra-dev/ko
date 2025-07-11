@@ -296,6 +296,7 @@ soptoolutils.genericTool(kwargs, 'edgecusp', allow_obj_sel=False)]]></script>
   </tool>
 
   <tool name="deform_by_delta" label="Deform by Delta" icon="hicon:/SVGIcons.index?SOP_pointdeform.svg">
+    <helpText><![CDATA["""Select the deformed mesh first, the rest mesh second."""]]></helpText>
     <script scriptType="python"><![CDATA[import random
 import string
 
@@ -338,6 +339,18 @@ else:
     subnet.setColor(hou.Color(0.9, 0.8, 0.55))
     subnet.shiftPosition(hou.Vector2(-2, 0))
     subnet.layoutChildren()
+    point_deform = subnet.node("point_deform")
+
+    inner_parms = ["radius", "minpt", "maxpt"]
+    for inner_parm in inner_parms:
+        parm = point_deform.parmTuple(inner_parm)
+        inner_template = parm.parmTemplate()
+        outer_temp_group = subnet.parmTemplateGroup()
+        outer_temp_group.append(inner_template)
+        subnet.setParmTemplateGroup(outer_temp_group)
+
+        expression = f'ch("../{inner_template.name()}")'
+        parm[0].setExpression(expression)
 ]]></script>
   </tool>
 
