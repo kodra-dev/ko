@@ -341,15 +341,15 @@ else:
     subnet.layoutChildren()
     point_deform = subnet.node("point_deform")
 
-    inner_parms = ["radius", "minpt", "maxpt"]
+    inner_parms = ["group", "radius", "minpt", "maxpt"]
     for inner_parm in inner_parms:
         parm = point_deform.parmTuple(inner_parm)
-        inner_template = parm.parmTemplate()
+        parm_temp = parm.parmTemplate()
         outer_temp_group = subnet.parmTemplateGroup()
-        outer_temp_group.append(inner_template)
+        outer_temp_group.append(parm_temp)
         subnet.setParmTemplateGroup(outer_temp_group)
-
-        expression = f'ch("../{inner_template.name()}")'
+ 
+        expression = f'chs("../{parm_temp.name()}")' if parm_temp.type() == hou.parmTemplateType.String else f'ch("../{parm_temp.name()}")'
         parm[0].setExpression(expression)
 ]]></script>
   </tool>
