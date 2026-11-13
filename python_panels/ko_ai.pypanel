@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pythonPanelDocument>
+  <interface name="ko_ai_workspace" label="Ko AI" icon="MISC_python">
+    <script><![CDATA[
+import ko_ai
+
+thePanel = None
+
+def onCreateInterface():
+    global thePanel
+    pane = globals().get("kwargs", {}).get("paneTab")
+    if pane is not None and hasattr(ko_ai, "_remember_pane"):
+        ko_ai._remember_pane(pane)
+    from PySide6 import QtWidgets
+    # A second pane must not reload or shut down the first pane's controller.
+    owner_exists = any(w.objectName() == "ko_ai_panel" and not getattr(w, "_closed", True)
+                       for w in QtWidgets.QApplication.allWidgets())
+    if not owner_exists:
+        ko_ai.reload_modules()
+    from ko_ai.panel import create_panel
+    thePanel = create_panel()
+    thePanel.reload_callback = ko_ai.reload
+    return thePanel
+
+def onDestroyInterface():
+    global thePanel
+    if thePanel is not None:
+        thePanel.shutdown()
+        # Houdini owns and destroys the embedded widget; don't close it here.
+        thePanel = None
+]]></script>
+    <includeInPaneTabMenu menu_position="1" create_separator="false"/>
+  </interface>
+</pythonPanelDocument>

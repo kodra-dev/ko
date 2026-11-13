@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <toolshelf name="ko_ai" label="Ko AI">
+    <memberTool name="ko_ai_open"/>
+  </toolshelf>
+  <tool name="ko_ai_open" label="Ko AI / Reload" icon="MISC_python">
+    <script scriptType="python"><![CDATA[
+import ko_ai
+ko_ai.reload()
+]]></script>
+  </tool>
+</shelfDocument>
