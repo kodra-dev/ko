@@ -398,4 +398,43 @@ kwargs['parms'] = {
 }
 soptoolutils.genericTool(kwargs, 'polyfill')]]></script>
   </tool>
+
+  <tool name="ko_edit" label="KoEdit" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/koedit.svg">
+    <helpText><![CDATA[= KoEdit =
+
+"""Similar to built-in Edit but doesn't recompute the point normals and uses local frame by default"""]]></helpText>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+kwargs['parms'] = {
+    'updatenmls': False,
+    'xformspace': 1,
+}
+node = soptoolutils.genericTool(kwargs, 'edit', isreusable=True)]]></script>
+  </tool>
+
+  <tool name="ko_edit_mirror" label="KoEditMirror" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/koeditmirror.svg">
+    <helpText><![CDATA[= KoEdit =
+
+"""Similar to built-in Edit but doesn't recompute the point normals, while using local frame and mirror by default"""]]></helpText>
+    <toolMenuContext name="viewer">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import soptoolutils
+
+kwargs['parms'] = {
+    'updatenmls': False,
+    'xformspace': 1,
+    'doreflect': True,
+}
+node = soptoolutils.genericTool(kwargs, 'edit', isreusable=True)]]></script>
+  </tool>
 </shelfDocument>

@@ -9,4 +9,421 @@
     <memberTool name="kodra::control_shapes_post_rigging"/>
     <memberTool name="unpack_edit_repack_rig"/>
   </toolshelf>
+
+  <tool name="unpack_edit_repack_rig" label="Unpack Edit Repack Rig" icon="hicon:/SVGIcons.index?SOP_apex-graph.svg">
+    <toolMenuContext name="network">
+      <contextOpType>Sop/unpackfolder</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'null' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_curve_editgraph3 (apex::Sop/editgraph)
+set _obj_curve_editgraph3 = `run("opadd -e -n -v apex::editgraph editgraph3")`
+oplocate -x `$arg2 + 0.24099999999998545` -y `$arg3 + -2.0821299999999994` $_obj_curve_editgraph3
+opparm $_obj_curve_editgraph3 stash ( geometry:f05TSmJbKwALZmlsZXZlcnNpb24mACsBCDIwLjAuNjA2JgErAghoYXNpbmRleCYCMSsDCnBvaW50Y291bnQmAxEAKwQLdmVydGV4Y291bnQmBBEAKwUOcHJpbWl0aXZlY291bnQmBREAKwYEaW5mbyYGeysHBmFydGlzdCYHKwgFcmFpbmMmCCsJCHNvZnR3YXJlJgkrChBIb3VkaW5pIDIwLjAuNjA2JgorCwRkYXRlJgsrDBMyMDI0LTAyLTEwIDE4OjM0OjM2JgwrDQhob3N0bmFtZSYNKw4IS29kcmEtUEMmDisPBmJvdW5kcyYPQBkG////fv////7///9+/////v///37////+KxARYXR0cmlidXRlX3N1bW1hcnkmECcbICAgICAxIHBvaW50IGF0dHJpYnV0ZXM6CVAKfSsRCHRvcG9sb2d5JhFbKxIIcG9pbnRyZWYmElsrEwdpbmRpY2VzJhNAEgBdXSsUCmF0dHJpYnV0ZXMmFFsrFQ9wb2ludGF0dHJpYnV0ZXMmFVtbWysWBXNjb3BlJhYrFwZwdWJsaWMmFysYBHR5cGUmGCsZB251bWVyaWMmGSsaBG5hbWUmGisbAVAmGyscB29wdGlvbnMmHHsmGHsmGCsdBnN0cmluZyYdKx4FdmFsdWUmHisfBXBvaW50Jh99fV1bKyAEc2l6ZSYgEQMrIQdzdG9yYWdlJiErIghmcHJlYWwzMiYiKyMIZGVmYXVsdHMmI1smIBEBJiErJAhmcHJlYWw2NCYkKyUGdmFsdWVzJiVAGgEAAAAAAAAAAF0mJVsmIBEDJiEmIismCHBhZ2VzaXplJiYSAAQrJwtyYXdwYWdlZGF0YSYnQBkAXV1dXV0rKApwcmltaXRpdmVzJihbXScFaW5kZXhbJw5pbnRlZ2VyZW50cmllc3t9Jw1zdHJpbmdlbnRyaWVze30nEWludGVnZXJrZXllbnRpcmVze30nEHN0cmluZ2tleWVudHJpZXN7fV0nDWluZGV4cG9zaXRpb24UZgAAAAAAAABd )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_curve_editgraph3
+opexprlanguage -s hscript $_obj_curve_editgraph3
+opuserdata -n '___Version___' -v '' $_obj_curve_editgraph3
+opuserdata -n 'display_options' -v '{"show_joints": true, "show_links": true, "solid_links": false, "show_axes": true, "show_scene_geo": true}' $_obj_curve_editgraph3
+opuserdata -n 'wirestyle' -v 'rounded' $_obj_curve_editgraph3
+opset -p on $_obj_curve_editgraph3
+opcf $arg1
+
+# Node $_obj_curve_unpackfolder2 (Sop/unpackfolder)
+set _obj_curve_unpackfolder2 = `run("opadd -e -n -v unpackfolder unpackfolder2")`
+oplocate -x `$arg2 + -1.4870000000000232` -y `$arg3 + -1.0926999999999998` $_obj_curve_unpackfolder2
+opparm -V 20.0.606 $_obj_curve_unpackfolder2 pattern ( /Base.rig )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_curve_unpackfolder2
+opexprlanguage -s hscript $_obj_curve_unpackfolder2
+opuserdata -n '___Version___' -v '20.0.606' $_obj_curve_unpackfolder2
+opset -p on $_obj_curve_unpackfolder2
+opcf $arg1
+
+# Node $_obj_curve_packfolder9 (Sop/packfolder)
+set _obj_curve_packfolder9 = `run("opadd -e -n -v packfolder packfolder9")`
+oplocate -x `$arg2 + -0.97400000000001796` -y `$arg3 + -2.9201300000000003` $_obj_curve_packfolder9
+opparm $_obj_curve_packfolder9  names ( 1 )
+opparm -V 20.0.606 $_obj_curve_packfolder9 names ( 1 ) name1 ( Base ) type1 ( rig ) visible1 ( folder )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_curve_packfolder9
+opexprlanguage -s hscript $_obj_curve_packfolder9
+opuserdata -n '___Version___' -v '20.0.606' $_obj_curve_packfolder9
+opset -p on $_obj_curve_packfolder9
+opcf $arg1
+
+# Node $_obj_curve_null6 (Sop/null)
+set _obj_curve_null6 = `run("opadd -e -n -v null null6")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_curve_null6
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_curve_null6
+opexprlanguage -s hscript $_obj_curve_null6
+opuserdata -n '___Version___' -v '20.0.606' $_obj_curve_null6
+opset -p on $_obj_curve_null6
+
+opcf $arg1
+opwire -n $_obj_curve_unpackfolder2 -0 $_obj_curve_editgraph3
+opcf $arg1
+opwire -n $_obj_curve_null6 -0 $_obj_curve_unpackfolder2
+opcf $arg1
+opwire -n $_obj_curve_null6 -0 $_obj_curve_packfolder9
+opwire -n $_obj_curve_editgraph3 -1 $_obj_curve_packfolder9
+opcf $arg1
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_curve_packfolder9
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_curve_null6
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
+
+  <tool name="kodra::control_shapes_post_rigging" label="Control Shapes Post Rigging" icon="SOP_apex-configurecontrols">
+    <toolMenuContext name="network">
+      <contextOpType>kodra::Sop/control_shape_library::1.0</contextOpType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[
+import sys
+import toolutils
+
+outputitem = None
+inputindex = -1
+inputitem = None
+outputindex = -1
+
+num_args = 1
+h_extra_args = ''
+pane = toolutils.activePane(kwargs)
+if not isinstance(pane, hou.NetworkEditor):
+    pane = hou.ui.paneTabOfType(hou.paneTabType.NetworkEditor)
+    if pane is None:
+       hou.ui.displayMessage(
+               'Cannot create node: cannot find any network pane')
+       sys.exit(0)
+else: # We're creating this tool from the TAB menu inside a network editor
+    pane_node = pane.pwd()
+    if "outputnodename" in kwargs and "inputindex" in kwargs:
+        outputitem = pane_node.item(kwargs["outputnodename"])
+        inputindex = kwargs["inputindex"]
+        h_extra_args += 'set arg4 = "' + kwargs["outputnodename"] + '"\n'
+        h_extra_args += 'set arg5 = "' + str(inputindex) + '"\n'
+        num_args = 6
+    if "inputnodename" in kwargs and "outputindex" in kwargs:
+        inputitem = pane_node.item(kwargs["inputnodename"])
+        outputindex = kwargs["outputindex"]
+        h_extra_args += 'set arg6 = "' + kwargs["inputnodename"] + '"\n'
+        h_extra_args += 'set arg9 = "' + str(outputindex) + '"\n'
+        num_args = 9
+    if "autoplace" in kwargs:
+        autoplace = kwargs["autoplace"]
+    else:
+        autoplace = False
+    # If shift-clicked we want to auto append to the current
+    # node
+    if "shiftclick" in kwargs and kwargs["shiftclick"]:
+        if inputitem is None:
+            inputitem = pane.currentNode()
+            outputindex = 0
+    if "nodepositionx" in kwargs and             "nodepositiony" in kwargs:
+        try:
+            pos = [ float( kwargs["nodepositionx"] ),
+                    float( kwargs["nodepositiony"] )]
+        except:
+            pos = None
+    else:
+        pos = None
+
+    if not autoplace and not pane.listMode():
+        if pos is not None:
+            pass
+        elif outputitem is None:
+            pos = pane.selectPosition(inputitem, outputindex, None, -1)
+        else:
+            pos = pane.selectPosition(inputitem, outputindex,
+                                      outputitem, inputindex)
+
+    if pos is not None:
+        if "node_bbox" in kwargs:
+            size = kwargs["node_bbox"]
+            pos[0] -= size[0] / 2
+            pos[1] -= size[1] / 2
+        else:
+            pos[0] -= 0.573625
+            pos[1] -= 0.220625
+        h_extra_args += 'set arg2 = "' + str(pos[0]) + '"\n'
+        h_extra_args += 'set arg3 = "' + str(pos[1]) + '"\n'
+h_extra_args += 'set argc = "' + str(num_args) + '"\n'
+
+pane_node = pane.pwd()
+child_type = pane_node.childTypeCategory().nodeTypes()
+
+if 'apex::configurecontrols' not in child_type:
+   hou.ui.displayMessage(
+           'Cannot create node: incompatible pane network type')
+   sys.exit(0)
+
+# First clear the node selection
+pane_node.setSelected(False, True)
+
+h_path = pane_node.path()
+h_preamble = 'set arg1 = "' + h_path + '"\n'
+h_cmd = r'''
+if ($argc < 2 || "$arg2" == "") then
+   set arg2 = 0
+endif
+if ($argc < 3 || "$arg3" == "") then
+   set arg3 = 0
+endif
+# Automatically generated script
+# $arg1 - the path to add this node
+# $arg2 - x position of the tile
+# $arg3 - y position of the tile
+# $arg4 - input node to wire to
+# $arg5 - which input to wire to
+# $arg6 - output node to wire to
+# $arg7 - the type of this node
+# $arg8 - the node is an indirect input
+# $arg9 - index of output from $arg6
+
+\set noalias = 1
+set saved_path = `execute("oppwf")`
+opcf $arg1
+
+# Node $_obj_geo1_control_shape_library3 (kodra::Sop/control_shape_library::1.0)
+set _obj_geo1_control_shape_library3 = `run("opadd -e -n -v kodra::control_shape_library::1.0 control_shape_library3")`
+oplocate -x `$arg2 + 0` -y `$arg3 + 0` $_obj_geo1_control_shape_library3
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_control_shape_library3
+opexprlanguage -s hscript $_obj_geo1_control_shape_library3
+opuserdata -n '___Version___' -v '' $_obj_geo1_control_shape_library3
+opset -p on $_obj_geo1_control_shape_library3
+opcf $arg1
+
+# Node $_obj_geo1_controlextract3 (apex::Sop/controlextract)
+set _obj_geo1_controlextract3 = `run("opadd -e -n -v apex::controlextract controlextract3")`
+oplocate -x `$arg2 + -2.0012919999999994` -y `$arg3 + 0.50663000000000036` $_obj_geo1_controlextract3
+opparm $_obj_geo1_controlextract3 extractfromfolder ( on ) graphgeopath ( Base.rig )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_controlextract3
+opexprlanguage -s hscript $_obj_geo1_controlextract3
+opuserdata -n '___Version___' -v '' $_obj_geo1_controlextract3
+opuserdata -n 'wirestyle' -v 'rounded' $_obj_geo1_controlextract3
+opset -p on $_obj_geo1_controlextract3
+opcf $arg1
+
+# Node $_obj_geo1_attachjointgeo4 (kinefx::Sop/attachjointgeo)
+set _obj_geo1_attachjointgeo4 = `run("opadd -e -n -v kinefx::attachjointgeo attachjointgeo4")`
+oplocate -x `$arg2 + -2.1279920000000008` -y `$arg3 + -0.71876999999999969` $_obj_geo1_attachjointgeo4
+opparm $_obj_geo1_attachjointgeo4  shapes ( 1 ) tweak ( 0 )
+opparm $_obj_geo1_attachjointgeo4 userestposeattrib ( off ) shapes ( 1 ) group1 ( '@name=CTL_Additional' ) shapename1 ( gimbal )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_attachjointgeo4
+opexprlanguage -s hscript $_obj_geo1_attachjointgeo4
+opuserdata -n '___Version___' -v '' $_obj_geo1_attachjointgeo4
+opuserdata -n 'display_options' -v '{"show_joints": true, "show_links": false, "solid_links": true, "show_axes": false, "show_scene_geo": true, "show_joint_data": false}' $_obj_geo1_attachjointgeo4
+opuserdata -n 'wirestyle' -v 'rounded' $_obj_geo1_attachjointgeo4
+opset -p on $_obj_geo1_attachjointgeo4
+opcf $arg1
+
+# Node $_obj_geo1_packfolder5 (Sop/packfolder)
+set _obj_geo1_packfolder5 = `run("opadd -e -n -v packfolder packfolder5")`
+oplocate -x `$arg2 + -3.9222900000000003` -y `$arg3 + -1.7579699999999989` $_obj_geo1_packfolder5
+opparm $_obj_geo1_packfolder5  names ( 1 )
+opparm -V 20.0.568 $_obj_geo1_packfolder5 names ( 1 ) name1 ( Guide ) type1 ( skel )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_packfolder5
+opexprlanguage -s hscript $_obj_geo1_packfolder5
+opuserdata -n '___Version___' -v '20.0.568' $_obj_geo1_packfolder5
+opset -p on $_obj_geo1_packfolder5
+opcf $arg1
+
+# Node $_obj_geo1_null5 (Sop/null)
+set _obj_geo1_null5 = `run("opadd -e -n -v null null5")`
+oplocate -x `$arg2 + -3.39499` -y `$arg3 + 1.4028300000000007` $_obj_geo1_null5
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_null5
+opexprlanguage -s hscript $_obj_geo1_null5
+opuserdata -n '___Version___' -v '20.0.568' $_obj_geo1_null5
+opset -p on $_obj_geo1_null5
+opcf $arg1
+
+# Node $_obj_geo1_configurecontrols3 (apex::Sop/configurecontrols)
+set _obj_geo1_configurecontrols3 = `run("opadd -e -n -v apex::configurecontrols configurecontrols3")`
+oplocate -x `$arg2 + -3.9222900000000003` -y `$arg3 + -2.7335699999999989` $_obj_geo1_configurecontrols3
+opparm $_obj_geo1_configurecontrols3  controls ( 0 )
+opparm $_obj_geo1_configurecontrols3 useguides ( on ) guidesource ( 'Guide.skel Base.skel' ) folder1___6 ( 1 )
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_configurecontrols3
+opexprlanguage -s hscript $_obj_geo1_configurecontrols3
+opuserdata -n '___Version___' -v '' $_obj_geo1_configurecontrols3
+opuserdata -n 'display_options' -v '{"show_joints": true, "show_links": true, "solid_links": false, "show_axes": true, "show_scene_geo": true}' $_obj_geo1_configurecontrols3
+opuserdata -n 'wirestyle' -v 'rounded' $_obj_geo1_configurecontrols3
+opuserdata -n 'xform_handle_config_version' -v '1' $_obj_geo1_configurecontrols3
+opuserdata -n 'xform_handle_stateparms' -v 'eJyr5lIAAqWKtPyi3PiSosS84pzEktT44pLUAiUrBQM9Qx1kBUX5JUiyhqZ6BijSxcmJOch6uWoBhHMdDA==' $_obj_geo1_configurecontrols3
+opcf /obj/geo1/configurecontrols3
+
+# Node $_obj_geo1_configurecontrols3_SKIN_PREVIS (Sop/null)
+set _obj_geo1_configurecontrols3_SKIN_PREVIS = `run("opadd -e -n -v null SKIN_PREVIS")`
+oplocate -x `$arg2 + -5.5115499999999997` -y `$arg3 + -1.0417400000000001` $_obj_geo1_configurecontrols3_SKIN_PREVIS
+opcolor -c 0.47499999403953552 0.81199997663497925 0.20399999618530273 $_obj_geo1_configurecontrols3_SKIN_PREVIS
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F off -c on -e on -b off $_obj_geo1_configurecontrols3_SKIN_PREVIS
+opexprlanguage -s hscript $_obj_geo1_configurecontrols3_SKIN_PREVIS
+opuserdata -n '___Version___' -v '20.0.568' $_obj_geo1_configurecontrols3_SKIN_PREVIS
+opcf /obj/geo1
+opcf /obj/geo1/configurecontrols3
+
+# Node $_obj_geo1_configurecontrols3_PREVIS (Sop/null)
+set _obj_geo1_configurecontrols3_PREVIS = `run("opadd -e -n -v null PREVIS")`
+oplocate -x `$arg2 + -5.6249399999999996` -y `$arg3 + 0.19448199999999999` $_obj_geo1_configurecontrols3_PREVIS
+opset -d off -r off -h off -f off -y off -t off -l off -s off -u off -F on -c on -e on -b off $_obj_geo1_configurecontrols3_PREVIS
+opexprlanguage -s hscript $_obj_geo1_configurecontrols3_PREVIS
+opuserdata -n '___Version___' -v '20.0.568' $_obj_geo1_configurecontrols3_PREVIS
+opcf /obj/geo1
+opset -p on $_obj_geo1_configurecontrols3
+
+opcf $arg1
+opcf $arg1
+opwire -n $_obj_geo1_null5 -0 $_obj_geo1_controlextract3
+opcf $arg1
+opwire -n -o 1 $_obj_geo1_controlextract3 -0 $_obj_geo1_attachjointgeo4
+opwire -n $_obj_geo1_control_shape_library3 -1 $_obj_geo1_attachjointgeo4
+opcf $arg1
+opwire -n $_obj_geo1_null5 -0 $_obj_geo1_packfolder5
+opwire -n $_obj_geo1_attachjointgeo4 -1 $_obj_geo1_packfolder5
+opcf $arg1
+opcf $arg1
+opwire -n $_obj_geo1_packfolder5 -0 $_obj_geo1_configurecontrols3
+
+set oidx = 0
+if ($argc >= 9 && "$arg9" != "") then
+    set oidx = $arg9
+endif
+
+if ($argc >= 5 && "$arg4" != "") then
+    set output = $_obj_geo1_configurecontrols3
+    opwire -n $output -$arg5 $arg4
+endif
+if ($argc >= 6 && "$arg6" != "") then
+    set input = $_obj_geo1_control_shape_library3
+    if ($arg8) then
+        opwire -n -i $arg6 -0 $input
+    else
+        opwire -n -o $oidx $arg6 -0 $input
+    endif
+endif
+opcf $saved_path
+'''
+hou.hscript(h_preamble + h_extra_args + h_cmd)
+]]></script>
+  </tool>
 </shelfDocument>

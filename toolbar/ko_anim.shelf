@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <!-- This file contains definitions of shelves, toolbars, and tools.
+ It should not be hand-edited when it is being used by the application.
+ Note, that two definitions of the same element are not allowed in
+ a single file. -->
+
+  <toolshelf name="ko_anim" label="KoAnim">
+    <memberTool name="play_from_start"/>
+  </toolshelf>
+
+  <tool name="play_from_start" label="Play From Start" icon="hicon:/SVGIconsUI.index?PLAYBAR_play_forward.svg">
+    <toolMenuContext name="viewer">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <toolMenuContext name="network">
+      <contextNetType>OBJ</contextNetType>
+      <contextNetType>SOP</contextNetType>
+    </toolMenuContext>
+    <script scriptType="python"><![CDATA[import hou
+
+if hou.playbar.isPlaying():
+    hou.playbar.stop()
+    
+else:
+
+    # Get the first frame of your current playback range
+    start_frame, _ = hou.playbar.playbackRange()
+    
+    # Set the timeline to the start frame
+    hou.setFrame(start_frame)
+    
+    # Wait for Houdini to update the frame, then play
+    hou.ui.waitUntil(lambda: hou.frame() == start_frame)
+    hou.playbar.play()]]></script>
+  </tool>
+</shelfDocument>

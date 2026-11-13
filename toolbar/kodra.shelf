@@ -7,6 +7,10 @@
 
   <shelfSet name="kodra" label="Kodra">
     <memberToolshelf name="ko_dev"/>
+    <memberToolshelf name="ko_modeling"/>
+    <memberToolshelf name="ko_network"/>
+    <memberToolshelf name="ko_rigging"/>
+    <memberToolshelf name="ko_anim"/>
   </shelfSet>
 
   
