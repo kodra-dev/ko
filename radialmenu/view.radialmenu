@@ -1,0 +1,187 @@
+{
+	"fileversion":"20.5.278",
+	"name":"view",
+	"categories":"Standard",
+	"pane":"scene",
+	"label":"View",
+	"type":"submenu",
+	"items":{
+		"0":{
+			"label":"Selection Options",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Visible Geometry",
+					"type":"script_action",
+					"icon":"TOOLS_select_visible",
+					"check":"radialmenu.isPickingVisibleGeometry(kwargs)",
+					"script":"radialmenu.setPickingVisibleGeometry(kwargs, not radialmenu.isPickingVisibleGeometry(kwargs))"
+				},
+				"2":{
+					"label":"Contained Geometry",
+					"type":"script_action",
+					"icon":"TOOLS_select_contained",
+					"check":"radialmenu.isPickingContainedGeometry(kwargs)",
+					"script":"radialmenu.setPickingContainedGeometry(kwargs, not radialmenu.isPickingContainedGeometry(kwargs))"
+				},
+				"6":{
+					"label":"Whole Geometry",
+					"type":"script_action",
+					"icon":"TOOLS_select_whole",
+					"check":"radialmenu.isWholeGeometryPicking(kwargs)",
+					"script":"radialmenu.setWholeGeometryPicking(kwargs, not radialmenu.isWholeGeometryPicking(kwargs))"
+				}
+			}
+		},
+		"2":{
+			"label":"Viewport Layout",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Four Views",
+					"type":"script_action",
+					"icon":"VIEW_layout_quad",
+					"check":"radialmenu.viewportLayout(kwargs) == hou.geometryViewportLayout.Quad",
+					"script":"radialmenu.setViewportLayout(kwargs, hou.geometryViewportLayout.Quad)"
+				},
+				"1":{
+					"label":"Two Views (Stack)",
+					"type":"script_action",
+					"icon":"VIEW_layout_2stacked",
+					"check":"radialmenu.viewportLayout(kwargs) == hou.geometryViewportLayout.DoubleStack",
+					"script":"radialmenu.setViewportLayout(kwargs, hou.geometryViewportLayout.DoubleStack, 1)"
+				},
+				"2":{
+					"label":"Two Views (Side)",
+					"type":"script_action",
+					"icon":"VIEW_layout_2side",
+					"check":"radialmenu.viewportLayout(kwargs) == hou.geometryViewportLayout.DoubleSide",
+					"script":"radialmenu.setViewportLayout(kwargs, hou.geometryViewportLayout.DoubleSide, 1)"
+				},
+				"3":{
+					"label":"Three Views (Bottom)",
+					"type":"script_action",
+					"icon":"VIEW_layout_3bottom",
+					"check":"radialmenu.viewportLayout(kwargs) == hou.geometryViewportLayout.TripleBottomSplit",
+					"script":"radialmenu.setViewportLayout(kwargs, hou.geometryViewportLayout.TripleBottomSplit, 1)"
+				},
+				"4":{
+					"label":"Three Views (Left)",
+					"type":"script_action",
+					"icon":"VIEW_layout_3left",
+					"check":"radialmenu.viewportLayout(kwargs) == hou.geometryViewportLayout.TripleLeftSplit",
+					"script":"radialmenu.setViewportLayout(kwargs, hou.geometryViewportLayout.TripleLeftSplit, 1)"
+				},
+				"5":{
+					"label":"Four Views (bottom)",
+					"type":"script_action",
+					"icon":"VIEW_layout_4bottom",
+					"check":"radialmenu.viewportLayout(kwargs) == hou.geometryViewportLayout.QuadBottomSplit",
+					"script":"radialmenu.setViewportLayout(kwargs, hou.geometryViewportLayout.QuadBottomSplit, 1)"
+				},
+				"7":{
+					"label":"Single View",
+					"type":"script_action",
+					"icon":"VIEW_layout_single",
+					"check":"radialmenu.viewportLayout(kwargs) == hou.geometryViewportLayout.Single",
+					"script":"radialmenu.setViewportLayout(kwargs, hou.geometryViewportLayout.Single, 1)"
+				}
+			}
+		},
+		"4":{
+			"label":"Shading",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"MatCap Wire Shaded",
+					"type":"script_action",
+					"icon":"hicon:/SVGIcons.index?VIEW_matcap.svg",
+					"check":"radialmenu.shadingMode(kwargs) == hou.glShadingType.MatCapWire",
+					"script":"import ko_ui\n\nradialmenu.setShadingMode(kwargs, hou.glShadingType.MatCapWire)\n"
+				},
+				"1":{
+					"label":"Wireframe",
+					"type":"script_action",
+					"icon":"VIEW_wireframe",
+					"check":"radialmenu.shadingMode(kwargs) == hou.glShadingType.Wire",
+					"script":"import ko_ui\nradialmenu.setShadingMode(kwargs, hou.glShadingType.Wire)"
+				},
+				"2":{
+					"label":"Wireframe Ghost",
+					"type":"script_action",
+					"icon":"VIEW_wireframe_ghost",
+					"check":"radialmenu.shadingMode(kwargs) == hou.glShadingType.WireGhost",
+					"script":"import ko_ui\nradialmenu.setShadingMode(kwargs, hou.glShadingType.WireGhost)"
+				},
+				"3":{
+					"label":"Smooth Wire Shaded",
+					"type":"script_action",
+					"icon":"VIEW_smooth_wireframe",
+					"check":"radialmenu.shadingMode(kwargs) == hou.glShadingType.SmoothWire",
+					"script":"import ko_ui\nradialmenu.setShadingMode(kwargs, hou.glShadingType.SmoothWire)\n"
+				},
+				"4":{
+					"label":"Smooth Shaded",
+					"type":"script_action",
+					"icon":"VIEW_smooth",
+					"check":"radialmenu.shadingMode(kwargs) == hou.glShadingType.Smooth",
+					"script":"import ko_ui\n\nradialmenu.setShadingMode(kwargs, hou.glShadingType.Smooth)\n"
+				},
+				"5":{
+					"label":"Flat Wire Shaded",
+					"type":"script_action",
+					"icon":"VIEW_flat_wireframe",
+					"check":"radialmenu.shadingMode(kwargs) == hou.glShadingType.FlatWire",
+					"script":"import ko_ui\n\nradialmenu.setShadingMode(kwargs, hou.glShadingType.FlatWire)\n"
+				},
+				"6":{
+					"label":"Flat Shaded",
+					"type":"script_action",
+					"icon":"VIEW_flat",
+					"check":"radialmenu.shadingMode(kwargs) == hou.glShadingType.Flat",
+					"script":"import ko_ui\n\nradialmenu.setShadingMode(kwargs, hou.glShadingType.Flat)\n"
+				},
+				"7":{
+					"label":"MatCap Shaded",
+					"type":"script_action",
+					"icon":"hicon:/SVGIcons.index?VIEW_matcap.svg",
+					"check":"radialmenu.shadingMode(kwargs) == hou.glShadingType.MatCap",
+					"script":"import ko_ui\n\nradialmenu.setShadingMode(kwargs, hou.glShadingType.MatCap)\n"
+				}
+			}
+		},
+		"6":{
+			"label":"Selection Tools",
+			"type":"submenu",
+			"items":{
+				"0":{
+					"label":"Laser",
+					"type":"script_action",
+					"icon":"TOOLS_select_mode_laser",
+					"check":"radialmenu.pickStyle(kwargs) == hou.pickStyle.Laser",
+					"script":"radialmenu.setPickStyle(kwargs, hou.pickStyle.Laser)"
+				},
+				"4":{
+					"label":"Lasso",
+					"type":"script_action",
+					"icon":"TOOLS_select_mode_lasso",
+					"check":"radialmenu.pickStyle(kwargs) == hou.pickStyle.Lasso",
+					"script":"radialmenu.setPickStyle(kwargs, hou.pickStyle.Lasso)"
+				},
+				"6":{
+					"label":"Box",
+					"type":"script_action",
+					"icon":"TOOLS_select_mode_boxselect",
+					"check":"radialmenu.pickStyle(kwargs) == hou.pickStyle.Box",
+					"script":"radialmenu.setPickStyle(kwargs, hou.pickStyle.Box)"
+				},
+				"7":{
+					"label":"Brush",
+					"type":"script_action",
+					"icon":"MTOOLS_select_mode_brushselect",
+					"script":"radialmenu.setPickStyle(kwargs, hou.pickStyle.Brush)"
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,55 @@
+{
+	"fileversion":"20.0.751",
+	"name":"network",
+	"categories":"Standard",
+	"pane":"network",
+	"label":"Network",
+	"type":"submenu",
+	"items":{
+		"0":{
+			"label":"Up",
+			"type":"script_action",
+			"icon":"BUTTONS_up",
+			"script":"pane = kwargs['pane']\nnetwork = pane.pwd()\nparent = network.parent()\nif parent and parent.path() != '/':\n    pane.setPwd(network.parent())"
+		},
+		"1":{
+			"label":"Select Displayed",
+			"type":"script_action",
+			"icon":"hicon:/SVGIcons.index?TOOLS_select.svg",
+			"script":"pane = kwargs['pane']\nnetwork_path = pane.pwd()\nnode = network_path.displayNode()\n        \nnode.setSelected(1,1)"
+		},
+		"2":{
+			"label":"Set Quickmark",
+			"type":"script_submenu",
+			"script":"import ko_radial_menus\n\neditor = kwargs['pane']\nmenu = ko_radial_menus.SetQuickmarkMenu(editor)\n\nradialmenu.setRadialMenu(menu)"
+		},
+		"3":{
+			"label":"Go Quickmark",
+			"type":"script_submenu",
+			"script":"import ko_radial_menus\n\neditor = kwargs['pane']\nmenu = ko_radial_menus.GoQuickmarkMenu(editor)\n\nradialmenu.setRadialMenu(menu)"
+		},
+		"4":{
+			"label":"Down",
+			"type":"script_action",
+			"icon":"BUTTONS_down",
+			"script":"pane = kwargs['pane']\nnode = pane.currentNode()\nif node and node.isNetwork():\n    pane.setPwd(node)"
+		},
+		"5":{
+			"label":"Bookmarks",
+			"type":"script_submenu",
+			"script":"import ko_radial_menus\n\neditor = kwargs['pane']\nmenu = ko_radial_menus.BookmarkMenu(editor)\n\nradialmenu.setRadialMenu(menu)"
+		},
+		"6":{
+			"label":"Toggle Highlight",
+			"type":"script_action",
+			"icon":"VIEW_show_group_colors",
+			"script":"radialmenu.runShelfTool(kwargs, 'toggle_highlight')"
+		},
+		"7":{
+			"label":"Focus Displayed",
+			"type":"script_action",
+			"icon":"hicon:/SVGIcons.index?BUTTONS_search.svg",
+			"script":"import nodegraphview\n\npane = kwargs['pane']\npwd = pane.pwd()\n\nnodegraphview.frameItems(pane, (pwd.displayNode(),))\n"
+		}
+	}
+}
