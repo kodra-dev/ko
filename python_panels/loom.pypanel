@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pythonPanelDocument>
+  <interface name="loom_workspace" label="Loom" icon="MISC_python" showNetworkNavigationBar="false">
+    <script><![CDATA[
+import hou
+import loom as loom
+
+thePanel = None
+
+def onCreateInterface():
+    global thePanel
+    pane = globals().get("kwargs", {}).get("paneTab")
+    if pane is not None:
+        # Also update panes whose interface was already installed before reload.
+        pane.showNetworkControls(False)
+    if pane is not None and hasattr(loom, "_remember_pane"):
+        loom._remember_pane(pane)
+    from PySide6 import QtWidgets
+    # A second pane must not reload or shut down the first pane's controller.
+    owner_exists = any(w.objectName() == "loom_panel" and not getattr(w, "_closed", True)
+                       for w in QtWidgets.QApplication.allWidgets())
+    if not owner_exists and not getattr(hou.session, "_loom_package_reloading", False):
+        loom.reload_modules()
+    from loom.panel import create_panel
+    thePanel = create_panel()
+    thePanel.reload_callback = loom.reload
+    from loom.window_state import track
+    track("agent", pane, thePanel)
+    return thePanel
+
+def onDestroyInterface():
+    global thePanel
+    if thePanel is not None:
+        from loom.window_state import flush
+        flush(thePanel)
+        thePanel.shutdown()
+        # Houdini owns and destroys the embedded widget; don't close it here.
+        thePanel = None
+]]></script>
+    <includeInPaneTabMenu menu_position="1" create_separator="false"/>
+  </interface>
+</pythonPanelDocument>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mainMenu>
+  <menuBar>
+    <subMenu id="loom_menu">
+      <label>Loom</label>
+      <insertBefore>help_menu</insertBefore>
+      <scriptItem id="h.loom_open_agent">
+        <label>Toggle Loom</label>
+        <scriptCode><![CDATA[
+import loom
+loom.toggle_pane()
+]]></scriptCode>
+      </scriptItem>
+      <scriptItem id="h.loom_open_checkpoints">
+        <label>Toggle Checkpoints</label>
+        <scriptCode><![CDATA[
+from loom import checkpoints
+checkpoints.toggle_pane()
+]]></scriptCode>
+      </scriptItem>
+      <separatorItem id="loom_reload_separator"/>
+      <scriptItem id="h.loom_reload_package">
+        <label>Reload Loom + Checkpoints</label>
+        <scriptCode><![CDATA[
+import loom
+loom.request_reload()
+]]></scriptCode>
+      </scriptItem>
+    </subMenu>
+  </menuBar>
+</mainMenu>

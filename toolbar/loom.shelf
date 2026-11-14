@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <toolshelf name="loom" label="Loom">
+    <memberTool name="loom_open"/>
+  </toolshelf>
+  <tool name="loom_open" label="Loom" icon="MISC_python">
+    <script scriptType="python"><![CDATA[
+import loom
+loom.open_pane()
+]]></script>
+  </tool>
+  <!-- Old saved shelves/key assignments may still refer to this hidden tool ID. -->
+  <tool name="ko_ai_open" label="Loom" icon="MISC_python">
+    <script scriptType="python"><![CDATA[
+import loom
+loom.open_pane()
+]]></script>
+  </tool>
+</shelfDocument>

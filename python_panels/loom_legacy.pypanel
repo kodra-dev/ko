@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pythonPanelDocument>
+  <!-- Hidden reader for saved desktops. Opening/reloading Loom rebinds to loom_workspace. -->
+  <interface name="ko_ai_workspace" label="Loom" icon="MISC_python" showNetworkNavigationBar="false">
+    <script><![CDATA[
+from pathlib import Path
+import xml.etree.ElementTree as ET
+import loom
+_source = Path(loom.__file__).resolve().parents[2] / "python_panels" / "loom.pypanel"
+exec(compile(ET.parse(_source).find("interface/script").text, str(_source), "exec"), globals())
+]]></script>
+  </interface>
+</pythonPanelDocument>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pythonPanelDocument>
+  <interface name="loom_checkpoints" label="Checkpoints" icon="MISC_python" showNetworkNavigationBar="false">
+    <script><![CDATA[
+from loom.checkpoints import create_panel, _remember_pane
+thePanel = None
+
+def onCreateInterface():
+    global thePanel
+    pane = globals().get("kwargs", {}).get("paneTab")
+    if pane is not None:
+        # Also update panes whose interface was already installed before reload.
+        pane.showNetworkControls(False)
+    if pane is not None:
+        _remember_pane(pane)
+    thePanel = create_panel()
+    from loom.window_state import track
+    track("checkpoints", pane, thePanel)
+    return thePanel
+
+def onDestroyInterface():
+    global thePanel
+    if thePanel is not None:
+        from loom.window_state import flush
+        flush(thePanel)
+        if hasattr(thePanel, "shutdown"):
+            thePanel.shutdown()
+    thePanel = None
+]]></script>
+    <includeInPaneTabMenu menu_position="2" create_separator="false"/>
+  </interface>
+</pythonPanelDocument>
