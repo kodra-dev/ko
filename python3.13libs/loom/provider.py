@@ -162,6 +162,22 @@ def resume_params(thread_id, model=None, instructions=None):
     return result
 
 
+def fork_params(thread_id, turn_id, position, model=None, instructions=None):
+    """Native bounded fork, never a full-history fork followed by local trimming.
+
+    Installed app-server schema supports beforeTurnId/lastTurnId. Suppress goal
+    continuation so this metadata operation cannot start an autonomous model turn.
+    Dynamic tools are inherited by the native fork, not redefined here.
+    """
+    if not turn_id or position not in ("before", "after"):
+        raise ValueError("A recorded before/after turn boundary is required")
+    result = resume_params(thread_id, model, instructions)
+    result.pop("dynamicTools", None)
+    result["beforeTurnId" if position == "before" else "lastTurnId"] = turn_id
+    result.update(deferGoalContinuation=True, excludeTurns=True)
+    return result
+
+
 def thread_params(model=None, instructions=None):
     from .tools import INSTRUCTIONS, tool_specs
     result = {"cwd": str((data_root() / "agent-workspace").resolve()),

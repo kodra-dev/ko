@@ -5,7 +5,7 @@ for the user-verified milestone, remaining priorities, constraints, and test pol
 
 **Loom** is the package name, covering the Loom agent harness and independent
 Checkpoints feature. This milestone separates scene history from the agent before
-adding threads, rewind, and broader tools.
+adding rewind and broader tools. Persisted workspace conversations are now implemented.
 
 ## Manual verification
 
@@ -86,6 +86,81 @@ Try these in a disposable scene:
    the HIP or Save As: the same workspace instructions and checkpoint history remain.
    Save normally so the workspace UUID is persisted in the HIP.
 
+### Persisted conversations
+
+- **Conversations** opens a separate, modeless manager for the current UUID workspace.
+  Each item shows its name and a faded first-user-message line. Active highlighting and
+  selection outlines follow Checkpoints; selecting an item does not switch the chat.
+  **Double-click / Enter** activates, **F2** renames the selected item, and **Delete** (button
+  or key) removes it. **New conversation** creates/selects an empty one. Names need not be unique.
+- Deleting a conversation removes its Loom record/history, not scene checkpoints, proposal
+  evidence, or native provider files. Deleting the active conversation selects another; deleting
+  the last creates an empty replacement. There is no archive/restore state; conversations
+  hidden by older versions become ordinary, visible items without losing their history.
+- During the first user turn, Loom asks the AI to choose a short name through the existing
+  scene tool's reserved metadata query (`operation=context`, `query=@conversation-name:TITLE`).
+  This is part of the ordinary turn, not a separate background prompt or provider thread, and
+  works with Edit scene off. An explicit manual rename wins. Existing named/history-bearing
+  conversations are not retitled. If the turn fails or the model omits naming, the initial
+  name remains; no hidden retry/model call is made.
+- Messages/tool details, native provider thread ID, model choice, draft, and usage stay with
+  their conversation. Reload/reopen restores the selected conversation. Switching resumes
+  its native thread on the next send; switching itself never calls a model or changes the scene.
+- The last explicitly used model remains the app-wide default; each conversation remembers its
+  own choice. An unavailable saved model requires an explicit available choice, not a silent
+  substitution. **Edit scene** remains a workspace preference, not per conversation.
+- Manager browsing stays available during a turn; mutating/activation actions are disabled
+  or rejected until it finishes. **Tidy Network** creates its own
+  conversation after validating scope/permission; your unsent draft stays in the original.
+- `<workspace>/conversations.json` atomically stores records and selection. Existing `chat.json`
+  imports as the initial conversation; old `conversations/*.json` imports as normal entries.
+  Originals remain untouched, and migration is not repeated. Proposal/result files and native
+  usage files remain in their existing locations; new proposals are tagged by conversation.
+  Historical untagged proposals are available to the initial migrated conversation only.
+- Manual check (no model calls needed): type a draft, create another conversation, open
+  **Conversations**, select/F2 rename, double-click back, delete a disposable conversation,
+  then reload/reopen. Check selection, messages, and drafts survive;
+  checkpoint selection and the live scene must not change.
+
+### Branching and editing history
+
+Right-click a user or AI message:
+
+- **Branch here** starts a new conversation, retaining the original. On an AI message it keeps
+  history through that exact message, not later actions. On a user prompt it starts before the
+  prompt and puts its text into the draft. Works for older and intermediate replies too.
+- **Delete from here** removes the selected message and everything after it, keeping the same
+  conversation/name and any current draft. It is also available on action/activity cards and their
+  collapsed headers: deleting a grouped **3 actions** row starts at its first underlying action.
+  Deleting only a later reply intentionally leaves earlier actions. Deleted content is excluded
+  from model context; scene edits already made are not undone.
+- **Edit prompt** (user messages) does the same removal and refills the composer with that prompt.
+  Nothing is sent automatically. This replaces an unsent draft if present.
+
+All three leave the scene, checkpoints and files unchanged; they are disabled during a turn.
+Deleting history does not undo the cost of work already done. Deleted-tail proposal summaries
+are excluded from subsequent context, while evidence/checkpoint files remain intact.
+
+Implementation details:
+
+- Recorded exact turn endpoints can use native `thread/fork` (`beforeTurnId` / `lastTurnId`),
+  with goal auto-continuation deferred. No full-future fork hidden behind a trimmed UI.
+- Old/intermediate messages, exact cuts before later tool activity, and offline branching use a
+  fresh provider thread. The retained **visible transcript** is replayed once as historical data
+  with the next user request; no model call occurs just to branch/delete/edit. Native hidden
+  reasoning and old image bytes are not reconstructed. The model is told not to re-execute old
+  requests/tool calls and to inspect the live scene as needed.
+- Delete/edit also start a fresh provider context, not just a cosmetically shortened chat. Prefix
+  replay survives reload, is consumed only after turn acceptance, and is not sent repeatedly.
+  Native IDs from the discarded thread are not reused. Branching before a replay-containing
+  first turn must retain that replayed prefix too.
+- The original branch draft stays with the original; a new branch has its own model/provenance
+  and usage. Same-conversation deletion carries forward already-reported cost, resetting only
+  provider token counters/context-fill. Historical untracked cost remains unknown.
+- Tests use mocks, never paid calls. Manual check: branch from an old/intermediate reply, then
+  try Edit prompt/Delete from here and verify exact history, draft, unchanged scene and reload.
+  Live model behavior with replay/bounded native forks still needs manual verification.
+
 ### Chat, input, local settings, and edit permission
 
 - One click activates the native pane and places the composer caret. **Enter sends**;
@@ -99,7 +174,8 @@ Try these in a disposable scene:
   and **Edit scene**). Multiple selected nodes: only those; one selected: its upstream/downstream
   connected component in the same network; none: all direct children of the visible Network Editor.
   If multiple Network Editors are visible with no selection, select a node to disambiguate.
-  Scope is frozen when clicked, the unsent draft is preserved, and edits use the normal AI checkpoint.
+  Scope is frozen when clicked, a new conversation is selected, the unsent draft stays in the
+  original conversation, and edits use the normal AI checkpoint.
   Cleanup asks for clearer layout, meaningful shorter names, behavior-preserving merge/split refactors,
   and comments/sticky notes/boxes only where difficult sections need explanation. Existing node comments
   are checked against the actual graph and corrected or removed when stale/incorrect. Layout uses explicit
@@ -252,14 +328,14 @@ import the agent/provider. `python3.13libs/ko_ai/` is only a legacy import bridg
 Canonical scripts are `scripts/loom_setup.ps1`, `loom_test.ps1`, and `loom_gui_test.ps1`;
 tests live under `tests/loom/`.
 
-Still to implement, in small verifiable increments:
+Milestones and remaining work, in small verifiable increments:
 
-1. **Harness threads:** create/rename/switch/archive persisted conversations; retain
-   model choices and tool activity. One active agent turn per Houdini session.
-2. **Rewind via branching:** preserve the original future; distinguish conversation-only
-   branching from explicitly restoring an associated scene checkpoint. No claim that
-   every message has a scene snapshot; editable checkpoint IDs alone do not guarantee
-   the scene as it was at message time. Never silently undo ko source changes.
+1. **Harness threads (implemented):** create/rename/switch/delete persisted conversations;
+   retain model choices, drafts and tool activity. One active agent turn per Houdini session.
+2. **History editing (implemented, pending manual verification):** Branch here at exact message
+   cuts, Delete from here, and Edit prompt; bounded native forks or fresh-context replay. Explicit scene
+   restoration remains unimplemented; editable checkpoint IDs alone do not guarantee the scene
+   as it was at message time. Never silently undo ko source changes.
 3. **Context management:** deterministic prefixes and tool schemas, append-only native
    thread history, on-demand retrieval, batched reads, conservative budget-triggered
    compaction with retained originals, usage/cache reporting where supported.

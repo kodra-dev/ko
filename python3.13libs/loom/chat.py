@@ -140,6 +140,9 @@ class MessageBody(QtWidgets.QTextBrowser):
 
 
 class MessageCard(QtWidgets.QFrame):
+    branch_requested = QtCore.Signal(object)
+    history_edit_requested = QtCore.Signal(object, bool)
+
     def __init__(self, message, parent=None):
         super().__init__(parent)
         self.setObjectName("loomMessageCard")
@@ -185,10 +188,41 @@ QToolButton {border: none; background: transparent; color: #c7cbd3; padding: 2px
         actions.addWidget(self.copy_button)
         self.actions.hide()
         self.body = MessageBody(self)
+        self.branch_enabled = True
+        self.body.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.body.customContextMenuRequested.connect(self._context_menu)
+        for target in (self, self.heading, self.title):
+            target.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+            target.customContextMenuRequested.connect(lambda pos, target=target: self._context_menu(pos, target))
         self.body.setViewportMargins(0, 0, 58, 0)
         layout.addWidget(self.body)
         self.toggle.toggled.connect(self.body.setVisible)
         self.update_message(message)
+
+    def _context_menu(self, position, origin=None):
+        menu = self.body.createStandardContextMenu()
+        menu.setToolTipsVisible(True)
+        message = self._message
+        if message["role"] in ("You", "Loom"):
+            menu.addSeparator()
+            action = menu.addAction("Branch here")
+            action.setEnabled(self.branch_enabled)
+            action.setToolTip(("Start before this prompt; put it in the draft for editing. " if message["role"] == "You"
+                               else "Start after this message. ") + "Keep the original chat. Scene stays unchanged.")
+            action.triggered.connect(lambda: self.branch_requested.emit(message))
+            if message["role"] == "You":
+                edit = menu.addAction("Edit prompt")
+                edit.setEnabled(self.branch_enabled)
+                edit.setToolTip("Remove this prompt and later messages; put the prompt back in the composer.")
+                edit.triggered.connect(lambda: self.history_edit_requested.emit(message, True))
+        else:
+            menu.addSeparator()
+        delete = menu.addAction("Delete from here")
+        delete.setEnabled(self.branch_enabled)
+        delete.setToolTip("Delete this item and everything after it. Scene stays unchanged.")
+        delete.triggered.connect(lambda: self.history_edit_requested.emit(message, False))
+        menu.exec((origin if origin is not None else self.body.viewport()).mapToGlobal(position))
+        menu.deleteLater()
 
     def enterEvent(self, event):
         self.actions.adjustSize()
@@ -230,6 +264,9 @@ QToolButton {border: none; background: transparent; color: #c7cbd3; padding: 2px
 
 
 class Transcript(QtWidgets.QScrollArea):
+    branch_requested = QtCore.Signal(object)
+    history_edit_requested = QtCore.Signal(object, bool)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWidgetResizable(True)
@@ -246,6 +283,7 @@ class Transcript(QtWidgets.QScrollArea):
         self.stack.addStretch()
         self.setWidget(self.content)
         self.cards = []
+        self.branch_enabled = True
         self._follow = True
         self.verticalScrollBar().valueChanged.connect(
             lambda value: setattr(self, "_follow", value >= self.verticalScrollBar().maximum() - 30))
@@ -255,11 +293,17 @@ class Transcript(QtWidgets.QScrollArea):
         if self._follow:
             self.verticalScrollBar().setValue(self.verticalScrollBar().maximum())
 
-    def set_messages(self, messages):
+    def set_branch_enabled(self, enabled):
+        self.branch_enabled = enabled
+        for card in self.cards:
+            card.branch_enabled = enabled
+
+    def set_messages(self, messages, conversation_id=None):
         # Keep the durable log unchanged; collapse consecutive tool activity only
         # in the view, like other harnesses' expandable action summaries.
         grouped = []
-        for message in messages:
+        for raw_index, message in enumerate(messages):
+            message = {**message, "_branch_index": raw_index, "_conversation_id": conversation_id}
             if message["role"] == "Tool" and grouped and isinstance(grouped[-1], list):
                 grouped[-1].append(message)
             else:
@@ -279,6 +323,8 @@ class Transcript(QtWidgets.QScrollArea):
                 if failed:
                     summary += " · " + str(failed) + " failed"
                 view.append({"role": "Tool", "summary": summary, "success": not failed,
+                             "_branch_index": group[0]["_branch_index"], "_conversation_id": conversation_id,
+                             "_history_target": group[0],
                              "text": "\n\n".join(m.get("summary", "Tool") + "\n" + m["text"] for m in group)})
         messages = view
         bar = self.verticalScrollBar()
@@ -289,6 +335,9 @@ class Transcript(QtWidgets.QScrollArea):
         for index, message in enumerate(messages):
             if index == len(self.cards):
                 card = MessageCard(message)
+                card.branch_enabled = self.branch_enabled
+                card.branch_requested.connect(self.branch_requested.emit)
+                card.history_edit_requested.connect(self.history_edit_requested.emit)
                 self.cards.append(card)
                 self.stack.insertWidget(self.stack.count() - 1, card)
             else:

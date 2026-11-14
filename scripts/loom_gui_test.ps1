@@ -79,7 +79,7 @@ try {
     if (-not $result.passed) { throw "GUI test failed ($mode): $($result.error)`nNo visible fallback. Logs: $run" }
     if ($desktopName -and $result.desktop -ne $desktopName) { throw "GUI ran on the wrong desktop. Expected $desktopName, got $($result.desktop). Logs: $run" }
     if ($process.ExitCode -ne 0) { throw "GUI test exited with code $($process.ExitCode). Logs: $run" }
-    Write-Host "PASS ($mode): native panes, F2, reloads, real viewport capture, Save/Save As sync, and shared controller lifecycle ($($result.houdini))."
+    Write-Host "PASS ($mode): native panes, conversation manager/F2/activation/delete, reloads, real viewport capture, Save/Save As sync, and shared controller lifecycle ($($result.houdini))."
 }
 finally {
     # Kill only this disposable job's remaining children, then release all handles.

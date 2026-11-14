@@ -163,6 +163,8 @@ class SceneTools:
         self.approve_cook = approve_cook or (lambda path: True)
         self.progress = progress or (lambda: None)
         self.proposals = {}
+        self.conversation_id = None
+        self.context_epoch = None
         self._group_edits = False
         self._turn_edit = None
         self.tidy_scope = None
@@ -389,7 +391,8 @@ class SceneTools:
             raise RuntimeError("Scene exceeds change-tracking limit; refusing an incompletely tracked proposal")
         record = {"id": uuid.uuid4().hex, "workspace": self.workspace.history.id,
                   "label": label, "steps": steps, "base": _fingerprint(graph),
-                  "created": now(), "status": "pending"}
+                  "created": now(), "status": "pending", "conversation_id": self.conversation_id,
+                  "context_epoch": self.context_epoch}
         self._save_proposal(record)
         self.proposals[record["id"]] = record
         return {"proposal": record["id"], "status": "prepared", "label": label,

@@ -330,6 +330,99 @@ class GuiSmokeTest:
                 assert checkpoint.workspace.history.get(key)["label"] == "GUI_F2_RENAMED", "F2 did not rename in the native checkpoint pane"
                 checkpoint.window().grab().save(str(DIRECTORY / "checkpoints-pane.png"))
                 host.window().grab().save(str(DIRECTORY / "reloaded-pane.png"))
+                # Conversation manager is a separate modeless window, not a dropdown.
+                agent = host._content
+                original = agent.conversation_id
+                agent.new_chat()
+                created = agent.conversation_id
+                agent._append("You", "Model a beveled mechanical housing\nKeep the topology clean.",
+                              turn_id="gui-recorded-turn", branch_point="before")
+                manager = agent.manage_conversation()
+                QtWidgets.QApplication.processEvents()
+                manager.items.setFocus()
+                def rename_conversation():
+                    dialog = QtWidgets.QApplication.activeModalWidget()
+                    if dialog is not None:
+                        dialog.input.setText("Mechanical Housing")
+                        QtTest.QTest.keyClick(dialog.input, QtCore.Qt.Key.Key_Return)
+                QtCore.QTimer.singleShot(100, rename_conversation)
+                QtTest.QTest.keyClick(manager.items, QtCore.Qt.Key.Key_F2)
+                assert agent.conversations.current["name"] == "Mechanical Housing", "Manager F2 failed"
+                manager.grab().save(str(DIRECTORY / "conversations-manager.png"))
+                # Exercise the native message menu with a fake callback, never a provider.
+                branch_requests, menu_errors = [], []
+                branch_handler = agent.branch_conversation
+                agent.branch_conversation = branch_requests.append
+                card = agent.transcript.cards[0]
+                def choose_branch():
+                    menu = QtWidgets.QApplication.activePopupWidget()
+                    try:
+                        menu.grab().save(str(DIRECTORY / "conversation-branch-menu.png"))
+                        action = next(a for a in menu.actions() if a.text() == "Branch here")
+                        assert action.isEnabled(), "Recorded prompt branch action is disabled"
+                        action.trigger()
+                    except Exception as exc:
+                        menu_errors.append(str(exc))
+                    finally:
+                        if menu is not None:
+                            menu.close()
+                QtCore.QTimer.singleShot(100, choose_branch)
+                card._context_menu(QtCore.QPoint(2, 2))
+                agent.branch_conversation = branch_handler
+                assert not menu_errors, menu_errors
+                assert len(branch_requests) == 1
+                assert branch_requests[0]["_conversation_id"] == created
+                assert branch_requests[0]["_branch_index"] == 0
+                def choose_edit():
+                    menu = QtWidgets.QApplication.activePopupWidget()
+                    try:
+                        next(a for a in menu.actions() if a.text() == "Edit prompt").trigger()
+                    except Exception as exc:
+                        menu_errors.append(str(exc))
+                    finally:
+                        if menu is not None:
+                            menu.close()
+                QtCore.QTimer.singleShot(100, choose_edit)
+                card._context_menu(QtCore.QPoint(2, 2))
+                assert not menu_errors, menu_errors
+                assert agent.conversation_id == created and not agent.messages
+                assert agent.prompt.toPlainText().startswith("Model a beveled mechanical housing")
+                agent._append("You", "Question with tool activity")
+                for n in range(3):
+                    agent._append("Tool", "Fake action " + str(n))
+                agent._append("Loom", "Yes, here is the reply")
+                agent.trim_conversation(agent.transcript.cards[-1]._message)
+                actions = agent.transcript.cards[1]
+                assert actions.title.text() == "3 actions" and actions.body.isHidden()
+                def delete_actions():
+                    menu = QtWidgets.QApplication.activePopupWidget()
+                    try:
+                        menu.grab().save(str(DIRECTORY / "action-group-menu.png"))
+                        next(a for a in menu.actions() if a.text() == "Delete from here").trigger()
+                    except Exception as exc:
+                        menu_errors.append(str(exc))
+                    finally:
+                        if menu is not None:
+                            menu.close()
+                QtCore.QTimer.singleShot(100, delete_actions)
+                actions.title.customContextMenuRequested.emit(QtCore.QPoint(2, 2))
+                assert not menu_errors, menu_errors
+                assert [m["role"] for m in agent.messages] == ["You"]
+                assert agent.conversation_id == created
+                def conversation_item(key):
+                    return next(manager.items.topLevelItem(i) for i in range(manager.items.topLevelItemCount())
+                                if manager.items.topLevelItem(i).data(0, QtCore.Qt.ItemDataRole.UserRole) == key)
+                item = conversation_item(original)
+                rect = manager.items.visualItemRect(item)
+                QtTest.QTest.mouseClick(manager.items.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=rect.center())
+                assert agent.conversation_id == created, "Selecting a row activated it"
+                QtTest.QTest.mouseDClick(manager.items.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=rect.center())
+                assert agent.conversation_id == original, "Manager double-click did not activate"
+                manager.items.setCurrentItem(conversation_item(created))
+                manager.delete_button.click()
+                assert agent.conversation_id == original
+                assert all(r["id"] != created for r in agent.conversations.records)
+                manager.close()
             elif self.stage == 8:
                 host = self.check()
                 box = hou.node("/obj/loom_gui_test/box1")

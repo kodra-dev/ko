@@ -6,8 +6,9 @@ The user has **roughly manually tested the current milestone and says it seems t
 Do not rebuild the completed Checkpoints/UI work. Read `AGENTS.md`, this file, and
 `LOOM_README.md`, then agree on the next small, manually verifiable milestone.
 
-**Recommended next task: persisted multiple conversation threads**, followed by
-branching/rewind. Do not implement this whole roadmap in one pass.
+Completed, user-verified behavior is documented in `LOOM_README.md`.
+Conversation-only branching is implemented below and awaits manual verification.
+Do not implement this whole roadmap in one pass.
 
 Repo: `H:/Assets/Assets_3D/HoudiniScripts/ko`.
 All development changes remain **uncommitted**. Do not commit/push unless requested.
@@ -15,30 +16,33 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 
 ## Remaining tasks, in priority order
 
-### 1. Persisted multiple conversation threads
+### 1. Earlier-message branching / rewind — first increment implemented, pending manual verification
 
-- Create, rename, switch, and archive threads within a UUID workspace.
-- Keep each thread's messages, native provider thread ID, model choice, tool activity,
-  proposals/results, and context state together.
-- Migrate existing `chat.json` into the initial thread without losing history.
-- Keep one running agent turn per Houdini session; prevent conflicting switches/actions.
-- Keep model-choice and workspace edit-permission semantics explicit: currently the
-  last model is an app-wide preference, while Allow scene edits is per workspace.
-- Reopening/reloading should restore the selected conversation, not silently start over.
-- Start with a small usable thread selector and persistence tests, then manual verification.
-- "Tiny Network" should start a new thread
-
-### 2. Earlier-message branching / rewind
-
-- Branch from an earlier message while preserving the original future.
-- Conversation-only branching must **not silently restore or change the scene**.
-- Make scene restoration a separate explicit action with a valid associated checkpointed
+- User rejected verbose menu labels and disabled old-message branching. Menu is now **Branch
+  here**, **Delete from here**, and **Edit prompt** (user messages). Details live in tooltips.
+- Branch here keeps the original future, cutting exactly after an AI message or before a user
+  prompt (prefilled draft). Legacy/intermediate replies work; no boundary-unavailable menu.
+- Native exact endpoints use bounded `thread/fork`, deferring goal continuation. Other cuts
+  start a fresh thread, replaying only the retained visible transcript once with the next send.
+  No inference just to branch. Never include later actions or reconstruct opaque reasoning/images.
+- Delete/Edit keep the same conversation ID/name but reset provider context too. Edit refills
+  the prompt without sending; Delete preserves the current unsent draft. Reported cost survives.
+  A new proposal context_epoch excludes deleted-tail evidence from recent_proposals.
+- Prefix replay persists across reload and is consumed only after turn acceptance. Clear old
+  native IDs; branching before the first replay-containing turn must replay again, not lose prefix.
+- Delete from here is also available on action/activity cards, including collapsed headers.
+  Grouped actions carry the first raw-message identity/index so deleting a displayed group removes
+  all its actions and later messages, without accidentally cutting at a display index.
+- All actions reject busy/stale menus and never restore/change scene, checkpoints or files.
+  Subsequent turns warn that historical observations can be stale; request live inspection.
+- Remaining: manual verification of live replay/bounded forks/history deletion and separate
+  explicit scene restoration with a validated scene/checkpoint association.
 - Checkpoints are editable versions: an ID alone does not guarantee its contents still
   match the scene when an earlier message was written. Design stale-context checks;
   do not advertise historical scene rewind without solving that association.
 - Never silently roll back ko source files as part of a conversation rewind.
 
-### 3. Context management and observability
+### 2. Context management and observability
 
 - Stable/deterministic instruction and tool prefixes; append-only native conversation history.
 - Keep volatile scene/UI state near the latest user input, not in stable instructions.
@@ -47,7 +51,7 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 - Show usage/cache statistics where the provider supports them; make compaction observable.
 - Avoid excessive tool-result payloads and unnecessary screenshots/model calls.
 
-### 4. File tools
+### 3. File tools
 
 - Read anywhere, with batched files/ranges; search/list/find tools.
 - Precise reviewed writes/edits in the requested scope, including ko source when requested.
@@ -56,7 +60,7 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 - Do not let Loom edit its own running harness inside Houdini.
 - Use Git for ko source history; do not add another source backup system.
 
-### 5. Optional AI integration and review polish
+### 4. Optional AI integration and review polish
 
 - Implement the real Checkpoints RMB **Suggest name** action using the existing optional
   action registry, with an editable result. No model request on every checkpoint creation.
@@ -64,7 +68,7 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
   edits on applies with checkpoints. Keep checkpoint links useful without reintroducing review UI.
 - Keep generated checkpoint names short, without AI:/Before: prefixes.
 
-### 6. Physical package extraction
+### 5. Physical package extraction
 
 - Extract Loom + independent Checkpoints into one installable **Loom** Houdini package,
   separate from basic ko tools.
@@ -73,13 +77,13 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 - Preserve migrations, compatibility readers, menu/shelf/panel definitions, and independent
   Checkpoints-only use.
 
-### 7. Independent-copy workspace detachment
+### 6. Independent-copy workspace detachment
 
 - Add an explicit detach/new-workspace operation for a copied HIP that should become independent.
 - Current rename, Save As, and file copies retain the UUID/workspace by design.
 - Workspace export is out of scope for now.
 
-### 8. Truly isolated long-running inspection, if needed
+### 7. Truly isolated long-running inspection, if needed
 
 - Geometry inspection is now prompt-free and has cooperative cancellation, **not a safe
   background HOM worker**. A non-yielding native/plugin/Python cook can still block the UI.
@@ -187,8 +191,15 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
   never fall back visibly. `-Visible` requires explicit permission. Test process trees
   are isolated/terminated by the launcher job, not by killing artist processes.
 - Tested Houdini: `C:/Program Files/Side Effects Software/Houdini 22.0.466/bin/`.
-- Latest full offline suite: **126 tests passed**; native hidden GUI toggle/geometry test
-  also passed, restoring exact independent Loom and Checkpoints rectangles.
+- Latest full offline suite: **197 tests** (78 unit, 43 HOM, 72 offscreen UI, 4 package reload).
+  Hidden native GUI passed, including the concise message menu and Edit prompt without changing
+  conversation identity and deleting a collapsed action group after deleting its reply. The native
+  test needed one retry for the known invisible legacy-pane startup issue. Earlier startup failures
+  exposed qtParentWindow=None; geometry tracking
+  now attaches lazily on idle, and GUI failure cleanup tolerates a missing root. No visible fallback
+  or paid tests.
+- Replay, exact cuts, one-time acknowledgement, deletion/edit, cost carry-forward, proposal
+  scope resets, and scene invariance use offline/mock coverage. No paid-provider tests ran.
 - Native open/close needs a real Houdini idle boundary; nested Qt `qWait` alone can mislead.
   The GUI toggle test advances across timer ticks. Reload is tested through a native hotkey;
   toggle items use their actual XML script body plus registered label checks, since shortcut
@@ -197,7 +208,9 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
 ## Source map
 
 - `python3.13libs/loom/panel.py`: agent/controller, auto-connect, workspace preferences, transport UI.
-- `chat.py`: native message cards/composer/spinner.
+- `chat.py`: native message cards/composer/spinner and message branching menu.
+- `conversations.py`: atomic workspace conversation records/selection, naming, deletion and legacy migration.
+- `conversation_ui.py`: separate modeless two-line manager; shared Checkpoints selection styling.
 - `tools.py`: scene/proposal schemas, inspection, per-turn edit checkpoint grouping.
 - `inspection.py`: UI-thread geometry scope and viewport PNG capture.
 - `network.py`: conservative arrangement/display defaults.
@@ -211,7 +224,7 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
 
 ## Suggested first prompt in the new context
 
-> Read AGENTS.md, LOOM_HANDOFF.md and LOOM_README.md. The current UI/Checkpoints
-> milestone roughly passed my manual testing. Discuss the next small milestone:
-> persisted multiple conversation threads. Preserve existing history and independent
-> Checkpoints. Do not run paid provider tests without asking me first.
+> Read AGENTS.md, LOOM_HANDOFF.md and LOOM_README.md, and verify current code.
+> Conversation-only branching is implemented; check whether it has passed manual verification.
+> Do not implicitly restore scenes or files. Preserve history and independent Checkpoints.
+> Do not run paid provider tests without asking me first.

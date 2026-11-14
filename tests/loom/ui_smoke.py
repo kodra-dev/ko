@@ -1,12 +1,13 @@
 """Offscreen Qt + real HOM; no changes to an existing Houdini process."""
 import os
+import queue
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from pathlib import Path
 import sys
 import tempfile
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "python3.13libs"))
 import hou
@@ -20,6 +21,7 @@ app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 class FakeTransport:
     def __init__(self):
         self.replies = []
+        self.events = queue.Queue()
     def reply(self, request_id, result):
         self.replies.append((request_id, result))
     def reject(self, request_id, message):
@@ -80,6 +82,534 @@ class UiTests(unittest.TestCase):
         self.assertEqual(self.panel.usage_label.text(), "≈$0.00 C—%")
         self.panel._event(event)  # delayed notification from the old conversation
         self.assertEqual(self.panel.usage_label.text(), "≈$0.00 C—%")
+
+    def test_conversations_restore_messages_native_id_models_drafts_and_selection(self):
+        models = {"data": [{"model": "a", "isDefault": True}, {"model": "b"}]}
+        self.panel._models(models)
+        self.panel.model.setCurrentIndex(self.panel.model.findData("a"))
+        self.panel._remember_model()
+        first = self.panel.conversation_id
+        self.panel.thread_id = "native-first"
+        self.panel._append("Tool", "original tool result", success=True)
+        self.panel.prompt.setPlainText("first draft")
+        self.panel.new_chat("Second")
+        second = self.panel.conversation_id
+        self.panel.model.setCurrentIndex(self.panel.model.findData("b"))
+        self.panel._remember_model()
+        self.panel._append("You", "second message")
+        self.panel.prompt.setPlainText("second draft")
+        active = self.panel.workspace.active
+        self.panel.switch_conversation(first)
+        self.assertEqual(self.panel.thread_id, "native-first")
+        self.assertEqual(self.panel.messages[0]["text"], "original tool result")
+        self.assertEqual(self.panel.prompt.toPlainText(), "first draft")
+        self.assertEqual(self.panel.model.currentData(), "a")
+        self.assertFalse(self.panel._resumed)
+        self.assertEqual(self.panel.workspace.active, active)
+        with patch("loom.panel.prompt_text", return_value=("Renamed", True)):
+            self.panel.rename_conversation()
+        self.panel.close()
+        self.panel = Panel()
+        self.panel._models(models)
+        self.assertEqual(self.panel.conversation_id, first)
+        self.assertEqual(self.panel.conversation_title.text(), "Renamed")
+        self.assertEqual(self.panel.model.currentData(), "a")
+        self.panel.switch_conversation(second)
+        self.assertEqual(self.panel.conversation_id, second)
+        self.assertEqual(self.panel.prompt.toPlainText(), "second draft")
+        self.assertEqual(self.panel.model.currentData(), "b")
+        self.assertEqual(self.panel.manage_conversation().items.topLevelItemCount(), 2)
+
+    def test_conversation_actions_are_blocked_during_turn_and_old_events_ignored(self):
+        first = self.panel.conversation_id
+        self.panel.new_chat()
+        second = self.panel.conversation_id
+        manager = self.panel.manage_conversation()
+        self.panel._set_busy(True)
+        self.assertFalse(manager.delete_button.isEnabled())
+        self.panel.new_chat()
+        self.panel.delete_conversation(first)
+        self.panel.switch_conversation(first)
+        self.assertEqual(self.panel.conversation_id, second)
+        self.assertEqual(manager.selected_id(), second)
+        self.panel._set_busy(False)
+        self.panel._event({"method": "item/agentMessage/delta", "params": {
+            "threadId": "old-native-thread", "itemId": "old", "delta": "must not leak"}})
+        self.assertEqual(self.panel.messages, [])
+
+    def test_switching_after_disconnect_does_not_reenable_send(self):
+        self.panel._models({"data": [{"model": "a", "isDefault": True}]})
+        first = self.panel.conversation_id
+        self.panel.new_chat()
+        self.panel._event({"transport_error": "Disconnected"})
+        self.panel.switch_conversation(first)
+        self.assertFalse(self.panel.ready)
+        self.assertFalse(self.panel.send_button.isEnabled())
+        self.panel._remember_model()
+        self.assertFalse(self.panel.ready)
+
+    def test_conversation_proposals_are_tagged_and_recent_context_is_isolated(self):
+        import json
+        box = self._cube()
+        first = self.panel.conversation_id
+        result = self.panel.tools.propose("First edit", [{"op": "set", "path": box.path(), "parm": "sizex", "value": 2}])
+        record = self.panel.tools.proposals[result["proposal"]]
+        self.assertEqual(record["conversation_id"], first)
+        self.panel.new_chat()
+        self.panel.thread_id = "second-native"
+        self.panel._turn_user_text = "Explain"
+        requests = []
+        self.panel._request = lambda method, params, callback: requests.append(params)
+        self.panel._start_turn()
+        context = json.loads(requests[-1]["input"][0]["text"].split("\n", 1)[1])
+        self.assertEqual(context["recent_proposals"], [])
+        self.panel.switch_conversation(first)
+        self.panel._start_turn()
+        context = json.loads(requests[-1]["input"][0]["text"].split("\n", 1)[1])
+        self.assertEqual(context["recent_proposals"][0]["id"], record["id"])
+
+    def test_workspace_switch_preserves_departing_draft_and_thread_selection(self):
+        self.panel.new_chat("Selected")
+        first_root = self.panel.workspace.history.root
+        first_id = self.panel.conversation_id
+        self.panel.prompt.setPlainText("departing draft")
+        hou.hipFile.clear(suppress_save_prompt=True)
+        self.panel._ensure_binding()
+        self.assertNotEqual(self.panel.workspace.history.root, first_root)
+        from loom.conversations import Conversations
+        saved = Conversations(first_root).current
+        self.assertEqual(saved["id"], first_id)
+        self.assertEqual(saved["draft"], "departing draft")
+        self.assertEqual(self.panel.prompt.toPlainText(), "")
+
+    def test_manager_two_line_items_selection_double_click_f2_and_delete(self):
+        from loom.conversation_ui import PREVIEW_ROLE, CURRENT_ROLE
+        first = self.panel.conversation_id
+        self.panel._append("You", "First line of request\nSecond line")
+        self.panel.new_chat("Another")
+        second = self.panel.conversation_id
+        manager = self.panel.manage_conversation()
+        manager.activateWindow()
+        app.processEvents()
+        self.assertFalse(hasattr(manager, "show_archived"))
+        self.assertFalse(hasattr(manager, "restore_button"))
+        first_item = manager.items.topLevelItem(0)
+        second_item = manager.items.topLevelItem(1)
+        self.assertEqual(first_item.data(0, PREVIEW_ROLE), "First line of request")
+        self.assertTrue(second_item.data(0, CURRENT_ROLE))
+        manager.items.setCurrentItem(first_item)
+        self.assertEqual(self.panel.conversation_id, second)  # Selection is not activation.
+        def rename():
+            dialog = app.activeModalWidget()
+            self.assertIsNotNone(dialog)
+            dialog.input.setText("Named with F2")
+            QtTest.QTest.keyClick(dialog.input, QtCore.Qt.Key.Key_Return)
+        QtCore.QTimer.singleShot(20, rename)
+        manager.items.setFocus()
+        QtTest.QTest.keyClick(manager.items, QtCore.Qt.Key.Key_F2)
+        self.assertEqual(self.panel.conversations.records[0]["name"], "Named with F2")
+        self.assertEqual(self.panel.conversation_id, second)
+        first_item = manager.items.topLevelItem(0)
+        rect = manager.items.visualItemRect(first_item)
+        QtTest.QTest.mouseClick(manager.items.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=rect.center())
+        QtTest.QTest.mouseDClick(manager.items.viewport(), QtCore.Qt.MouseButton.LeftButton, pos=rect.center())
+        self.assertEqual(self.panel.conversation_id, first)
+        self.assertEqual(self.panel.messages[0]["text"], "First line of request\nSecond line")
+        manager.delete_button.click()
+        self.assertEqual(self.panel.conversation_id, second)
+        self.assertEqual(manager.items.topLevelItemCount(), 1)
+        self.assertEqual(manager.selected_id(), second)
+        QtTest.QTest.keyClick(manager.items, QtCore.Qt.Key.Key_Delete)
+        self.assertNotEqual(self.panel.conversation_id, second)
+        self.assertEqual(manager.items.topLevelItemCount(), 1)
+        manager.close()
+        self.assertFalse(self.panel._closed)
+
+    def test_ai_names_first_turn_through_existing_tool_without_extra_model_call(self):
+        self.panel.ready = True
+        self.panel._turn_workspace = self.panel.workspace.history.id
+        self.panel._turn_user_text = "Help me build a cube"
+        self.panel._append("You", self.panel._turn_user_text)
+        requests = []
+        self.panel._request = lambda method, params, callback: requests.append((method, params))
+        self.panel._start_turn()
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(requests[0][0], "turn/start")
+        self.assertIn("@conversation-name:TITLE", requests[0][1]["input"][1]["text"])
+        self.panel.transport = FakeTransport()
+        self.panel._set_busy(True)
+        self.panel._event({"id": 10, "method": "item/tool/call", "params": {
+            "tool": "loom_scene", "arguments": {"operation": "context", "path": "/",
+                "query": "@conversation-name:Cube Modeling"}}})
+        self.assertTrue(self.panel.transport.replies[-1][1]["success"])
+        self.assertEqual(self.panel.conversation_title.text(), "Cube Modeling")
+        self.assertIsNone(self.panel.workspace.active)
+        self.assertFalse(self.panel.allow_edits.isChecked())
+        self.panel._set_busy(False)
+        self.panel._append("You", "Next question")
+        self.panel._start_turn()
+        self.assertEqual(len(requests[-1][1]["input"]), 2)  # No repeated title request.
+        self.panel._load_chat()
+        self.assertEqual(self.panel.conversations.current["name_source"], "ai")
+
+    def test_manager_actions_and_auto_name_cannot_change_manual_name_or_busy_thread(self):
+        self.panel.conversations.rename(self.panel.conversation_id, "Manual name")
+        manager = self.panel.manage_conversation()
+        self.panel._turn_workspace = self.panel.workspace.history.id
+        self.panel._turn_name_requested = True
+        self.panel.transport = FakeTransport()
+        self.panel._set_busy(True)
+        key = self.panel.conversation_id
+        manager.delete_selected()
+        self.panel.delete_conversation(key)
+        self.assertEqual(self.panel.conversation_id, key)
+        self.assertFalse(manager.delete_button.isEnabled())
+        self.panel._event({"id": 11, "method": "item/tool/call", "params": {
+            "tool": "loom_scene", "arguments": {"operation": "context",
+                "query": "@conversation-name:Overwrite"}}})
+        self.assertEqual(self.panel.conversations.current["name"], "Manual name")
+        self.panel._turn_name_requested = False
+        self.panel._event({"id": 12, "method": "item/tool/call", "params": {
+            "tool": "loom_scene", "arguments": {"operation": "context",
+                "query": "@conversation-name:Again"}}})
+        self.assertFalse(self.panel.transport.replies[-1][1]["success"])
+        self.panel._set_busy(False)
+
+    def _completed_chat_turn(self, text, turn_id):
+        self.panel.ready = True
+        self.panel.transport = FakeTransport()
+        def request(method, params, callback):
+            if method in ("thread/start", "thread/resume"):
+                callback({"thread": {"id": "native-source"}})
+            elif method == "turn/start":
+                callback({"turn": {"id": turn_id}})
+        self.panel._request = request
+        self.panel.prompt.setPlainText(text)
+        self.panel.send_prompt()
+        self.panel._append("Tool", "Evidence for " + text)
+        self.panel._event({"method": "item/completed", "params": {
+            "item": {"id": "reply-" + turn_id, "type": "agentMessage", "text": "Reply to " + text}}})
+        self.panel._event({"method": "turn/completed", "params": {
+            "threadId": "native-source", "turn": {"id": turn_id, "status": "completed"}}})
+
+    def test_branch_before_prompt_uses_bounded_native_fork_without_scene_or_inference(self):
+        import json
+        self._completed_chat_turn("First prompt", "t1")
+        self._completed_chat_turn("Future secret", "t2")
+        self.assertEqual(self.panel.messages[0]["branch_point"], "before")
+        self.assertEqual(self.panel.messages[2]["branch_point"], "after")
+        source = self.panel.conversation_id
+        original_messages = list(self.panel.messages)
+        self.panel.prompt.setPlainText("Original draft")
+        request = []
+        self.panel._request = lambda method, params, callback: request.append((method, params, callback))
+        with patch.object(self.panel.workspace, "checkpoint") as checkpoint, patch.object(self.panel.workspace, "visit") as visit:
+            message = self.panel.transcript.cards[0]._message
+            self.panel.branch_conversation(message)
+            self.assertTrue(self.panel.busy)
+            self.assertFalse(self.panel.transcript.branch_enabled)
+            self.assertEqual(request[0][0], "thread/fork")
+            self.assertEqual(request[0][1]["beforeTurnId"], "t1")
+            self.assertTrue(request[0][1]["deferGoalContinuation"])
+            request[0][2]({"thread": {"id": "native-fork"}})
+            checkpoint.assert_not_called()
+            visit.assert_not_called()
+        self.assertFalse(self.panel.busy)
+        self.assertEqual(self.panel.thread_id, "native-fork")
+        self.assertNotEqual(self.panel.conversation_id, source)
+        self.assertEqual(self.panel.messages, [])
+        self.assertEqual(self.panel.prompt.toPlainText(), "First prompt")
+        original = self.panel.conversations.records[0]
+        self.assertEqual(original["messages"], original_messages)
+        self.assertEqual(original["draft"], "Original draft")
+        self.assertEqual(len(request), 1)  # Fork never starts a turn.
+        self.panel._turn_user_text = "Revised prompt"
+        self.panel._start_turn()
+        context = json.loads(request[-1][1]["input"][0]["text"].split("\n", 1)[1])
+        self.assertIn("NOT restored", context["historical_scene_warning"])
+        self.assertEqual(context["recent_proposals"], [])
+
+    def test_branch_after_reply_keeps_only_selected_turn_and_persists(self):
+        self._completed_chat_turn("First", "t1")
+        self._completed_chat_turn("Future secret", "t2")
+        requests = []
+        self.panel._request = lambda method, params, callback: requests.append((method, params, callback))
+        self.panel.branch_conversation(self.panel.transcript.cards[2]._message)
+        self.assertEqual(requests[0][1]["lastTurnId"], "t1")
+        requests[0][2]({"thread": {"id": "native-fork"}})
+        self.assertEqual(len(self.panel.messages), 3)
+        self.assertNotIn("Future secret", str(self.panel.messages))
+        self.assertEqual(self.panel.prompt.toPlainText(), "")
+        selected = self.panel.conversation_id
+        self.panel._save_chat()
+        self.panel._load_chat()
+        self.assertEqual(self.panel.conversation_id, selected)
+        self.assertEqual(self.panel.thread_id, "native-fork")
+        self.assertFalse(self.panel._resumed)
+
+    def test_branch_guards_stale_menu_busy_missing_ids_and_request_failure(self):
+        self._completed_chat_turn("First", "t1")
+        old = self.panel.transcript.cards[0]._message
+        self.panel._set_busy(True)
+        with self.assertRaisesRegex(RuntimeError, "active turn"):
+            self.panel.branch_conversation(old)
+        self.panel._set_busy(False)
+        source = self.panel.conversation_id
+        self.panel._request = Mock(side_effect=RuntimeError("request failed"))
+        with self.assertRaisesRegex(RuntimeError, "request failed"):
+            self.panel.branch_conversation(old)
+        self.assertFalse(self.panel.busy)
+        self.assertEqual(len(self.panel.conversations.records), 1)
+        requests = []
+        self.panel._request = lambda method, params, callback: requests.append(callback)
+        self.panel.branch_conversation(old)
+        self.panel.callbacks[999] = (requests[-1], time.monotonic(), "thread/fork")
+        self.panel._event({"id": 999, "error": {"message": "bounded fork unavailable"}})
+        self.assertFalse(self.panel.busy)
+        self.assertFalse(self.panel._branch_pending)
+        self.assertEqual(self.panel.conversation_id, source)
+        self.assertEqual(len(self.panel.conversations.records), 1)
+        self.assertEqual(self.panel.messages[0]["text"], "First")
+        self.panel.new_chat()
+        with self.assertRaisesRegex(RuntimeError, "Conversation changed"):
+            self.panel.branch_conversation(old)
+        self.assertNotEqual(self.panel.conversation_id, source)
+        self.panel._append("You", "Legacy unrecorded message")
+        self.panel.branch_conversation(self.panel.transcript.cards[0]._message)
+        self.assertEqual(self.panel.messages, [])
+        self.assertEqual(self.panel.prompt.toPlainText(), "Legacy unrecorded message")
+
+    def test_message_menu_branch_signal_preserves_raw_index_after_grouped_tools(self):
+        from unittest.mock import Mock
+        self.panel._append("Tool", "First tool")
+        self.panel._append("Tool", "Second tool")
+        self._completed_chat_turn("Prompt", "t1")
+        card = self.panel.transcript.cards[-1]
+        self.assertEqual(card._message["_branch_index"], len(self.panel.messages) - 1)
+        self.panel.branch_conversation = Mock()
+        failures = []
+        def choose():
+            menu = app.activePopupWidget()
+            try:
+                action = next(a for a in menu.actions() if a.text() == "Branch here")
+                self.assertTrue(action.isEnabled())
+                action.trigger()
+            except Exception as exc:
+                failures.append(exc)
+            finally:
+                if menu:
+                    menu.close()
+        QtCore.QTimer.singleShot(30, choose)
+        card._context_menu(QtCore.QPoint(0, 0))
+        self.assertEqual(failures, [])
+        self.panel.branch_conversation.assert_called_once_with(card._message)
+
+    def test_old_or_intermediate_reply_branches_at_exact_message_and_replays_once(self):
+        self.panel._append("You", "Original question")
+        self.panel._append("Loom", "Intermediate reply")
+        self.panel._append("Tool", "Future secret action")
+        self.panel._append("Loom", "Future secret reply")
+        source = self.panel.conversation_id
+        self.panel._request = Mock(side_effect=AssertionError("Branch must not call provider"))
+        self.panel.branch_conversation(self.panel.transcript.cards[1]._message)
+        self.assertNotEqual(self.panel.conversation_id, source)
+        self.assertEqual([m["text"] for m in self.panel.messages], ["Original question", "Intermediate reply"])
+        self.assertIsNone(self.panel.thread_id)
+        self.assertTrue(self.panel.conversations.current["replay_pending"])
+        self.panel._save_chat()
+        self.panel._load_chat()
+        self.panel.ready = True
+        self.panel.transport = FakeTransport()
+        requests = []
+        def request(method, params, callback):
+            requests.append((method, params, callback))
+            if method == "thread/start":
+                callback({"thread": {"id": "fresh-native"}})
+        self.panel._request = request
+        self.panel.prompt.setPlainText("Continue differently")
+        self.panel.send_prompt()
+        self.assertEqual([r[0] for r in requests], ["thread/start", "turn/start"])
+        inputs = requests[-1][1]["input"]
+        self.assertIn("Intermediate reply", inputs[1]["text"])
+        self.assertNotIn("Future secret", str(inputs))
+        self.assertEqual(inputs[-1]["text"], "Continue differently")
+        self.assertTrue(self.panel.conversations.current["replay_pending"])
+        requests[-1][2]({"turn": {"id": "fresh-turn"}})
+        self.assertFalse(self.panel.conversations.current["replay_pending"])
+        self.panel._event({"method": "turn/completed", "params": {
+            "threadId": "fresh-native", "turn": {"id": "fresh-turn", "status": "completed"}}})
+        # Native forking before this turn would lose the replayed prefix, so replay again.
+        self.assertFalse(self.panel.conversations.branch_point(2)["native"])
+        self.panel.prompt.setPlainText("Next")
+        self.panel.send_prompt()
+        self.assertEqual(len(requests[-1][1]["input"]), 2)  # Prefix is not resent.
+        self.panel._set_busy(False)
+
+    def test_delete_from_here_keeps_conversation_and_omits_removed_proposals(self):
+        import json
+        self._completed_chat_turn("Keep this", "t1")
+        self._completed_chat_turn("Remove secret", "t2")
+        key = self.panel.conversation_id
+        self.panel.tools.proposals["removed-proposal"] = {
+            "id": "removed-proposal", "conversation_id": key, "label": "Removed secret", "status": "applied"}
+        self.panel.prompt.setPlainText("Keep unsent draft")
+        self.panel._request = Mock(side_effect=AssertionError("Deletion must not call provider"))
+        with patch.object(self.panel.workspace, "checkpoint") as checkpoint, patch.object(self.panel.workspace, "visit") as visit:
+            self.panel.trim_conversation(self.panel.transcript.cards[3]._message)
+            checkpoint.assert_not_called()
+            visit.assert_not_called()
+        self.assertEqual(self.panel.conversation_id, key)
+        self.assertEqual(len(self.panel.conversations.records), 1)
+        self.assertEqual(len(self.panel.messages), 3)
+        self.assertEqual(self.panel.prompt.toPlainText(), "Keep unsent draft")
+        self.assertIsNone(self.panel.thread_id)
+        self.assertNotIn("Remove secret", str(self.panel.messages))
+        self.assertIsNotNone(self.panel.tools.context_epoch)
+        requests = []
+        self.panel._request = lambda method, params, callback: requests.append(params)
+        self.panel._turn_user_text = "Next"
+        self.panel._start_turn()
+        context = json.loads(requests[-1]["input"][0]["text"].split("\n", 1)[1])
+        self.assertEqual(context["recent_proposals"], [])
+        self.assertNotIn("Remove secret", str(requests))
+
+    def test_edit_prompt_keeps_same_conversation_and_refills_without_sending(self):
+        self._completed_chat_turn("Wrong question", "t1")
+        key = self.panel.conversation_id
+        message = self.panel.transcript.cards[0]._message
+        self.panel.usage.state.update(cost=.25, complete=True)
+        self.panel._set_busy(True)
+        with self.assertRaisesRegex(RuntimeError, "active turn"):
+            self.panel.trim_conversation(message, edit=True)
+        self.panel._set_busy(False)
+        self.panel._request = Mock(side_effect=AssertionError("Edit must not send"))
+        self.panel.trim_conversation(message, edit=True)
+        self.assertEqual(self.panel.conversation_id, key)
+        self.assertEqual(self.panel.messages, [])
+        self.assertEqual(self.panel.prompt.toPlainText(), "Wrong question")
+        self.assertIsNone(self.panel.thread_id)
+        self.assertFalse(self.panel.conversations.current["replay_pending"])
+        self.assertEqual(self.panel.usage.state["cost"], .25)  # Deletion cannot undo billed work.
+        self.panel._save_chat()
+        self.panel._load_chat()
+        self.assertEqual(self.panel.usage.state["cost"], .25)
+        self.assertEqual(self.panel.usage.state["total"], {})
+
+    def test_short_message_menu_has_edit_delete_and_branch_even_for_old_messages(self):
+        self.panel._append("You", "Old question")
+        self.panel.trim_conversation = Mock()
+        card = self.panel.transcript.cards[0]
+        failures = []
+        def choose():
+            menu = app.activePopupWidget()
+            try:
+                labels = [a.text() for a in menu.actions()]
+                for label in ("Branch here", "Edit prompt", "Delete from here"):
+                    action = next(a for a in menu.actions() if a.text() == label)
+                    self.assertTrue(action.isEnabled())
+                self.assertFalse(any("boundary" in s or "conversation only" in s for s in labels))
+                next(a for a in menu.actions() if a.text() == "Edit prompt").trigger()
+            except Exception as exc:
+                failures.append(exc)
+            finally:
+                if menu:
+                    menu.close()
+        QtCore.QTimer.singleShot(30, choose)
+        card._context_menu(QtCore.QPoint(0, 0))
+        self.assertEqual(failures, [])
+        self.panel.trim_conversation.assert_called_once_with(card._message, edit=True)
+
+    def test_collapsed_actions_header_can_delete_group_after_reply_was_deleted(self):
+        self.panel._append("You", "How should I improve this?")
+        for text in ("Action one", "Action two", "Action three"):
+            self.panel._append("Tool", text)
+        self.panel._append("Loom", "Yes, here is my answer")
+        key = self.panel.conversation_id
+        self.panel.trim_conversation(self.panel.transcript.cards[-1]._message)
+        card = self.panel.transcript.cards[1]
+        self.assertEqual(card.title.text(), "3 actions")
+        self.assertTrue(card.body.isHidden())
+        self.assertEqual(card._message["_branch_index"], 1)
+        failures = []
+        def choose():
+            menu = app.activePopupWidget()
+            try:
+                labels = [a.text() for a in menu.actions()]
+                self.assertNotIn("Branch here", labels)
+                self.assertNotIn("Edit prompt", labels)
+                action = next(a for a in menu.actions() if a.text() == "Delete from here")
+                self.assertTrue(action.isEnabled())
+                action.trigger()
+            except Exception as exc:
+                failures.append(exc)
+            finally:
+                if menu:
+                    menu.close()
+        self.panel._request = Mock(side_effect=AssertionError("No provider request for deletion"))
+        with patch.object(self.panel.workspace, "checkpoint") as checkpoint, patch.object(self.panel.workspace, "visit") as visit:
+            QtCore.QTimer.singleShot(30, choose)
+            card.title.customContextMenuRequested.emit(QtCore.QPoint(2, 2))
+            checkpoint.assert_not_called()
+            visit.assert_not_called()
+        self.assertEqual(failures, [])
+        self.assertEqual(self.panel.conversation_id, key)
+        self.assertEqual([m["role"] for m in self.panel.messages], ["You"])
+        self.panel._save_chat()
+        self.panel._load_chat()
+        self.assertEqual([m["role"] for m in self.panel.messages], ["You"])
+        self.assertNotIn("Action", str(self.panel._history_replay))
+
+    def test_action_group_uses_first_raw_message_not_grouped_display_index(self):
+        for role, text in (("You", "Question"), ("Tool", "Keep one"), ("Tool", "Keep two"),
+                           ("Loom", "Keep reply"), ("Tool", "Remove one"),
+                           ("Tool", "Remove two"), ("Loom", "Remove reply")):
+            self.panel._append(role, text)
+        card = self.panel.transcript.cards[3]
+        message = card._message
+        self.assertEqual(message["_branch_index"], 4)
+        self.assertEqual(message["_history_target"]["text"], "Remove one")
+        self.panel._set_busy(True)
+        with self.assertRaisesRegex(RuntimeError, "active turn"):
+            self.panel.trim_conversation(message)
+        self.panel._set_busy(False)
+        self.panel.trim_conversation(message)
+        self.assertEqual([m["text"] for m in self.panel.messages],
+                         ["Question", "Keep one", "Keep two", "Keep reply"])
+        self.assertNotIn("_history_target", str(self.panel.conversations.current))
+        self.panel.new_chat()
+        with self.assertRaisesRegex(RuntimeError, "Conversation changed"):
+            self.panel.trim_conversation(message)
+
+    def test_single_tool_and_other_activity_cards_expose_delete_on_card(self):
+        for role in ("Tool", "System", "Error"):
+            self.panel._append(role, "Remove " + role)
+            card = self.panel.transcript.cards[-1]
+            self.panel.trim_conversation = Mock()
+            failures = []
+            def choose():
+                menu = app.activePopupWidget()
+                try:
+                    next(a for a in menu.actions() if a.text() == "Delete from here").trigger()
+                except Exception as exc:
+                    failures.append(exc)
+                finally:
+                    if menu:
+                        menu.close()
+            QtCore.QTimer.singleShot(30, choose)
+            card.customContextMenuRequested.emit(QtCore.QPoint(2, 2))
+            self.assertEqual(failures, [])
+            self.panel.trim_conversation.assert_called_once_with(card._message, edit=False)
+
+    def test_unavailable_saved_model_requires_explicit_available_choice(self):
+        self.panel.conversations.update(model="missing")
+        self.panel._load_chat()
+        self.panel._models({"data": [{"model": "available", "isDefault": True}]})
+        self.assertEqual(self.panel.model.currentData(), "missing")
+        self.assertFalse(self.panel.ready)
+        self.panel.model.setCurrentIndex(self.panel.model.findData("available"))
+        self.panel._remember_model()
+        self.assertTrue(self.panel.ready)
+        self.assertEqual(self.panel.conversations.current["model"], "available")
 
     def test_usage_model_is_frozen_for_turn_and_tracks_rerouting(self):
         self.panel.thread_id = "usage-thread"
@@ -176,7 +706,11 @@ class UiTests(unittest.TestCase):
         self.assertTrue(self.panel.busy)
         self.assertFalse(self.panel.tidy_button.isEnabled())
         self.assertEqual(self.panel.tools.tidy_scope.nodes, {box})
-        self.assertEqual(self.panel.prompt.toPlainText(), "Unsent draft")
+        self.assertEqual(self.panel.prompt.toPlainText(), "")
+        original = self.panel.conversations.records[0]
+        self.assertEqual(original["draft"], "Unsent draft")
+        self.assertNotEqual(original["id"], self.panel.conversation_id)
+        self.assertEqual(self.panel.conversations.current["name"], "Tidy Network")
         self.assertIn("Tidy Network", self.panel.messages[-1]["text"])
         self.panel._set_busy(False)
         self.assertIsNone(self.panel.tools.tidy_scope)

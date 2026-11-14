@@ -50,7 +50,10 @@ class ReloadTests(unittest.TestCase):
         workspace_id = panel.workspace.history.id
         active = panel.workspace.active
         box.parm("sizex").set(7)  # Reload must neither save nor discard these edits.
+        agent.new_chat("Reload selection")
+        conversation_id = agent.conversation_id
         agent._append("You", "PACKAGE_RELOAD_MARKER")
+        agent.prompt.setPlainText("PACKAGE_DRAFT_MARKER")
         from loom.checkpoints.actions import register_action
         callback = lambda *_: None
         register_action("test.reload", "Test extension", callback)
@@ -70,6 +73,8 @@ class ReloadTests(unittest.TestCase):
         self.assertEqual(box.parm("sizex").eval(), 7)
         self.assertTrue(panel.workspace.has_live_changes())
         self.assertEqual(agent.messages[-1]["text"], "PACKAGE_RELOAD_MARKER")
+        self.assertEqual(agent.conversation_id, conversation_id)
+        self.assertEqual(agent.prompt.toPlainText(), "PACKAGE_DRAFT_MARKER")
         self.assertEqual(len(hou.hipFile.eventCallbacks()), 1)
         from loom.checkpoints.actions import registered_actions, unregister_action
         self.assertIs(next(a for a in registered_actions() if a.id == "test.reload").callback, callback)
