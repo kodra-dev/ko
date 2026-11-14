@@ -360,12 +360,34 @@ Milestones and remaining work, in small verifiable increments:
 ## Tests
 
 ```powershell
-./scripts/loom_test.ps1
+./scripts/loom_test.ps1 -Suite Fast  # ordinary Python; no Houdini/Qt startup
+./scripts/loom_test.ps1 -Suite Fast -Test test_history.HistoryTests
+./scripts/loom_test.ps1 -Suite Unit -Test test_name_migration
+./scripts/loom_test.ps1 -Suite Houdini -Test HoudiniTests.test_create_connect_flags
+./scripts/loom_test.ps1 -Suite UI     # all offscreen widget tests
+./scripts/loom_test.ps1 -Suite Reload # fresh-process reload/lifecycle checks
+./scripts/loom_test.ps1              # full offline coverage (unchanged default)
 ./scripts/loom_gui_test.ps1          # hidden Win32 desktop by default
 ./tests/loom/gui_launcher_smoke.ps1  # hidden-launch/logging/timeout cleanup checks
 # Only when explicitly debugging interactively (opens visible Houdini windows):
 ./scripts/loom_gui_test.ps1 -Visible
 ```
+
+During development, run the affected module/class/method after small edits, plus
+`-Suite Fast` regularly. Run the affected integration suite for HOM/Qt changes;
+run the full offline suite and hidden-desktop GUI checks before completing a feature.
+Focused runs are feedback, not a replacement for full validation.
+
+`-Test` accepts dotted module/class/method names, or an array of names, with one
+explicit suite (not `Full`). For Houdini/UI/Reload, the module prefix is optional.
+Unknown selectors and empty suites fail rather than silently passing. `-Python`
+selects an ordinary Python 3 executable for Fast; `-Hython` selects Houdini for the
+other suites. Fast uses an explicit list of dependency-free test modules in
+`scripts/loom_test_runner.py`; new tests still enter full unit discovery automatically.
+No assertions or integration tests have been removed. Every run reports import/discovery,
+execution, the ten slowest tests (including setup/teardown), and process wall time
+(including interpreter startup/cleanup). Suites retain separate interpreters and
+use disposable Loom homes with provider access blocked before test imports.
 
 Graphical tests create a separate inactive desktop in the logged-in Windows session.
 They never switch to it, use physical input, or silently fall back to visible mode.
