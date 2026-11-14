@@ -7,6 +7,10 @@ Default-Icons
 *_auto*.hdalc
 
 
+# Generated VEX extension package and language-server documentation
+/build/zed-vex/
+.vex-lsp/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

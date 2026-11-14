@@ -1,0 +1,4 @@
+/target/
+/extension.toml
+/extension.wasm
+/grammars/

@@ -1,0 +1,5 @@
+{
+  "grammars": [{ "name": "vex", "camelcase": "Vex", "scope": "source.vex", "path": ".", "file-types": ["vfl", "vexh"] }],
+  "metadata": { "version": "0.1.0", "license": "MIT", "description": "Houdini VEX grammar", "authors": [{ "name": "Ko contributors" }] },
+  "bindings": { "c": true }
+}

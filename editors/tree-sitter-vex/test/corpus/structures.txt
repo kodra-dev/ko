@@ -1,0 +1,295 @@
+==================
+Structs, methods and array return types
+==================
+struct Particle {
+    vector position;
+    float mass;
+    float scaled(float factor) { return mass * factor; }
+};
+function float[] weights(int count;) {
+    float result[];
+    for (int i = 0; i < count; i++) {
+        append(result, float(i));
+    }
+    return result;
+}
+Particle particle = Particle();
+particle.position = set(1, 2, 3);
+v@P = particle.position;
+s[]@names = array("one", "two");
+3@transform = ident();
+
+---
+
+(source_file
+  (struct_definition
+    (identifier)
+    (block
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)))
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)))
+      (function_definition
+        (type_specifier
+          (primitive_type))
+        (identifier)
+        (parameter_list
+          (parameter
+            (type_specifier
+              (primitive_type))
+            (identifier)))
+        (block
+          (return_statement
+            (expression
+              (binary_expression
+                (expression
+                  (identifier))
+                (expression
+                  (identifier)))))))))
+  (function_definition
+    (type_specifier
+      (primitive_type))
+    (array_suffix)
+    (identifier)
+    (parameter_list
+      (parameter
+        (type_specifier
+          (primitive_type))
+        (identifier)))
+    (block
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (array_suffix)))
+      (loop_statement
+        (loop_header
+          (parameter
+            (type_specifier
+              (primitive_type))
+            (identifier)
+            (expression
+              (number)))
+          (expression
+            (binary_expression
+              (expression
+                (identifier))
+              (expression
+                (identifier))))
+          (expression
+            (unary_expression
+              (expression
+                (identifier)))))
+        (block
+          (expression_statement
+            (expression
+              (call_expression
+                (expression
+                  (identifier))
+                (expression
+                  (identifier))
+                (expression
+                  (constructor_expression
+                    (primitive_type)
+                    (expression
+                      (identifier)))))))))
+      (return_statement
+        (expression
+          (identifier)))))
+  (declaration
+    (type_specifier
+      (type_identifier))
+    (declarator
+      (identifier)
+      (expression
+        (call_expression
+          (expression
+            (identifier))))))
+  (expression_statement
+    (expression
+      (assignment_expression
+        (expression
+          (member_expression
+            (expression
+              (identifier))
+            (identifier)))
+        (expression
+          (call_expression
+            (expression
+              (identifier))
+            (expression
+              (number))
+            (expression
+              (number))
+            (expression
+              (number)))))))
+  (expression_statement
+    (expression
+      (assignment_expression
+        (expression
+          (attribute))
+        (expression
+          (member_expression
+            (expression
+              (identifier))
+            (identifier))))))
+  (expression_statement
+    (expression
+      (assignment_expression
+        (expression
+          (attribute))
+        (expression
+          (call_expression
+            (expression
+              (identifier))
+            (expression
+              (string))
+            (expression
+              (string)))))))
+  (expression_statement
+    (expression
+      (assignment_expression
+        (expression
+          (attribute))
+        (expression
+          (call_expression
+            (expression
+              (identifier))))))))
+
+==================
+Conditionals, exports and expression precedence
+==================
+#ifndef USER_HEADER
+#define USER_HEADER
+function vector transform(const vector input; export matrix frame) {
+    vector result = (vector)input;
+    result = normalize(result) * 2 + {1, 0, 0};
+    do { result.x += 1; } while (result.x < 0);
+    while (length(result) > 100) { result *= .5; }
+    return result.x > 0 ? result : -result;
+}
+#endif
+
+---
+
+(source_file
+  (preprocessor)
+  (preprocessor)
+  (function_definition
+    (type_specifier
+      (primitive_type))
+    (identifier)
+    (parameter_list
+      (parameter
+        (qualifier)
+        (type_specifier
+          (primitive_type))
+        (identifier))
+      (parameter
+        (qualifier)
+        (type_specifier
+          (primitive_type))
+        (identifier)))
+    (block
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (expression
+            (cast_expression
+              (type_specifier
+                (primitive_type))
+              (expression
+                (identifier))))))
+      (expression_statement
+        (expression
+          (assignment_expression
+            (expression
+              (identifier))
+            (expression
+              (binary_expression
+                (expression
+                  (binary_expression
+                    (expression
+                      (call_expression
+                        (expression
+                          (identifier))
+                        (expression
+                          (identifier))))
+                    (expression
+                      (number))))
+                (expression
+                  (initializer
+                    (expression
+                      (number))
+                    (expression
+                      (number))
+                    (expression
+                      (number)))))))))
+      (loop_statement
+        (block
+          (expression_statement
+            (expression
+              (assignment_expression
+                (expression
+                  (member_expression
+                    (expression
+                      (identifier))
+                    (identifier)))
+                (expression
+                  (number))))))
+        (expression
+          (binary_expression
+            (expression
+              (member_expression
+                (expression
+                  (identifier))
+                (identifier)))
+            (expression
+              (number)))))
+      (loop_statement
+        (expression
+          (binary_expression
+            (expression
+              (call_expression
+                (expression
+                  (identifier))
+                (expression
+                  (identifier))))
+            (expression
+              (number))))
+        (block
+          (expression_statement
+            (expression
+              (assignment_expression
+                (expression
+                  (identifier))
+                (expression
+                  (number)))))))
+      (return_statement
+        (expression
+          (conditional_expression
+            (expression
+              (binary_expression
+                (expression
+                  (member_expression
+                    (expression
+                      (identifier))
+                    (identifier)))
+                (expression
+                  (number))))
+            (expression
+              (identifier))
+            (expression
+              (unary_expression
+                (expression
+                  (identifier)))))))))
+  (preprocessor))

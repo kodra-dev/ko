@@ -1,0 +1,130 @@
+==================
+Header-style arrays, shared parameters, slices and method access
+==================
+int[] select_indices(const int geometry; const int first, last;) {
+    int values[] = {0, 1, 2,};
+    int before[] = values[:first];
+    int after[] = values[last:];
+    int stride[] = values[::2];
+    return int[](values);
+}
+for (int point : array(1, 2)) {
+    context->update(point);
+}
+printf("one " "two");
+
+---
+
+(source_file
+  (function_definition
+    (type_specifier
+      (primitive_type))
+    (array_suffix)
+    (identifier)
+    (parameter_list
+      (parameter
+        (qualifier)
+        (type_specifier
+          (primitive_type))
+        (identifier))
+      (parameter
+        (qualifier)
+        (type_specifier
+          (primitive_type))
+        (identifier)
+        (identifier)))
+    (block
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (array_suffix)
+          (expression
+            (initializer
+              (expression
+                (number))
+              (expression
+                (number))
+              (expression
+                (number))))))
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (array_suffix)
+          (expression
+            (index_expression
+              (expression
+                (identifier))
+              (slice
+                (expression
+                  (identifier)))))))
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (array_suffix)
+          (expression
+            (index_expression
+              (expression
+                (identifier))
+              (slice
+                (expression
+                  (identifier)))))))
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (array_suffix)
+          (expression
+            (index_expression
+              (expression
+                (identifier))
+              (slice
+                (expression
+                  (number)))))))
+      (return_statement
+        (expression
+          (constructor_expression
+            (primitive_type)
+            (array_suffix)
+            (expression
+              (identifier)))))))
+  (loop_statement
+    (loop_header
+      (parameter
+        (type_specifier
+          (primitive_type))
+        (identifier))
+      (expression
+        (call_expression
+          (expression
+            (identifier))
+          (expression
+            (number))
+          (expression
+            (number)))))
+    (block
+      (expression_statement
+        (expression
+          (call_expression
+            (expression
+              (member_expression
+                (expression
+                  (identifier))
+                (identifier)))
+            (expression
+              (identifier)))))))
+  (expression_statement
+    (expression
+      (call_expression
+        (expression
+          (identifier))
+        (expression
+          (concatenated_string
+            (string)
+            (string)))))))

@@ -131,6 +131,7 @@ mouse position, or matching code text.
 - File suffixes: VEX `.vfl`, Python `.py`, APEX Script `.apex`, OpenCL `.cl`, other strings `.txt`.
   APEX does not deliberately masquerade as Python even though Houdini tags it as Python.
   Language highlighting/LSP/semantic rename support in Zed is separate from this bridge.
+  Standalone VEX tooling and setup are now documented in [VEX_README.md](VEX_README.md).
 - Text files are UTF-8, up to 4 MiB. Files remain under the workspace for recovery; no automatic deletion.
 - The existing **Reload Ko** action preserves the live bridge. For a clean developer restart, run
   `import ko_zed; ko_zed.shutdown()` first. Shutdown leaves Zed and saved editing files intact.

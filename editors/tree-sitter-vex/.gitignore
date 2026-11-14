@@ -1,0 +1,7 @@
+/node_modules/
+/.vex-parser.dll
+/.vex-parser.lib
+/.vex-parser.exp
+/parser.exp
+/parser.lib
+/parser.obj
