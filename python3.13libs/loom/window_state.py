@@ -62,8 +62,8 @@ class GeometryTracker(QtCore.QObject):
         self.last = None
         self.dirty = False
         self.stopped = False
-        self.window = pane.floatingPanel().qtParentWindow()
-        self.window.installEventFilter(self)
+        # Native pane creation may precede its Qt floating window by an idle tick.
+        self.window = None
         self.write_timer = QtCore.QTimer(self)
         self.write_timer.setSingleShot(True)
         self.write_timer.timeout.connect(self.save)
@@ -77,7 +77,11 @@ class GeometryTracker(QtCore.QObject):
             return
         try:
             floating = self.pane.floatingPanel()
-            if (floating is None or not isValid(self.window) or not self.window.isVisible()
+            if floating is not None and (self.window is None or not isValid(self.window)):
+                self.window = floating.qtParentWindow()
+                if self.window is not None and isValid(self.window):
+                    self.window.installEventFilter(self)
+            if (floating is None or self.window is None or not isValid(self.window) or not self.window.isVisible()
                     or self.window.isMinimized() or self.window.isMaximized()):
                 return
             value = {"position": [int(round(v)) for v in floating.position()],
@@ -116,5 +120,5 @@ class GeometryTracker(QtCore.QObject):
             self.poll.stop()
         if isValid(self.write_timer):
             self.write_timer.stop()
-        if isValid(self.window):
+        if self.window is not None and isValid(self.window):
             self.window.removeEventFilter(self)

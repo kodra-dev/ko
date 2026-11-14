@@ -130,7 +130,7 @@ class GuiSmokeTest:
             if root is not None and hasattr(root, "shutdown"):
                 root.shutdown()
                 log("Agent shutdown complete")
-        if hasattr(self, "checkpoint_widget"):
+        if getattr(self, "checkpoint_widget", None) is not None:
             self.checkpoint_widget.shutdown()
             log("Checkpoint shutdown complete")
         # Exit through Houdini's callback boundary, not a PySide timer callback:
@@ -156,8 +156,15 @@ class GuiSmokeTest:
                     assert self.desktop.lower() != "default", "Hidden launch used the visible Default desktop"
                 # Checkpoints must open before the agent and remain alive across reloads.
                 from loom import checkpoints
-                self.checkpoint_pane = checkpoints.open_pane()
+                if getattr(self, "checkpoint_pane", None) is None:
+                    self.checkpoint_pane = checkpoints.open_pane()
+                    self.checkpoint_started = time.monotonic()
                 self.checkpoint_widget = self.checkpoint_pane.activeInterfaceRootWidget()
+                if self.checkpoint_widget is None:
+                    if time.monotonic() - self.checkpoint_started < 15:
+                        return  # Creation can cross a real native idle boundary under load.
+                    raise RuntimeError("Checkpoint root did not initialize: " + repr(
+                        self.checkpoint_pane.activeInterfaceScriptErrors()))
                 assert hasattr(self.checkpoint_widget, "workspace"), repr([
                     w.toPlainText() for w in self.checkpoint_widget.findChildren(QtWidgets.QPlainTextEdit)])
                 # A saved legacy desktop still loads, then migrates to the new interface.

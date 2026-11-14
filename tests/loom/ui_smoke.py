@@ -938,6 +938,29 @@ class UiTests(unittest.TestCase):
         path.write_text("invalid JSON")
         self.assertEqual(geometry("agent"), {})
 
+    def test_geometry_tracker_waits_for_native_qt_window(self):
+        from loom.window_state import GeometryTracker
+        root = QtWidgets.QWidget()
+        window = QtWidgets.QWidget()
+        floating = Mock()
+        floating.qtParentWindow.return_value = None
+        floating.position.return_value = (120, 90)
+        floating.size.return_value = (480, 640)
+        pane = Mock()
+        pane.floatingPanel.return_value = floating
+        tracker = GeometryTracker("agent", pane, root)
+        tracker.capture()
+        self.assertIsNone(tracker.window)
+        window.show()
+        floating.qtParentWindow.return_value = window
+        tracker.capture()
+        self.assertIs(tracker.window, window)
+        self.assertEqual(tracker.last["size"], [480, 640])
+        tracker.finish()
+        window.close()
+        window.deleteLater()
+        root.deleteLater()
+
     def test_menu_toggles_do_not_close_docked_tabs(self):
         import loom
         from unittest.mock import Mock
