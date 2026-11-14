@@ -132,7 +132,7 @@ b = not b
 for p in hou.ui.panes():
     p.setShowPaneTabs(not b)
 for p in hou.ui.paneTabs():
-    if p.type()!=hou.paneTabType.NetworkEditor:
+    if p.type()!=hou.paneTabType.NetworkEditor and p.type()!=hou.paneTabType.DetailsView:
         p.setShowNetworkControls(not b)
 
     if p.type()==hou.paneTabType.NetworkEditor:
