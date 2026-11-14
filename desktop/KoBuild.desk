@@ -24,7 +24,7 @@ root {
         }
     }
 
-    panel panel1 -w 2582 504 832 888 {
+    panel panel1 -w 2582 511 832 888 {
         tabs 0 2 {
             pane FloatingPanel -a 1 -l 10 -H /obj/geo1/ -T SOP -m parmeditor
         }
