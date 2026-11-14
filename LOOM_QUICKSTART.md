@@ -23,6 +23,8 @@ Restart once after this naming migration; save the HIP/desktop to persist migrat
 - Right-click a message: **Branch here** keeps the original chat, **Delete from here** removes
   that message and later ones, **Edit prompt** puts a user prompt back in the composer.
   Old/intermediate messages work too. Scene/files stay unchanged; nothing is sent automatically.
+- Completed AI jobs play a custom rising chime, different from pi's notice (Windows).
+  Tool actions, errors and cancellation stay silent.
 - **Edit scene** off: read-only answers/guidance. On: apply requested, checkpointed edits. No pending-review UI.
 - **Context** inspects the current setup. The right-aligned `≈$0.12 C14%` shows estimated API-equivalent thread cost and current context fill; `—` means unavailable.
 - Local help: Loom can search/read `H:/Docs/houdini_help`; override with `LOOM_HOUDINI_DOCS`.

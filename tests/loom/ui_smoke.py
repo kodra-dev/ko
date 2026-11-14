@@ -32,6 +32,7 @@ class FakeTransport:
 
 class UiTests(unittest.TestCase):
     def setUp(self):
+        self.completion_sound = self.enterContext(patch("loom.panel.play_completion"))
         self.temp = tempfile.TemporaryDirectory(prefix="loom-ui-")
         self.previous_home = os.environ.get("LOOM_HOME")
         os.environ["LOOM_HOME"] = self.temp.name
@@ -275,6 +276,45 @@ class UiTests(unittest.TestCase):
         self.assertFalse(self.panel.transport.replies[-1][1]["success"])
         self.panel._set_busy(False)
 
+    def test_completion_chime_only_after_full_successful_job_once(self):
+        self.panel.thread_id = "native-job"
+        self.panel._set_busy(True)
+        self.panel.turn_id = "job-1"
+        self.panel._event({"method": "item/completed", "params": {
+            "item": {"type": "agentMessage", "id": "message", "text": "One action done"}}})
+        self.completion_sound.assert_not_called()
+        finished = {"method": "turn/completed", "params": {"threadId": "native-job",
+                    "turn": {"id": "job-1", "status": "completed"}}}
+        self.panel._event(finished)
+        self.assertFalse(self.panel.busy)
+        self.completion_sound.assert_called_once_with()
+        self.panel._event(finished)
+        self.completion_sound.assert_called_once()
+        # A delayed duplicate must not end a subsequent job or play again.
+        self.panel._set_busy(True)
+        self.panel.turn_id = "job-2"
+        self.panel._event(finished)
+        self.assertTrue(self.panel.busy)
+        self.assertEqual(self.panel.turn_id, "job-2")
+        self.completion_sound.assert_called_once()
+        self.panel._set_busy(False)
+
+    def test_completion_chime_skips_failure_cancel_foreign_or_idle_events(self):
+        self.panel.thread_id = "native-job"
+        for index, (status, stopped, error) in enumerate((
+                ("failed", False, {"message": "failed"}), ("interrupted", False, None),
+                ("completed", True, None), ("completed", False, {"message": "error"}))):
+            self.panel._set_busy(True)
+            self.panel._stop_requested = stopped
+            self.panel.turn_id = str(index)
+            self.panel._event({"method": "turn/completed", "params": {
+                "threadId": "native-job", "turn": {"id": str(index), "status": status, "error": error}}})
+        self.panel._event({"method": "turn/completed", "params": {
+            "threadId": "foreign", "turn": {"id": "foreign", "status": "completed"}}})
+        self.panel._event({"method": "turn/completed", "params": {
+            "threadId": "native-job", "turn": {"id": "idle", "status": "completed"}}})
+        self.completion_sound.assert_not_called()
+
     def _completed_chat_turn(self, text, turn_id):
         self.panel.ready = True
         self.panel.transport = FakeTransport()
@@ -303,6 +343,7 @@ class UiTests(unittest.TestCase):
         self.panel.prompt.setPlainText("Original draft")
         request = []
         self.panel._request = lambda method, params, callback: request.append((method, params, callback))
+        self.completion_sound.reset_mock()
         with patch.object(self.panel.workspace, "checkpoint") as checkpoint, patch.object(self.panel.workspace, "visit") as visit:
             message = self.panel.transcript.cards[0]._message
             self.panel.branch_conversation(message)
@@ -322,6 +363,7 @@ class UiTests(unittest.TestCase):
         original = self.panel.conversations.records[0]
         self.assertEqual(original["messages"], original_messages)
         self.assertEqual(original["draft"], "Original draft")
+        self.completion_sound.assert_not_called()
         self.assertEqual(len(request), 1)  # Fork never starts a turn.
         self.panel._turn_user_text = "Revised prompt"
         self.panel._start_turn()

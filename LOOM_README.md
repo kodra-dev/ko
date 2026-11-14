@@ -163,6 +163,11 @@ Implementation details:
 
 ### Chat, input, local settings, and edit permission
 
+- On Windows, a successful full AI turn plays Loom's own soft, rising three-note chime.
+  Individual tool actions/messages never chime; failed, interrupted, stopped, idle/replayed
+  or duplicate completion events do not notify. Playback is asynchronous and audio failures
+  never fail the job. This is a custom generated WAV, distinct from pi's system Asterisk sound;
+  it is cached under `<data home>/sounds/loom-complete-v1.wav`. Tests mock playback.
 - One click activates the native pane and places the composer caret. **Enter sends**;
   **Shift+Enter inserts a newline** (including keypad Enter; IME composition is not submitted).
 - Chat text/input is slightly larger. Message colors distinguish user/assistant; there are

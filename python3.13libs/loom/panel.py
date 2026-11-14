@@ -15,6 +15,7 @@ from .chat import BusySpinner, Composer, Transcript
 from .conversations import Conversations
 from .conversation_ui import ConversationManager
 from .local import settings
+from .notifications import play_completion
 from .checkpoints.scene import ui_context
 from .checkpoints.storage import WorkspaceInUseError, atomic_json, data_root, read_json
 from .checkpoints.service import acquire
@@ -765,6 +766,9 @@ class Panel(QtWidgets.QWidget):
             key = (self.thread_id, turn.get("id"))
             if key in self._completed_turns or (self.turn_id and turn.get("id") != self.turn_id):
                 return
+            notify = (self.busy and not getattr(self, "_stop_requested", False)
+                      and turn.get("status") == "completed" and not turn.get("error")
+                      and bool(turn.get("id")))
             self._completed_turns.add(key)
             if self.busy:
                 self._record_turn_boundary(turn)
@@ -774,6 +778,8 @@ class Panel(QtWidgets.QWidget):
             self._render_chat()
             self.status.setText("Turn " + turn.get("status", "completed") +
                                 (" · " + pretty(turn["error"]) if turn.get("error") else ""))
+            if notify:
+                play_completion()
         elif method == "error":
             self.status.setText(str(params.get("message", params.get("error", "Agent error"))))
 
