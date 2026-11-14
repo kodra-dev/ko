@@ -14368,6 +14368,11 @@
 									]
 								},
 								{
+									"action":"h.pane.parms.ko_edit_in_zed",
+									"keys":["Alt+E"
+									]
+								},
+								{
 									"action":"h.pane.parms.lock_parm",
 									"keys":[
 									]
@@ -14379,7 +14384,7 @@
 								},
 								{
 									"action":"h.pane.parms.open_external_editor",
-									"keys":["Alt+E"
+									"keys":[
 									]
 								},
 								{

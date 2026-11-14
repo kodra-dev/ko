@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<menuDocument>
+  <menu>
+    <scriptItem id="ko_edit_in_zed">
+      <label>Edit in Zed</label>
+      <context>
+        <expression><![CDATA[bool(kwargs.get("parms")) and all(p.parmTemplate().type() == hou.parmTemplateType.String for p in kwargs["parms"])]]></expression>
+      </context>
+      <scriptCode><![CDATA[import ko_zed
+ko_zed.menu_edit(kwargs)]]></scriptCode>
+    </scriptItem>
+    <scriptItem id="ko_zed_sessions">
+      <label>Zed Sessions…</label>
+      <scriptCode><![CDATA[import ko_zed
+ko_zed.sessions()]]></scriptCode>
+    </scriptItem>
+  </menu>
+</menuDocument>
