@@ -12815,7 +12815,7 @@
 													"bindings":[
 														{
 															"action":"h.pane.imgui.state.cop.sidefx_cop_remap.ctrl_e_customTools",
-															"keys":["Ctrl+E"
+															"keys":[
 															]
 														},
 														{
