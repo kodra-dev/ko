@@ -18451,6 +18451,21 @@
 					]
 				},
 				{
+					"action":"h.loom_open_agent",
+					"keys":["Backspace","Ctrl+Shift+/"
+					]
+				},
+				{
+					"action":"h.loom_open_checkpoints",
+					"keys":[
+					]
+				},
+				{
+					"action":"h.loom_reload_package",
+					"keys":[
+					]
+				},
+				{
 					"action":"h.manageotl",
 					"keys":[
 					]
