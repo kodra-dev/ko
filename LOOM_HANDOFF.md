@@ -177,6 +177,14 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 
 ### Menus / windows / naming
 
+- Independent ko UI feature: **Ko → Toggle Parameters**, `ko_parameters.py`, replaces the
+  AI-generated Restore Parameters shelf script (removed). Same native HOM geometry strategy
+  as Toggle Loom; not part of Loom/package reload. `uiready.py` adopts existing windows without
+  opening and migrates Ctrl+Shift+P when conflict-free. Restart to discover the menu.
+  Preferences: `$HOUDINI_USER_PREF_DIR/ko-parameters.json`, no old Qt/QSettings coordinate import.
+  See `PARAMETERS_README.md`; pure tests plus hidden native tests passed on 22.0.429 and 22.0.466,
+  including actual hotkey close/open, X-close, repeated accurate geometry and maximized closing.
+
 - Top menu: **Loom → Toggle Loom / Toggle Checkpoints / Reload Loom + Checkpoints**.
 - Toggles close an existing floating pane or reopen it with its own last normal position/size.
   Stored app-wide in `pane-geometry.json`; docked panes are not moved/closed by toggles.

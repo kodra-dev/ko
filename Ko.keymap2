@@ -18426,6 +18426,11 @@
 					]
 				},
 				{
+					"action":"h.ko_toggle_parameters",
+					"keys":["Ctrl+Shift+P"
+					]
+				},
+				{
 					"action":"h.labs_node_to_network_origin",
 					"keys":[
 					]

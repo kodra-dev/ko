@@ -215,16 +215,17 @@ class StartupTests(unittest.TestCase):
         enable = Mock(side_effect=RuntimeError("test startup failure") if fail else lambda: order.append("enable"))
         qt = NS(QtCore=NS(QTimer=NS(singleShot=lambda delay, callback: scheduled.append(callback))))
         with patch.dict(sys.modules, {"hou": hou, "hutil": NS(Qt=qt), "hutil.Qt": qt,
-                                     "ko_zed_shortcuts": NS(enable=enable)}), patch.dict(os.environ, {"KO_ZED_SHORTCUTS": enabled}):
+                                     "ko_zed_shortcuts": NS(enable=enable),
+                                     "ko_parameters": NS(install=lambda: order.append("parameters"))}), patch.dict(os.environ, {"KO_ZED_SHORTCUTS": enabled}):
             runpy.run_path(str(ROOT / "python3.13libs/uiready.py"))
-            self.assertEqual(order, ["save"])
+            self.assertEqual(order, (["parameters", "save"] if ui else ["save"]))
             for callback in scheduled:
                 callback()
         return order, scheduled, enable, hou
 
     def test_ui_startup_saves_before_deferred_enable(self):
         order, scheduled, enable, hou = self.run_startup()
-        self.assertEqual(order, ["save", "enable"])
+        self.assertEqual(order, ["parameters", "save", "enable"])
         self.assertEqual(len(scheduled), 1)
         enable.assert_called_once_with()
         hou.ui.setStatusMessage.assert_not_called()

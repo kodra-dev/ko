@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <mainMenu>
   <menuBar>
+    <subMenu id="ko_menu">
+      <label>Ko</label>
+      <insertBefore>help_menu</insertBefore>
+      <scriptItem id="h.ko_toggle_parameters">
+        <label>Toggle Parameters</label>
+        <scriptCode><![CDATA[
+import ko_parameters
+ko_parameters.toggle_parameters()
+]]></scriptCode>
+      </scriptItem>
+    </subMenu>
     <subMenu id="loom_menu">
       <label>Loom</label>
       <insertBefore>help_menu</insertBefore>

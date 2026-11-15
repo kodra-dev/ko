@@ -1,6 +1,16 @@
 import os
 import hou
 
+# Native menu action: track existing Parameters windows without opening one.
+# Migrate its persistent key BEFORE saving Ko, unlike temporary editor bindings.
+if hou.isUIAvailable():
+    try:
+        import ko_parameters
+        ko_parameters.install()
+    except Exception as error:
+        hou.ui.setStatusMessage("Toggle Parameters not initialized: " + str(error),
+                                severity=hou.severityType.Warning)
+
 # Save the user's keymap BEFORE installing temporary runtime editor bindings.
 hou.hotkeys.saveAsKeymap("Ko", hou.text.expandString("$KO/Ko.keymap2"))
 
