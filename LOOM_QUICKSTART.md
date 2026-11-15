@@ -25,6 +25,9 @@ Restart once after this naming migration; save the HIP/desktop to persist migrat
   Old/intermediate messages work too. Scene/files stay unchanged; nothing is sent automatically.
 - Completed AI jobs play a custom rising chime, different from pi's notice (Windows).
   Tool actions, errors and cancellation stay silent.
-- **Edit scene** off: read-only answers/guidance. On: apply requested, checkpointed edits. No pending-review UI.
+- The three-dot control shows only the current mode: **Read Only** inspects/explains (including files);
+  **Scene Edit** changes the scene/controls Houdini UI with Python; **Tool Dev** also writes persistent
+  scripts, panels and ko features. No per-call approval popup. Python runs on the UI thread.
+  Scene edits use checkpoints; UI/files are not checkpoint-reversible. Modes are policy, not a sandbox.
 - **Context** inspects the current setup. The right-aligned `≈$0.12 C14%` shows estimated API-equivalent thread cost and current context fill; `—` means unavailable.
 - Local help: Loom can search/read `H:/Docs/houdini_help`; override with `LOOM_HOUDINI_DOCS`.

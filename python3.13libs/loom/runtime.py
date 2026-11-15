@@ -6,7 +6,7 @@ import sys
 MODULES = (
     "paths", "checkpoints.storage", "window_state", "checkpoints.scene", "checkpoints.service", "checkpoints.actions",
     "checkpoints.ui", "checkpoints.panel", "checkpoints",
-    "instructions", "local", "chat", "inspection", "network", "tools", "provider", "usage", "conversations", "conversation_ui", "notifications", "panel",
+    "instructions", "local", "mode_control", "chat", "inspection", "network", "execution", "files", "tools", "provider", "usage", "conversations", "conversation_ui", "notifications", "panel",
 )
 INTERFACES = {"agent": ("loom_workspace", "loom.pypanel"),
               "checkpoints": ("loom_checkpoints", "loom_checkpoints.pypanel")}

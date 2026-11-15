@@ -15,12 +15,13 @@ from .chat import BusySpinner, Composer, Transcript
 from .conversations import Conversations
 from .conversation_ui import ConversationManager, new_conversation_button
 from .local import settings
+from .mode_control import ModeControl, MODES
 from .notifications import play_completion
 from .checkpoints.scene import ui_context
 from .checkpoints.storage import WorkspaceInUseError, atomic_json, data_root, read_json
 from .checkpoints.service import acquire
 from .checkpoints.ui import CompareDialog, TextInputDialog, button, pretty, prompt_text
-from .tools import SceneTools
+from .tools import SceneTools, normalize_tool_call
 from .usage import ThreadUsage, TOOLTIP as USAGE_TOOLTIP
 
 _window = None
@@ -75,7 +76,7 @@ class Panel(QtWidgets.QWidget):
         button("Checkpoints", lambda: self._guard(self.open_checkpoints), heading)
         button("Instructions", lambda: self._guard(self.edit_instructions), heading)
         self.tidy_button = button("Tidy Network", lambda: self._guard(self.tidy_network), heading)
-        self.tidy_button.setToolTip("AI cleanup (requires Edit scene). Multiple selected: only those nodes.\n"
+        self.tidy_button.setToolTip("AI cleanup (requires Scene Edit or Tool Dev). Multiple selected: only those nodes.\n"
                                     "One selected: its connected component. None: current network.")
         self.status = QtWidgets.QLabel("Scene tools ready · Connect to start chatting.")
         self.status.setWordWrap(True)
@@ -111,11 +112,10 @@ class Panel(QtWidgets.QWidget):
         chat_layout = QtWidgets.QVBoxLayout(chat)
         controls = QtWidgets.QHBoxLayout()
         chat_layout.addLayout(controls)
-        self.allow_edits = QtWidgets.QCheckBox("Edit scene")
-        self.allow_edits.setToolTip("Off: read-only answers and guidance; no pending changes.\n"
-                                   "On: save current, then apply requested edits in one new AI checkpoint per turn.\n"
-                                   "Does not authorize external files, renders, simulations, or arbitrary code.")
-        self.allow_edits.toggled.connect(lambda allowed: self._guard(lambda: self._remember_edit_preference(allowed)))
+        self.permission_mode = ModeControl()
+        self.allow_edits = self.permission_mode  # Compatibility for existing panel scripts.
+        self.permission_mode.modeChanged.connect(
+            lambda mode: self._guard(lambda: self._remember_edit_preference(mode)))
         self.conversation_title = QtWidgets.QLabel("Conversation")
         self.conversation_title.setTextFormat(QtCore.Qt.TextFormat.PlainText)
         controls.addWidget(self.conversation_title, 1)
@@ -342,19 +342,23 @@ class Panel(QtWidgets.QWidget):
         path = self.workspace.history.root / "preferences.json"
         saved = read_json(path) if path.exists() else {}
         blocker = QtCore.QSignalBlocker(self.allow_edits)
-        self.allow_edits.setChecked(saved.get("allow_scene_edits") is True)
+        mode = saved.get("permission_mode")
+        if mode not in MODES:
+            mode = "scene_edit" if saved.get("allow_scene_edits") is True else "read_only"
+        self.permission_mode.setMode(mode)
         del blocker
 
-    def _remember_edit_preference(self, allowed):
+    def _remember_edit_preference(self, mode):
         if self._closed or self.busy:
             return
         self._ensure_binding()  # A just-loaded HIP may not have reached the poll yet.
         path = self.workspace.history.root / "preferences.json"
         saved = read_json(path) if path.exists() else {}
-        saved["allow_scene_edits"] = bool(allowed)
+        saved["permission_mode"] = mode
+        saved["allow_scene_edits"] = mode != "read_only"
         atomic_json(path, saved)
         blocker = QtCore.QSignalBlocker(self.allow_edits)
-        self.allow_edits.setChecked(bool(allowed))
+        self.permission_mode.setMode(mode)
         del blocker
 
     def _ensure_binding(self):
@@ -516,7 +520,7 @@ class Panel(QtWidgets.QWidget):
             return
         self._ensure_binding()
         if not self.allow_edits.isChecked():
-            raise PermissionError("Enable Edit scene before tidying the network.")
+            raise PermissionError("Select Scene Edit or Tool Dev before tidying the network.")
         import hou
         from .tidy import resolve_scope, request_text, TidyScope
         parent, nodes = resolve_scope(hou)
@@ -541,6 +545,8 @@ class Panel(QtWidgets.QWidget):
         self.tools.allow_proposals = self.allow_edits.isChecked()
         # Freeze the user grant for this turn; model text cannot change it.
         self._turn_allow_edits = self.allow_edits.isChecked()
+        self._turn_permission_mode = self.permission_mode.mode()
+        self.tools.permission_mode = self._turn_permission_mode
         self._turn_workspace = self.workspace.history.id
         self._turn_user_text = text
         self._turn_start_index = len(self.messages)
@@ -590,7 +596,8 @@ class Panel(QtWidgets.QWidget):
         self._ensure_binding()
         self._turn_usage_model = self.model.currentData()
         context = {"ui": ui_context(), "local_settings": settings(),
-                   "scene_tools": {"available": True, "inspection": "loom_scene", "proposal": "loom_propose"},
+                   "scene_tools": {"available": True, "inspection": "loom_scene", "proposal": "loom_propose",
+                                   "python": "loom_python", "files": "loom_files"},
                    "workspace": self.workspace.history.id,
                    "conversation_branch": self._branch_origin,
                    "historical_scene_warning": ("Conversation history changed; historical tool results may be stale. "
@@ -598,6 +605,11 @@ class Panel(QtWidgets.QWidget):
                                                 if self._branch_origin or self._history_trimmed else None),
                    "active_checkpoint": self.workspace.active,
                    "allow_scene_edits": getattr(self, "_turn_allow_edits", False),
+                   "permission_mode": getattr(self, "_turn_permission_mode", "read_only"),
+                   "development_tools": {"python": getattr(self, "_turn_allow_edits", False),
+                                         "source_writes": (getattr(self, "_turn_allow_edits", False) and
+                                                           getattr(self, "_turn_permission_mode", "read_only") == "tool_dev"),
+                                         "checkpoint_limits": "HIP checkpoints do not restore UI or files"},
                    "mode": ("Apply requested scene edits with checkpoints" if getattr(self, "_turn_allow_edits", False)
                             else "Read-only answers / guidance; do NOT propose or apply scene edits"),
                    "recent_proposals": [{"id": p["id"], "label": p["label"], "status": p["status"],
@@ -634,6 +646,7 @@ class Panel(QtWidgets.QWidget):
     def interrupt(self):
         self._stop_requested = True
         self._turn_allow_edits = False
+        self.tools.permission_mode = "read_only"
         if getattr(self, "_handling_tool", False):
             self.status.setText("Stopping inspection… (Esc also interrupts native Houdini cooks)")
             if self.transport and self.thread_id and self.turn_id:
@@ -795,6 +808,8 @@ class Panel(QtWidgets.QWidget):
             self._handling_tool = True
             image_url = None
             is_name = False
+            success = False
+            mutation = tool in ("loom_propose", "loom_python")
             try:
                 if not self.busy or self._branch_pending or getattr(self, "_stop_requested", False):
                     raise PermissionError("No active user turn, or turn was stopped")
@@ -803,8 +818,15 @@ class Panel(QtWidgets.QWidget):
                     raise PermissionError("Scene changed; start a new turn")
                 if isinstance(args, str):
                     args = json.loads(args)
-                if tool == "loom_propose" and not getattr(self, "_turn_allow_edits", False):
-                    raise PermissionError("Scene edits are off. Enable Edit scene and send a new request.")
+                tool, args = normalize_tool_call(tool, args)
+                mutation = tool in ("loom_propose", "loom_python")
+                if tool == "loom_files":
+                    from .files import MUTATIONS, requests_from_json
+                    mutation = any(r["op"] in MUTATIONS for r in requests_from_json(**args))
+                if mutation and not getattr(self, "_turn_allow_edits", False):
+                    raise PermissionError("Changes are disabled for this turn. Select Scene Edit or Tool Dev and send a new request.")
+                self.tools.permission_mode = (getattr(self, "_turn_permission_mode", "read_only")
+                                              if getattr(self, "_turn_allow_edits", False) else "read_only")
                 self.status.setText("Working: " + tool)
                 is_name = (tool == "loom_scene" and args.get("operation") == "context"
                            and str(args.get("query", "")).startswith("@conversation-name:"))
@@ -818,7 +840,8 @@ class Panel(QtWidgets.QWidget):
                     result = {"conversation_name": self.conversations.current["name"], "changed": changed}
                 else:
                     result = self.tools.dispatch(tool, args)
-                self._inspection_progress()
+                if tool not in ("loom_python", "loom_files"):
+                    self._inspection_progress()
                 image_url = result.pop("_image_url", None)
                 success = True
                 if tool == "loom_propose" and getattr(self, "_turn_allow_edits", False):
@@ -832,9 +855,20 @@ class Panel(QtWidgets.QWidget):
                     if not success:
                         self._turn_allow_edits = False
                         result["automatic_edits_disabled_for_turn"] = True
+                if mutation and result.get("status") == "failed":
+                    success = False
+                if tool == "loom_files" and result.get("status") == "failed":
+                    success = False
             except Exception as exc:
                 result, success = {"error": str(exc)}, False
             finally:
+                retryable_python_error = (tool == "loom_python" and result.get("retryable") is True
+                                          and getattr(self, "_turn_allow_edits", False)
+                                          and not getattr(self, "_stop_requested", False))
+                if mutation and not success and not retryable_python_error:
+                    self._turn_allow_edits = False
+                    self.tools.permission_mode = "read_only"
+                    result["automatic_edits_disabled_for_turn"] = True
                 self._handling_tool = False
             if self._closed or not isValid(self):
                 return
@@ -842,6 +876,9 @@ class Panel(QtWidgets.QWidget):
                        "Captured viewport" if image_url and success else
                        "Edited scene" if tool == "loom_propose" and result.get("status") == "applied"
                        else "Prepared proposal" if tool == "loom_propose" and success
+                       else "Ran Houdini Python" if tool == "loom_python" and success
+                       else "Edited source files" if tool == "loom_files" and mutation and success
+                       else "Inspected files" if tool == "loom_files" and success
                        else "Inspected scene" if tool == "loom_scene" and success
                        else "Tool failed")
             target = (args.get("query") or args.get("path") or args.get("label") or "") if isinstance(args, dict) else ""
@@ -883,8 +920,9 @@ class Panel(QtWidgets.QWidget):
         dialog.resize(800, 600)
         layout = QtWidgets.QVBoxLayout(dialog)
         text = QtWidgets.QPlainTextEdit(pretty({"ui": ui_context(), "local_settings": settings(),
-                                               "scene_tools": ["loom_scene", "loom_propose"],
-                                               "allow_scene_edits": self.allow_edits.isChecked()}))
+                                               "scene_tools": ["loom_scene", "loom_propose", "loom_python", "loom_files"],
+                                               "allow_scene_edits": self.allow_edits.isChecked(),
+                                               "permission_mode": self.permission_mode.mode()}))
         text.setReadOnly(True)
         layout.addWidget(text)
         button("Close", dialog.accept, layout)

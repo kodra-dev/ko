@@ -51,10 +51,13 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 - Show usage/cache statistics where the provider supports them; make compaction observable.
 - Avoid excessive tool-result payloads and unnecessary screenshots/model calls.
 
-### 3. File tools
+### 3. Tool development — first increment implemented, pending manual verification
 
-- Read anywhere, with batched files/ranges; search/list/find tools.
-- Precise reviewed writes/edits in the requested scope, including ko source when requested.
+- `loom_python` executes requested HOM/UI work on the UI thread in Scene Edit or Tool Dev.
+- `loom_files` provides batched paged reads, immediate listing, literal in-file search, and
+  hash-checked exact edits/new files; writes require Tool Dev. No pending-review popup.
+- Remaining: recursive file search/find and richer file navigation; do not rebuild working tools.
+- Precise writes/edits stay in the requested scope, including ko source when requested.
 - Work in the HIP first; promote reusable work into ko only with user agreement.
 - Scope/self-edit restrictions are working instructions, **not an OS security sandbox**.
 - Do not let Loom edit its own running harness inside Houdini.
@@ -99,14 +102,39 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 - Opening Loom auto-connects using the existing official sign-in and last-used model.
   This only initializes/authenticates/lists models; **it does not submit a prompt**.
 - No Loom view means no auto-connect. Checkpoints-only use never loads/starts the agent.
-- Allow scene edits is persisted per UUID workspace in its `preferences.json`, restored
-  on reopen/reload/HIP switch, and retained across Save As. New workspaces default off.
-- Off: read-only answers/guidance; edit calls are blocked, not queued. On: requested structured changes are automatically applied.
+- Compact three-stop permission selector shows only the current label: Read Only / Scene Edit /
+  Tool Dev. Click dots or use arrow keys; per-dot hover descriptions. Disabled during a turn.
+  `permission_mode` is persisted per UUID workspace in `preferences.json`, restored on
+  reopen/reload/HIP switch and Save As. New workspaces default Read Only. Legacy true
+  `allow_scene_edits` migrates to Scene Edit, never Tool Dev.
+- Read Only blocks Python/edits, not queues them; file read/list/search remain available.
+  Scene Edit adds structured edits and live Houdini Python/UI control. Tool Dev additionally
+  authorizes persistent scripts/panels/ko source edits. Python has full in-process privileges:
+  modes are authorization/instruction policy, NOT a security sandbox. Scene Edit's no-file-write
+  rule and Python self-edit/credential/shell/network restrictions are instructions, not isolation.
+- Python uses a fresh namespace (`hou` provided), bounded stdout/stderr, cooperative trace-based
+  Stop plus native interrupt/Esc, and UI-thread enforcement. No unsafe worker HOM or forced cancel.
+  It shares one per-turn AI child with structured edits, even for UI-only calls. Syntax errors run
+  nothing. Ordinary Python exceptions/syntax errors return failed + retryable=true, allowing
+  inspection and correction in the same turn after successful checkpoint persistence. Runtime errors
+  may leave partial scene/UI/files changes; empty scene diff is NOT proof of no effects. Never blindly
+  retry earlier actions. Stop/native interruption, HIP switches, checkpoint/storage/infrastructure
+  failures, structured-edit failures and file-write failures still revoke all further changes for
+  the turn. Positive Python recovery markers never override Stop or a revoked grant.
+  UI/files are NOT checkpoint-reversible.
+- File writes require a fresh SHA-256 (empty only for new files), exact unique/nonoverlapping edits,
+  and staged atomic replacement. Max file 1 MB, bounded batches/output, partial/skipped work explicit.
+  Known credential/Git locations and running-harness writes are rejected by the file tool. No
+  extra ko source backup system. Scoped Tidy Network turns cannot use Python/source writes.
+- Legacy two-tool threads can use scene context query @python:{label,code} / @files:{requests_json}
+  (JSON objects). The panel normalizes these before grant checks; direct dispatch checks them too.
+  Native resume supplies current instructions/tools; no inference is needed merely to reload.
 - Local-help tools: `loom_scene` operations `docs_search` / `docs_read`, root-confined to
   `LOOM_HOUDINI_DOCS` or `H:/Docs/houdini_help` (fallback `$HFS/houdini/help`).
 - Schema query=exact child type now reads that type's templates, not the parent object.
   Scene tracking tolerates unconnected indirect inputs inside wrangles; two-call regression covered.
-  The grant is frozen per turn; application failure revokes it for the remainder of that turn.
+  The grant is frozen per turn; structured application/infrastructure failure revokes it for the
+  remainder of that turn. Ordinary Python code errors can be corrected (see retryable policy above).
 - Slightly larger Markdown chat text; user/assistant colors replace role headers.
   Copy/Details are hover-only floating icon buttons. Tool activity is collapsed; errors expand.
 - Single-click composer focus; Enter sends, Shift+Enter inserts newline; IME-safe.
@@ -191,7 +219,20 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
   never fall back visibly. `-Visible` requires explicit permission. Test process trees
   are isolated/terminated by the launcher job, not by killing artist processes.
 - Tested Houdini: `C:/Program Files/Side Effects Software/Houdini 22.0.466/bin/`.
-- Latest full offline suite: **197 tests** (78 unit, 43 HOM, 72 offscreen UI, 4 package reload).
+- Latest full offline suite: **233 tests** (96 unit, 49 HOM, 84 offscreen UI, 4 package reload).
+  Python permission checks, shared checkpoints, partial failure, trace restoration/SystemExit,
+  cooperative Stop, HIP switches, file hashing/exact edits/atomic failure/partial batches,
+  frozen grants and legacy routes are covered offline. Python missing-API/partial/syntax recovery
+  is tested separately from fatal checkpoint failure, cancellation and workspace changes. Hidden GUI also writes a disposable
+  module, loads it via loom_python on the UI thread and opens/verifies/closes a pinned native
+  floating Parm pane. The recovery milestone's GUI passed on retry after missed native reload-hotkey
+  dispatch. During the subsequent independent Toggle Parameters change, full offline Loom tests passed,
+  but both Loom GUI regression attempts stopped at the known legacy-root isVisible startup assertion
+  (gui_startup.py:189), before exercising the changes. Dedicated Parameters hidden GUI tests passed
+  on both 22.0.429 and 22.0.466; do not conflate those results with a full Loom GUI pass.
+  No paid-provider test was run. User's live log confirms Python execution; it also exposed a guessed
+  nonexistent hou.Tool.setHotkeySymbol API and overly broad turn revocation, now fixed by the retryable
+  Python-error policy above. End-to-end live recovery still awaits user verification.
   Hidden native GUI passed, including the concise message menu and Edit prompt without changing
   conversation identity and deleting a collapsed action group after deleting its reply. The native
   test needed one retry for the known invisible legacy-pane startup issue. Earlier startup failures
@@ -212,6 +253,9 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
 - `conversations.py`: atomic workspace conversation records/selection, naming, deletion and legacy migration.
 - `conversation_ui.py`: separate modeless two-line manager; shared Checkpoints selection styling.
 - `tools.py`: scene/proposal schemas, inspection, per-turn edit checkpoint grouping.
+- `mode_control.py`: compact three-stop permission selector and current-state label.
+- `execution.py`: bounded output and cooperative UI-thread Python execution (not a sandbox).
+- `files.py`: bounded text read/list/search and hash-checked atomic writes/exact edits.
 - `inspection.py`: UI-thread geometry scope and viewport PNG capture.
 - `network.py`: conservative arrangement/display defaults.
 - `provider.py`: official app-server transport, tool-host flags, resume path handling.

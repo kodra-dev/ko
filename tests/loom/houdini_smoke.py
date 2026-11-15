@@ -33,6 +33,82 @@ class HoudiniTests(unittest.TestCase):
         box.setDisplayFlag(True)
         return geo, box
 
+    def test_python_and_structured_edits_share_one_ai_checkpoint(self):
+        _, box = self.make_geometry()
+        self.tools.begin_turn()
+        self.tools.permission_mode = "scene_edit"
+        result = self.tools.dispatch("loom_python", {"label": "Wider box", "code":
+            "hou.node('/obj/test_geo/box1').parm('sizex').set(3)\nprint('python worked')"})
+        self.assertEqual(result["status"], "applied")
+        self.assertIn("python worked", result["execution"]["output"])
+        self.assertNotIn("code", result)
+        self.assertEqual(box.parm("sizex").eval(), 3)
+        prepared = self.tools.propose("Taller box", [{"op": "set", "path": box.path(), "parm": "sizey", "value": 4}])
+        structured = self.tools.apply(prepared["proposal"])
+        second = self.tools.execute_python("Deeper box", "hou.node('/obj/test_geo/box1').parm('sizez').set(5)")
+        self.assertEqual(result["result"], structured["result"])
+        self.assertEqual(result["result"], second["result"])
+        self.assertEqual(len(self.workspace.history.entries), 2)
+        self.workspace.visit(result["baseline"])
+        restored = hou.node("/obj/test_geo/box1")
+        self.assertEqual(restored.parmTuple("size").eval(), (1, 1, 1))
+        self.workspace.visit(result["result"])
+        self.assertEqual(hou.node("/obj/test_geo/box1").parmTuple("size").eval(), (3, 4, 5))
+
+    def test_python_syntax_error_has_no_checkpoint_or_scene_effects(self):
+        self.make_geometry()
+        self.tools.permission_mode = "scene_edit"
+        result = self.tools.execute_python("Invalid", "if:")
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["retryable"])
+        self.assertEqual(len(self.workspace.history.entries), 0)
+
+    def test_python_partial_failure_is_saved_and_reported_not_rolled_back(self):
+        _, box = self.make_geometry()
+        self.tools.permission_mode = "scene_edit"
+        result = self.tools.execute_python("Partial edit",
+            "hou.node('/obj/test_geo/box1').parm('sizex').set(9)\nprint('before failure')\nraise ValueError('expected failure')")
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("expected failure", result["error"])
+        self.assertTrue(result["retryable"])
+        self.assertIn("before failure", result["execution"]["output"])
+        self.assertEqual(box.parm("sizex").eval(), 9)
+        self.assertTrue(self.workspace.history.get(result["result"])["label"].startswith("Partial:"))
+
+    def test_python_system_exit_is_captured_and_trace_restored(self):
+        self.tools.permission_mode = "scene_edit"
+        previous = sys.gettrace()
+        result = self.tools.execute_python("Exit test", "print('alive')\nraise SystemExit(2)")
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("SystemExit", result["error"])
+        self.assertFalse(result["retryable"])
+        self.assertIs(sys.gettrace(), previous)
+
+    def test_python_loop_cancellation_is_cooperative_and_restores_trace(self):
+        self.tools.permission_mode = "scene_edit"
+        polls = []
+        def cancel():
+            polls.append(True)
+            if len(polls) > 1:
+                raise RuntimeError("cancelled test loop")
+        self.tools.progress = cancel
+        previous = sys.gettrace()
+        result = self.tools.execute_python("Loop test", "while True:\n    x = 1")
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("cancelled test loop", result["error"])
+        self.assertFalse(result["retryable"])
+        self.assertIs(sys.gettrace(), previous)
+
+    def test_python_hip_switch_does_not_save_result_into_new_workspace(self):
+        self.tools.permission_mode = "scene_edit"
+        with patch.object(self.workspace, "save_current", wraps=self.workspace.save_current) as save:
+            result = self.tools.execute_python("Bad scene switch", "hou.hipFile.clear(suppress_save_prompt=True)")
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("workspace", result["error"])
+        self.assertFalse(result["retryable"])
+        # Initial checkpoint creation may save; no final result save after the switch.
+        self.assertFalse(any(call.kwargs.get("force") for call in save.call_args_list))
+
     def make_versions(self):
         _, box = self.make_geometry()
         original = self.workspace.checkpoint("Original")

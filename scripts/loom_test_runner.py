@@ -13,7 +13,7 @@ REPO = Path(__file__).resolve().parents[1]
 TESTS = REPO / "tests" / "loom"
 # Deliberately explicit: adding a HOM/Qt test must not silently slow the fast lane.
 FAST_MODULES = (
-    "test_branch_provider", "test_conversations", "test_history",
+    "test_branch_provider", "test_conversations", "test_files", "test_history",
     "test_notifications", "test_panel_navigation", "test_usage", "test_test_runner",
 )
 MODULES = {"houdini": "houdini_smoke", "ui": "ui_smoke", "reload": "ui_package_reload"}

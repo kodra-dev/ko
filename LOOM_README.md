@@ -79,7 +79,7 @@ Try these in a disposable scene:
    controller and OS lock. Scene-changing checkpoint actions wait for an active turn
    to finish; they never load a HIP underneath the agent.
 8. Loom has no Changes/Versions tabs or pending-change review UI. With scene edits
-   off it is read-only; enable **Edit scene** before requesting changes.
+   in **Read Only** it cannot make changes; select **Scene Edit** before requesting changes.
    Edits execute with checkpoints; old pending records are never auto-applied.
 9. Use **Instructions → Open shared instructions / Open HIP instructions**. Edit
    the ordinary Markdown files directly. They are reread before every send. Rename
@@ -100,7 +100,7 @@ Try these in a disposable scene:
 - During the first user turn, Loom asks the AI to choose a short name through the existing
   scene tool's reserved metadata query (`operation=context`, `query=@conversation-name:TITLE`).
   This is part of the ordinary turn, not a separate background prompt or provider thread, and
-  works with Edit scene off. An explicit manual rename wins. Existing named/history-bearing
+  works in Read Only mode. An explicit manual rename wins. Existing named/history-bearing
   conversations are not retitled. If the turn fails or the model omits naming, the initial
   name remains; no hidden retry/model call is made.
 - Messages/tool details, native provider thread ID, model choice, draft, and usage stay with
@@ -108,7 +108,7 @@ Try these in a disposable scene:
   its native thread on the next send; switching itself never calls a model or changes the scene.
 - The last explicitly used model remains the app-wide default; each conversation remembers its
   own choice. An unavailable saved model requires an explicit available choice, not a silent
-  substitution. **Edit scene** remains a workspace preference, not per conversation.
+  substitution. The permission mode remains a workspace preference, not per conversation.
 - Manager browsing stays available during a turn; mutating/activation actions are disabled
   or rejected until it finishes. **Tidy Network** creates its own
   conversation after validating scope/permission; your unsent draft stays in the original.
@@ -176,7 +176,7 @@ Implementation details:
   collapsed, with real arguments/results in Details; failures expand automatically.
   Message Markdown cannot load local/network images or open links.
 - **Tidy Network** in the Loom header sends an AI cleanup request (requires a connected model
-  and **Edit scene**). Multiple selected nodes: only those; one selected: its upstream/downstream
+  and **Scene Edit** or **Tool Dev**). Multiple selected nodes: only those; one selected: its upstream/downstream
   connected component in the same network; none: all direct children of the visible Network Editor.
   If multiple Network Editors are visible with no selection, select a node to disambiguate.
   Scope is frozen when clicked, a new conversation is selected, the unsent draft stays in the
@@ -189,8 +189,14 @@ Implementation details:
   per node/name plus column gaps; do not change the user's wiring-style preference. These are AI layout
   guidelines, not a guarantee of pixel-perfect label clearance. Risky changes should be skipped rather
   than breaking references. No automatic display-flag changes run for tidy turns.
-- The old Ask/Propose modes are replaced by **Edit scene**, beside the composer.
-- The composer row has **Context**, **Edit scene**, and a right-aligned `≈$0.12 C14%`.
+- A compact three-stop permission selector beside the composer shows only the current label:
+  **Read Only**, **Scene Edit**, or **Tool Dev**. Click a dot or use arrow keys when focused;
+  hover each dot for its description. It is disabled during a turn.
+  **Read Only:** inspect/explain, including text files; no Python or changes.
+  **Scene Edit:** structured scene changes plus Python for live scene/Houdini UI control.
+  **Tool Dev:** also create/edit persistent scripts, panels and ko features, then load/test them in Houdini.
+  These are authorization modes, not a Python/OS security sandbox.
+- The composer row has **Context**, the permission selector, and a right-aligned `≈$0.12 C14%`.
   Cost is a standard API-equivalent estimate from reported usage deltas, using the model
   active for each call (including rerouting), cached-input rates, reported cache writes
   at the 30m rate, and long-context pricing where applicable. It is not subscription billing.
@@ -199,8 +205,8 @@ Implementation details:
   new conversations reset it. Missing pricing, incomplete pre-tracking history, and
   unavailable context size show `—`, rather than a fabricated zero. Pricing is a local
   snapshot in `usage.py` (2026-11-14), not fetched during chat; hover for a short explanation.
-  **Off (default):** read-only answers/guidance; edit tool calls are blocked, not queued.
-  **On:** save the current checkpoint in place, then carry out edits in **one new AI child
+  **Read Only (default):** answers/guidance; edit tool calls are blocked, not queued.
+  **Scene Edit / Tool Dev:** save the current checkpoint in place, then carry out edits in **one new AI child
   per turn**, including multi-proposal turns. No extra Before checkpoint, no AI: name prefix,
   and no second Apply confirmation. An initial baseline is created only if no current
   checkpoint exists. Older pending proposals are not auto-applied.
@@ -214,11 +220,39 @@ Implementation details:
 - Opening Loom automatically connects using the existing sign-in and last-used model;
   this does not send a prompt or start inference. Imports and Checkpoints-only use do
   nothing. Missing login/failure stays inline; browser sign-in remains a user action.
-- **Edit scene** is remembered in the UUID workspace’s `preferences.json`.
+- The selected `permission_mode` is remembered in the UUID workspace’s `preferences.json`.
+  Legacy `allow_scene_edits=true` migrates to Scene Edit, never Tool Dev.
   Reopening/reloading and Save As restore it; other HIP workspaces have separate preferences,
-  defaulting off. The grant is frozen per turn, disabled during a turn,
-  and revoked for the rest of the turn if automatic application fails. It does not
-  authorize external file writes, simulation/render actions, or arbitrary execution.
+  defaulting to Read Only. The grant is frozen per turn, disabled during a turn,
+  and revoked for Stop, scene/checkpoint/storage failures, structured-edit failures or file-write failures.
+  Ordinary Python exceptions and syntax errors can be corrected within the same turn. Shell/network operations,
+  unrequested renders/simulations and self-editing/reloading Loom's running harness remain disallowed.
+- `loom_python {label, code}` executes in the live Houdini process on the UI thread. `hou` is provided;
+  import PySide6/ko modules as needed. Globals are fresh each call; retain live UI references in `hou.session`
+  or an imported module. Stdout/stderr are bounded to 16K characters; exceptions/SystemExit are captured.
+  Python and structured edits share **one AI child per turn**. Syntax errors run nothing and return
+  `retryable=true`. Ordinary Python exceptions (including missing APIs) remain failed tool results, but
+  return `retryable=true` after successful checkpoint persistence so Loom can inspect/correct the error.
+  They may leave partial scene/UI/files changes: an empty scene diff is NOT proof of no side effects.
+  Never blindly repeat earlier actions. Stop/native interruption, HIP switches, checkpoint/storage errors,
+  and infrastructure failures are not retryable and still disable further changes for that turn.
+  Stop cooperatively interrupts Python loops; native cooks use Houdini's interrupt mechanism/Esc, but
+  non-yielding native calls can still block. Python is not moved to an unsafe HOM worker thread.
+  **UI, source files and external effects cannot be restored by HIP checkpoints.** All Python calls
+  currently create/reuse the per-turn scene checkpoint, including UI-only calls. Python has full process
+  privileges; Scene Edit's prohibition on source/file writes is an instruction policy, not isolation.
+- `loom_files {requests_json}` accepts a batch of up to 20 absolute-path operations: paged `read`, immediate
+  directory `list`, literal in-file `search`, new/full-file `write`, and precise `edit` with unique,
+  nonoverlapping `{old,new}` replacements. UTF-8 text files up to 1 MB; bounded result payloads.
+  Read/search return a SHA-256; writes/edits require `expected_sha256` (empty only for a new file), rejecting
+  stale content. Publication uses a staged atomic replacement, not another backup system. Only Tool Dev
+  can write. Batches stop on failure/cancellation/output limits and explicitly report partial/skipped work.
+  Known credential/Git paths and writes to Loom's running harness are blocked by the file tool; this is
+  not a sandbox around Python. No file deletion or shell tool. Scoped Tidy Network turns cannot use
+  Python or source writes to escape their node scope. Work in the HIP first; edit ko when requested.
+- Historical provider threads can use `loom_scene` / `ko_scene` context query `@python:` followed by a
+  JSON object `{label,code}`, or `@files:` followed by `{requests_json}`. These compatibility routes use
+  the same permissions, checkpoints and logs. Reload the package to update instructions/tools.
 - Local version, keymap, FPS and update mode accompany the turn. Shortcut questions use
   `loom_scene operation=context query=PolyExtrude` (or a key) to search live resolved
   Houdini bindings, including tool invocation and context-specific overrides. Missing
@@ -344,8 +378,10 @@ Milestones and remaining work, in small verifiable increments:
 3. **Context management:** deterministic prefixes and tool schemas, append-only native
    thread history, on-demand retrieval, batched reads, conservative budget-triggered
    compaction with retained originals, usage/cache reporting where supported.
-4. **Tools:** read files anywhere (multiple paths/ranges), search/find, and reviewed
-   precise file edits including ko. Scope is governed by plain instructions, not a
+4. **Tools (first increment implemented):** batched file reads/ranges, immediate directory listing,
+   literal in-file search, hash-checked exact edits/new files including ko, and UI-thread Houdini Python.
+   Recursive search/find and richer file navigation remain future work. Tool Dev is the authorization
+   for precise file edits, without a separate pending-review UI. Scope is governed by plain instructions, not a
    claimed sandbox. Work inside the HIP first; promote proven reusable work into ko
    only with user agreement. Never self-edit Loom inside Houdini. Use Git rather than
    adding a second ko backup system; don't commit/push unless asked.

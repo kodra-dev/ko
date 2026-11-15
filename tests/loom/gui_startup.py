@@ -272,6 +272,35 @@ class GuiSmokeTest:
                     (DIRECTORY / "agent-viewport.png").write_bytes(data)
                     assert not any("base64" in message["text"] for message in panel.messages)
                     host.grab().save(str(DIRECTORY / "spinner-working.png"))
+                    # Develop a real persistent module, then invoke it in live Houdini.
+                    # All requests are mocked; the panes live only on the hidden test desktop.
+                    panel._turn_allow_edits = True
+                    panel._turn_permission_mode = "tool_dev"
+                    feature_path = DIRECTORY / "floating_feature.py"
+                    source = ("import hou\n\ndef open_parameters(node):\n"
+                              "    pane = hou.ui.curDesktop().createFloatingPaneTab(hou.paneTabType.Parm)\n"
+                              "    pane.setCurrentNode(node)\n    pane.setPin(True)\n    return pane\n")
+                    panel._event({"id": 902, "method": "item/tool/call", "params": {
+                        "tool": "loom_files", "arguments": {"requests_json": json.dumps([
+                            {"op": "write", "path": str(feature_path), "content": source, "expected_sha256": ""}])}}})
+                    assert fake.replies[-1]["success"], repr(fake.replies[-1])
+                    assert feature_path.read_text() == source
+                    code = ("import importlib.util\nfrom PySide6 import QtCore, QtWidgets\n"
+                            "assert QtCore.QThread.currentThread() == QtWidgets.QApplication.instance().thread()\n"
+                            f"spec = importlib.util.spec_from_file_location('floating_feature', {str(feature_path)!r})\n"
+                            "feature = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(feature)\n"
+                            f"hou.session._loom_test_parms = feature.open_parameters(hou.node({box.path()!r}))\n"
+                            "print(hou.session._loom_test_parms.currentNode().path())")
+                    panel._event({"id": 903, "method": "item/tool/call", "params": {
+                        "tool": "loom_python", "arguments": {"label": "Floating parameters", "code": code}}})
+                    assert fake.replies[-1]["success"], repr(fake.replies[-1])
+                    parm_pane = hou.session._loom_test_parms
+                    assert parm_pane.type() == hou.paneTabType.Parm
+                    assert parm_pane.currentNode() == box
+                    assert parm_pane.isPin()
+                    parm_pane.close()
+                    del hou.session._loom_test_parms
+                    log("Tool Dev wrote a module and executed it on the GUI thread to open pinned floating parameters")
                 finally:
                     panel.transport = None
                     panel._set_busy(False)
@@ -280,7 +309,7 @@ class GuiSmokeTest:
                 b = host._content.workspace.checkpoint("Wide")
                 host._content._append("You", "GUI_RELOAD_MARKER")
                 self.workspace_id = host._content.workspace.history.id
-                self.checkpoint_ids = [a["id"], b["id"]]
+                self.checkpoint_ids = [record["id"] for record in panel.workspace.history.entries]
                 host._content.refresh_all()
                 self.old_host = host
                 self.old_checkpoint = self.checkpoint_widget

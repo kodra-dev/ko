@@ -58,7 +58,7 @@ class UiTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_compact_usage_is_right_aligned_persisted_and_thread_scoped(self):
-        self.assertEqual(self.panel.allow_edits.text(), "Edit scene")
+        self.assertEqual(self.panel.permission_mode.text(), "Read Only")
         self.assertTrue(any(b.text() == "Context" for b in self.panel.findChildren(QtWidgets.QPushButton)))
         self.assertTrue(self.panel.usage_label.alignment() & QtCore.Qt.AlignmentFlag.AlignRight)
         row = self.panel.usage_label.parentWidget().layout().itemAt(
@@ -803,6 +803,166 @@ class UiTests(unittest.TestCase):
         self.panel.send_prompt()
         self.panel.transport = FakeTransport()
 
+    def _start_permission_turn(self, mode):
+        self.panel.ready = True
+        self.panel.thread_id = "fake-thread"
+        self.panel._resumed = True
+        self.panel._request = lambda *args: None
+        self.panel.permission_mode.setMode(mode)
+        self.panel.send_prompt("Test the requested feature")
+        self.panel.transport = FakeTransport()
+
+    def _call_tool(self, name, args):
+        self.panel._event({"id": 950, "method": "item/tool/call", "params": {
+            "tool": name, "arguments": args}})
+        reply = self.panel.transport.replies[-1][1]
+        result = __import__("json").loads(reply["contentItems"][0]["text"])
+        return reply["success"], result
+
+    def test_read_only_python_is_blocked_even_with_forged_permission(self):
+        box = self._cube()
+        self._start_permission_turn("read_only")
+        success, result = self._call_tool("loom_python", {"label": "Blocked", "code":
+            "hou.node('/obj/cube/box1').parm('sizex').set(20)", "permission_mode": "tool_dev"})
+        self.assertFalse(success)
+        self.assertEqual(box.parm("sizex").eval(), 1)
+        self.assertEqual(len(self.panel.workspace.history.entries), 0)
+
+    def test_tool_dev_writes_imports_and_tests_a_persistent_feature(self):
+        import json
+        path = Path(self.temp.name) / "ko_feature.py"
+        self._start_permission_turn("tool_dev")
+        success, result = self._call_tool("loom_files", {"requests_json": json.dumps([
+            {"op": "write", "path": str(path), "content": "def feature():\n    return 'feature works'\n", "expected_sha256": ""}])})
+        self.assertTrue(success, result)
+        self.assertFalse(result["results"][0]["checkpoint_reversible"])
+        success, result = self._call_tool("loom_python", {"label": "Test feature", "code":
+            "import importlib.util\n"
+            f"spec = importlib.util.spec_from_file_location('ko_feature_test', {str(path)!r})\n"
+            "module = importlib.util.module_from_spec(spec)\nspec.loader.exec_module(module)\nprint(module.feature())"})
+        self.assertTrue(success, result)
+        self.assertIn("feature works", result["execution"]["output"])
+        self.assertEqual(self.panel.messages[-1]["summary"], "Ran Houdini Python · Test feature")
+
+    def test_frozen_scene_mode_cannot_escalate_to_source_writes(self):
+        import json
+        self._start_permission_turn("scene_edit")
+        self.panel.permission_mode.setMode("tool_dev")  # Scripted UI change, not the frozen grant.
+        path = Path(self.temp.name) / "blocked.py"
+        success, result = self._call_tool("loom_files", {"requests_json": json.dumps([
+            {"op": "write", "path": str(path), "content": "bad", "expected_sha256": ""}])})
+        self.assertFalse(success)
+        self.assertIn("Tool Dev", result["error"])
+        self.assertFalse(path.exists())
+
+    def test_python_error_allows_correction_after_inspecting_partial_changes(self):
+        import json
+        box = self._cube()
+        self._start_permission_turn("tool_dev")
+        success, result = self._call_tool("loom_python", {"label": "Partial", "code":
+            "hou.node('/obj/cube/box1').parm('sizex').set(7)\nraise ValueError('failure marker')"})
+        self.assertFalse(success)
+        self.assertTrue(result["retryable"])
+        self.assertNotIn("automatic_edits_disabled_for_turn", result)
+        self.assertTrue(self.panel._turn_allow_edits)
+        self.assertEqual(box.parm("sizex").eval(), 7)
+        self.assertIn("partial", result["message"])
+        first_checkpoint = result["result"]
+        success, correction = self._call_tool("loom_python", {"label": "Inspect before correction", "code":
+            "print(hou.node('/obj/cube/box1').parm('sizex').eval())"})
+        self.assertTrue(success)
+        self.assertIn("7", correction["execution"]["output"])
+        self.assertEqual(first_checkpoint, correction["result"])
+        self._send_size_proposal()
+        self.assertTrue(self.panel.transport.replies[-1][1]["success"])
+        self.assertEqual(box.parm("sizex").eval(), 3)
+        self.assertEqual(len(self.panel.workspace.history.entries), 2)
+        path = Path(self.temp.name) / "feature.py"
+        success, _ = self._call_tool("loom_files", {"requests_json": json.dumps([
+            {"op": "write", "path": str(path), "content": "corrected", "expected_sha256": ""}])})
+        self.assertTrue(success)
+
+    def test_missing_python_api_with_empty_scene_diff_does_not_end_turn(self):
+        self._start_permission_turn("tool_dev")
+        path = Path(self.temp.name) / "external_effect.txt"
+        success, result = self._call_tool("loom_python", {"label": "Inspect action APIs", "code":
+            f"from pathlib import Path\nPath({str(path)!r}).write_text('already happened')\n"
+            "print('partial inspection output')\ngetattr(hou.Tool, '__loom_nonexistent_api__')"})
+        self.assertFalse(success)
+        self.assertIn("AttributeError", result["error"])
+        self.assertIn("partial inspection output", result["execution"]["output"])
+        self.assertEqual(result["diff"]["modified"], {})
+        self.assertTrue(path.exists())  # Empty HIP diff is NOT proof of no side effects.
+        self.assertTrue(result["retryable"])
+        self.assertIn("UI/files", result["message"])
+        success, _ = self._call_tool("loom_python", {"label": "Correct API lookup", "code":
+            "print(getattr(hou.Tool, '__loom_nonexistent_api__', None))"})
+        self.assertTrue(success)
+
+    def test_python_checkpoint_failure_still_revokes_all_change_grants(self):
+        import json
+        box = self._cube()
+        self._start_permission_turn("tool_dev")
+        save = self.panel.workspace.save_current
+        def fail_after_code(*args, **kwargs):
+            if box.parm('sizex').eval() == 7:
+                raise OSError("checkpoint storage failed")
+            return save(*args, **kwargs)
+        with patch.object(self.panel.workspace, "save_current", side_effect=fail_after_code):
+            success, result = self._call_tool("loom_python", {"label": "Partial", "code":
+                "hou.node('/obj/cube/box1').parm('sizex').set(7)\nraise AttributeError('missing API')"})
+        self.assertFalse(success)
+        self.assertIn("checkpoint storage failed", result["error"])
+        self.assertTrue(result["automatic_edits_disabled_for_turn"])
+        self.assertFalse(result.get("retryable", False))
+        self.assertEqual(box.parm("sizex").eval(), 7)
+        success, _ = self._call_tool("loom_python", {"label": "Blocked retry", "code": "print('blocked')"})
+        self.assertFalse(success)
+        self._send_size_proposal()
+        self.assertFalse(self.panel.transport.replies[-1][1]["success"])
+        path = Path(self.temp.name) / "blocked.py"
+        success, _ = self._call_tool("loom_files", {"requests_json": json.dumps([
+            {"op": "write", "path": str(path), "content": "bad", "expected_sha256": ""}])})
+        self.assertFalse(success)
+        self.assertFalse(path.exists())
+        path.write_text("inspection is still allowed")
+        success, _ = self._call_tool("loom_files", {"requests_json": json.dumps([{"op": "read", "path": str(path)}])})
+        self.assertTrue(success)
+
+    def test_python_syntax_error_can_be_corrected_without_a_new_turn(self):
+        self._start_permission_turn("scene_edit")
+        success, result = self._call_tool("loom_python", {"label": "Syntax test", "code": "if:"})
+        self.assertFalse(success)
+        self.assertTrue(result["retryable"])
+        self.assertEqual(len(self.panel.workspace.history.entries), 0)
+        success, _ = self._call_tool("loom_python", {"label": "Corrected syntax", "code": "print('ok')"})
+        self.assertTrue(success)
+
+    def test_stop_cancels_python_loop_and_returns_a_failed_tool_result(self):
+        self._start_permission_turn("scene_edit")
+        transport = self.panel.transport
+        QtCore.QTimer.singleShot(25, self.panel.interrupt)
+        self.panel._event({"id": 951, "method": "item/tool/call", "params": {
+            "tool": "loom_python", "arguments": {"label": "Cancellable loop", "code": "while True:\n    x = 1"}}})
+        reply = transport.replies[-1][1]
+        self.assertFalse(reply["success"])
+        result = __import__("json").loads(reply["contentItems"][0]["text"])
+        self.assertEqual(result["status"], "failed")
+        self.assertIn("cancelled", result["error"].lower())
+        self.assertFalse(result.get("retryable", False))
+        self.assertTrue(result["automatic_edits_disabled_for_turn"])
+        self.assertFalse(self.panel._turn_allow_edits)
+
+    def test_legacy_thread_python_route_runs_under_same_scene_grant(self):
+        import json
+        box = self._cube()
+        self._start_permission_turn("scene_edit")
+        success, result = self._call_tool("ko_scene", {"operation": "context", "path": "/", "offset": 0, "limit": 1,
+            "query": "@python:" + json.dumps({"label": "Legacy Python", "code":
+                "hou.node('/obj/cube/box1').parm('sizex').set(8)"})})
+        self.assertTrue(success, result)
+        self.assertEqual(box.parm("sizex").eval(), 8)
+
     def _send_size_proposal(self, request_id=72, **extra):
         import json
         self.panel._event({"id": request_id, "method": "item/tool/call", "params": {
@@ -857,6 +1017,52 @@ class UiTests(unittest.TestCase):
             self._send_size_proposal(request_id=73)
             self.assertEqual(apply.call_count, 1)
         self.assertEqual(box.parm("sizex").eval(), 1)
+
+    def test_compact_permission_mode_click_keyboard_and_busy_lock(self):
+        control = self.panel.permission_mode
+        self.assertEqual(control.mode(), "read_only")
+        self.assertEqual(len(control.findChildren(QtWidgets.QLabel)), 1)
+        for index, (mode, label) in enumerate(zip(
+                ("read_only", "scene_edit", "tool_dev"),
+                ("Read Only", "Scene Edit", "Tool Dev"))):
+            QtTest.QTest.mouseClick(control.slider, QtCore.Qt.MouseButton.LeftButton,
+                                   pos=QtCore.QPoint(int(control.slider._position(index)), 12))
+            self.assertEqual(control.mode(), mode)
+            self.assertEqual(control.label.text(), label)
+        QtTest.QTest.keyClick(control.slider, QtCore.Qt.Key.Key_Left)
+        self.assertEqual(control.mode(), "scene_edit")
+        self.panel._set_busy(True)
+        QtTest.QTest.mouseClick(control.slider, QtCore.Qt.MouseButton.LeftButton,
+                               pos=QtCore.QPoint(56, 12))
+        self.assertEqual(control.mode(), "scene_edit")
+        self.panel._set_busy(False)
+
+    def test_tool_dev_mode_survives_reopen_and_workspace_switch(self):
+        self.panel.permission_mode.setMode("tool_dev")
+        root = self.panel.workspace.history.root
+        self.panel.close()
+        self.panel = Panel()
+        self.assertEqual(self.panel.permission_mode.mode(), "tool_dev")
+        self.assertTrue(self.panel.allow_edits.isChecked())
+        hou.hipFile.clear(suppress_save_prompt=True)
+        self.panel._ensure_binding()
+        self.assertEqual(self.panel.permission_mode.mode(), "read_only")
+        saved = __import__("json").loads((root / "preferences.json").read_text())
+        self.assertEqual(saved["permission_mode"], "tool_dev")
+
+    def test_legacy_permission_preferences_migrate_without_escalation(self):
+        from loom.checkpoints.storage import atomic_json
+        path = self.panel.workspace.history.root / "preferences.json"
+        for allowed, expected in ((True, "scene_edit"), (False, "read_only")):
+            atomic_json(path, {"allow_scene_edits": allowed, "unrelated": 42})
+            self.panel._load_workspace_preferences()
+            self.assertEqual(self.panel.permission_mode.mode(), expected)
+        atomic_json(path, {"permission_mode": "invalid", "allow_scene_edits": False})
+        self.panel._load_workspace_preferences()
+        self.assertEqual(self.panel.permission_mode.mode(), "read_only")
+        self.panel.permission_mode.setMode("tool_dev")
+        saved = __import__("json").loads(path.read_text())
+        self.assertEqual(saved["permission_mode"], "tool_dev")
 
     def test_new_workspace_starts_off_but_reopening_restores_its_edit_preference(self):
         self.panel.allow_edits.setChecked(True)

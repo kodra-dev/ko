@@ -158,7 +158,8 @@ class MigrationTests(unittest.TestCase):
         tools = object.__new__(SceneTools)
         result = tools.dispatch("ko_scene", {"operation": "context"})
         self.assertIn("hip", result)
-        self.assertEqual([spec["name"] for spec in tool_specs()], ["loom_scene", "loom_propose"])
+        self.assertEqual([spec["name"] for spec in tool_specs()],
+                         ["loom_scene", "loom_propose", "loom_python", "loom_files"])
 
 
 if __name__ == "__main__":
