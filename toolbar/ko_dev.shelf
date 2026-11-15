@@ -24,6 +24,7 @@ Save in Zed to update Houdini without closing the tab. No blocking external-edit
     <script scriptType="python"><![CDATA[import ko_zed
 ko_zed.shelf_edit()]]></script>
   </tool>
+
   <tool name="ko_zed_sessions" label="Zed Sessions" icon="DATATYPES_code">
     <helpText><![CDATA[Resolve conflicts, apply manually, reload from Houdini, toggle automatic application, or detach a Zed editing session.]]></helpText>
     <script scriptType="python"><![CDATA[import ko_zed
@@ -42,7 +43,7 @@ except Exception as error:
   </tool>
 
   <tool name="reload_ko" label="Reload Ko" icon="hicon:/SVGIcons.index?BUTTONS_reload.svg">
-    <helpText><![CDATA[1]]></helpText>
+    <helpText><![CDATA[ko_dev.reloadKoModules()]]></helpText>
     <script scriptType="python"><![CDATA[import ko_dev
 ko_dev.reloadKoModules() ]]></script>
   </tool>
@@ -50,7 +51,7 @@ ko_dev.reloadKoModules() ]]></script>
   <tool name="open_in_explorer" label="Open in Explorer" icon="hicon:/SVGIcons.index?COMMON_file.svg">
     <helpText><![CDATA[= Open in Explorer =
 
-""" Open $HIP in Explorer (Ctrl: input any path) """]]></helpText>
+""" Open the containing folder of $HIP in Explorer (Ctrl: input any path) """]]></helpText>
     <script scriptType="python"><![CDATA[import ko_dev
 
 ko_dev.openInExplorer(show_dialog=kwargs['ctrlclick'])]]></script>

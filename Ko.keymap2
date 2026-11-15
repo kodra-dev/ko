@@ -1,7 +1,7 @@
 {
 	"name":"Ko",
 	"version":2,
-	"houdini.version":"22.0.429",
+	"houdini.version":"22.0.466",
 	"symbol":"",
 	"contexts":[
 		{
@@ -6587,6 +6587,11 @@
 														{
 															"action":"h.pane.gview.state.sop.kinefx__rigpose.flip_xformlimitsguide",
 															"keys":["Shift+F"
+															]
+														},
+														{
+															"action":"h.pane.gview.state.sop.kinefx__rigpose.select_all",
+															"keys":["Ctrl+A"
 															]
 														},
 														{
@@ -14097,6 +14102,11 @@
 													]
 												},
 												{
+													"action":"h.pane.parms.multiparm.menu.duplicate_selected",
+													"keys":[
+													]
+												},
+												{
 													"action":"h.pane.parms.multiparm.menu.insert_above",
 													"keys":[
 													]
@@ -14369,7 +14379,7 @@
 								},
 								{
 									"action":"h.pane.parms.ko_edit_in_zed",
-									"keys":["Alt+E"
+									"keys":[
 									]
 								},
 								{
@@ -18416,6 +18426,11 @@
 					]
 				},
 				{
+					"action":"h.ko_toggle_parameters",
+					"keys":["Ctrl+Shift+P"
+					]
+				},
+				{
 					"action":"h.labs_check_node_versions",
 					"keys":[
 					]
@@ -18423,11 +18438,6 @@
 				{
 					"action":"h.labs_networkwalk_hotkeys",
 					"keys":[
-					]
-				},
-				{
-					"action":"h.ko_toggle_parameters",
-					"keys":["Ctrl+Shift+P"
 					]
 				},
 				{
@@ -18462,7 +18472,7 @@
 				},
 				{
 					"action":"h.loom_open_agent",
-					"keys":["Backspace","Ctrl+Shift+/"
+					"keys":["Ctrl+Shift+/"
 					]
 				},
 				{
