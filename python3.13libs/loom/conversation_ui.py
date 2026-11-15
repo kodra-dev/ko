@@ -7,6 +7,33 @@ from .checkpoints.ui import button, prompt_text
 PREVIEW_ROLE = CURRENT_ROLE + 1
 
 
+def new_conversation_button(callback, layout):
+    control = QtWidgets.QToolButton()
+    control.setToolTip("New conversation")
+    control.setAccessibleName("New conversation")
+    control.setAutoRaise(True)
+    icon = QtGui.QIcon()
+    for mode, group in ((QtGui.QIcon.Mode.Normal, QtGui.QPalette.ColorGroup.Active),
+                        (QtGui.QIcon.Mode.Disabled, QtGui.QPalette.ColorGroup.Disabled)):
+        pixmap = QtGui.QPixmap(32, 32)
+        pixmap.setDevicePixelRatio(2)
+        pixmap.fill(QtCore.Qt.GlobalColor.transparent)
+        painter = QtGui.QPainter(pixmap)
+        painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+        painter.setPen(QtGui.QPen(control.palette().color(group, QtGui.QPalette.ColorRole.ButtonText),
+                                 1.8, QtCore.Qt.PenStyle.SolidLine, QtCore.Qt.PenCapStyle.RoundCap))
+        painter.drawLine(QtCore.QPointF(3, 8), QtCore.QPointF(13, 8))
+        painter.drawLine(QtCore.QPointF(8, 3), QtCore.QPointF(8, 13))
+        painter.end()
+        icon.addPixmap(pixmap, mode)
+    control.setIcon(icon)
+    control.setIconSize(QtCore.QSize(16, 16))
+    control.setMinimumSize(24, 24)
+    control.clicked.connect(callback)
+    layout.addWidget(control)
+    return control
+
+
 def first_line(record):
     for message in record["messages"]:
         if message.get("role") == "You":
@@ -56,7 +83,7 @@ class ConversationManager(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(self)
         toolbar = QtWidgets.QHBoxLayout()
         layout.addLayout(toolbar)
-        self.new_button = button("New conversation", lambda: owner._guard(owner.new_chat), toolbar)
+        self.new_button = new_conversation_button(lambda: owner._guard(owner.new_chat), toolbar)
         toolbar.addStretch()
         self.delete_button = button("Delete", lambda: owner._guard(self.delete_selected), toolbar)
         self.delete_button.setToolTip("Permanently remove the selected Loom conversation. Does not delete scene checkpoints or native provider files.")
@@ -133,6 +160,15 @@ class ConversationManager(QtWidgets.QDialog):
             self.owner.conversations.rename(key, name)
             self.owner._refresh_conversations()
 
+    def copy_selected(self):
+        key = self._valid_selection()
+        if not key:
+            return
+        record = next(r for r in self.owner.conversations.records if r["id"] == key)
+        text = "\n\n".join([record["name"]] + [
+            f"{message['role']}:\n{message.get('text', '')}" for message in record["messages"]])
+        QtWidgets.QApplication.clipboard().setText(text)
+
     def delete_selected(self):
         key = self._valid_selection()
         if key:
@@ -146,6 +182,7 @@ class ConversationManager(QtWidgets.QDialog):
             return
         menu = QtWidgets.QMenu(self)
         for label, callback in (("Activate", self.activate_selected), ("Rename…  F2", self.rename_selected),
+                                ("Copy as text", self.copy_selected),
                                 ("Delete", self.delete_selected)):
             menu.addAction(label, lambda checked=False, callback=callback: self.owner._guard(callback)).setEnabled(
                 not self.owner.busy and self.owner.session.turn_owner is None)

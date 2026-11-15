@@ -13,7 +13,7 @@ from shiboken6 import isValid
 from . import provider
 from .chat import BusySpinner, Composer, Transcript
 from .conversations import Conversations
-from .conversation_ui import ConversationManager
+from .conversation_ui import ConversationManager, new_conversation_button
 from .local import settings
 from .notifications import play_completion
 from .checkpoints.scene import ui_context
@@ -120,7 +120,7 @@ class Panel(QtWidgets.QWidget):
         self.conversation_title.setTextFormat(QtCore.Qt.TextFormat.PlainText)
         controls.addWidget(self.conversation_title, 1)
         self.conversations_button = button("Conversations", lambda: self._guard(self.manage_conversation), controls)
-        self.new_chat_button = button("New conversation", lambda: self._guard(self.new_chat), controls)
+        self.new_chat_button = new_conversation_button(lambda: self._guard(self.new_chat), controls)
         self.transcript = Transcript()
         self.transcript.branch_requested.connect(lambda message: self._guard(lambda: self.branch_conversation(message)))
         self.transcript.history_edit_requested.connect(

@@ -183,6 +183,42 @@ class UiTests(unittest.TestCase):
         self.assertEqual(saved["draft"], "departing draft")
         self.assertEqual(self.panel.prompt.toPlainText(), "")
 
+    def test_manager_copy_as_text_copies_selected_history_without_activation(self):
+        self.panel.new_chat("Unicode café")
+        self.panel._append("You", "First line\nSecond line")
+        self.panel._append("Tool", "tool result")
+        self.panel._append("Loom", "```python\nprint('hello')\n```")
+        self.panel.new_chat("Active")
+        active = self.panel.conversation_id
+        before = self.panel.conversations.records
+        manager = self.panel.manage_conversation()
+        manager.items.setCurrentItem(manager.items.topLevelItem(1))
+        expected = ("Unicode café\n\nYou:\nFirst line\nSecond line\n\nTool:\ntool result"
+                    "\n\nLoom:\n```python\nprint('hello')\n```")
+        failures = []
+        def choose_copy():
+            menu = app.activePopupWidget()
+            try:
+                action = next(a for a in menu.actions() if a.text() == "Copy as text")
+                self.assertTrue(action.isEnabled())
+                action.trigger()
+            except Exception as exc:
+                failures.append(exc)
+            finally:
+                if menu:
+                    menu.close()
+        QtCore.QTimer.singleShot(30, choose_copy)
+        rect = manager.items.visualItemRect(manager.items.currentItem())
+        manager.context_menu(rect.center())
+        self.assertEqual(failures, [])
+        self.assertEqual(app.clipboard().text(), expected)
+        self.assertEqual(self.panel.conversation_id, active)
+        self.assertEqual(self.panel.conversations.records, before)
+        manager.items.setCurrentItem(manager.items.topLevelItem(2))
+        manager.copy_selected()
+        self.assertEqual(app.clipboard().text(), "Active")
+        manager.close()
+
     def test_manager_two_line_items_selection_double_click_f2_and_delete(self):
         from loom.conversation_ui import PREVIEW_ROLE, CURRENT_ROLE
         first = self.panel.conversation_id
