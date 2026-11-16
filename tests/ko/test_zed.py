@@ -213,10 +213,23 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(launcher.run.call_count, 1)
 
     def test_cli_error_is_reported_on_queue(self):
-        launcher = self.launcher(lambda marker: True,
-                                 Mock(return_value=SimpleNamespace(returncode=1, stderr="CLI failed")))
+        def run(command, stderr, **kwargs):
+            stderr.write(b"CLI failed")
+            return SimpleNamespace(returncode=1)
+
+        launcher = self.launcher(lambda marker: True, run)
         launcher.open(launcher.root / "code.vfl")
         self.assertIn("CLI failed", launcher.errors.get(timeout=2))
+
+    def test_cli_output_is_never_piped(self):
+        # A cold start's Zed.exe inherits CLI handles; pipes would block until Zed exits.
+        run = Mock(return_value=SimpleNamespace(returncode=0))
+        self.launcher(lambda marker: True, run)._open(Path("code.vfl"))
+        kwargs = run.call_args.kwargs
+        self.assertNotIn("capture_output", kwargs)
+        for stream in ("stdin", "stdout", "stderr"):
+            self.assertNotEqual(kwargs.get(stream), zed.subprocess.PIPE)
+            self.assertIsNotNone(kwargs.get(stream))
 
 
 class HoudiniAdapterTests(unittest.TestCase):

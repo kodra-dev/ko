@@ -12,6 +12,7 @@ import queue
 import re
 import shutil
 import subprocess
+import tempfile
 import threading
 import time
 import uuid
@@ -167,10 +168,17 @@ class Launcher:
     def _run(self, command):
         if self.stopping.is_set():
             return
-        result = self.run(command, capture_output=True, text=True, timeout=30,
-                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        if result.returncode:
-            raise RuntimeError(result.stderr.strip() or f"Zed exited with {result.returncode}")
+        # Never pipe the CLI's output: on a cold start it spawns Zed.exe, which inherits
+        # the handles, so a pipe would not reach EOF until the editor itself exits.
+        # A file only requires the CLI process to exit.
+        with tempfile.TemporaryFile() as stderr:
+            result = self.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                              stderr=stderr, timeout=30,
+                              creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            if result.returncode:
+                stderr.seek(0)
+                message = stderr.read().decode("utf-8", "replace").strip()
+                raise RuntimeError(message or f"Zed exited with {result.returncode}")
 
     def _work(self):
         try:
