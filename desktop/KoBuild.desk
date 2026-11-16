@@ -23,6 +23,10 @@ root {
             }
         }
     }
+
+    panel parmeditor -w 2598 509 738 864 {
+        pane KoParameters -a 1 -l 10 -H /obj/ -T OBJ -m parmeditor
+    }
 }
 shelfdock -o 1 -l icon_and_text -G "0.50 0.50" add shelf_set_1 shelf_set_2
 viewerstow -x open -b open -l open -m hide -c hide -d open ${DESKNAME}.panetab1.world
@@ -56,3 +60,4 @@ netcolumns -c delscript,comment -n DATA panetab2
 geospreadsheet -c 0 -l horizontal -s 0.5 -m none -f 0 panetab3
 scenegraphtree -S 0.25 -m 2 -p "" -c  -i  -o  -t  -x 1 -s 1 -M 0 -C primtype,childcount,kind,populated,loaded,activation,visibility,solo,selectability  panetab3
 pythonpanel -s on -t off -n loom_checkpoints panetab7
+parmeditor -T 0.25 -w 0 KoParameters
