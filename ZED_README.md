@@ -13,7 +13,7 @@ Windows / Houdini 22. No provider, Zed extension, or blocking external-editor pr
 4. **Ko → Zed → Zed Sessions…** lets you apply manually, reload one saved file from Houdini,
    toggle auto-apply for a binding, or detach it. Detaching retains the file and editor tab.
 5. **Sync Houdini → Zed** on **KoDev** or under **Ko → Zed** refreshes **all attached editing files**
-   from their Houdini parameters immediately, without a confirmation prompt. It does not use node selection or attach new sessions.
+   from their Houdini parameters. It does not use node selection or attach new sessions.
    Changed saved files get adjacent `.backup-*` recovery copies before atomic replacement; successful
    exports clear conflict pauses and preserve each session's auto/manual setting. Failed exports stay
    paused and are reported without stopping the remaining exports. Unsaved Zed buffers are not replaced:
@@ -100,7 +100,7 @@ mouse position, or matching code text.
 - Keep **Preferences → Scripting → Use External Editor** off. That blocking external-editor route
   does not create the internal window required for target resolution.
 - The filter applies to native parameter panels, not Python shells, network editors, or unrelated Qt fields.
-- Existing *visible* internal editor windows are not intercepted, to avoid discarding unsaved text.
+- Existing _visible_ internal editor windows are not intercepted, to avoid discarding unsaved text.
   Close an internal editor before handing that same field to Zed. Unrecognized/non-string/expression
   editors remain native; a timeout reports that nothing was sent to Zed.
 - This depends on Houdini 22's native widget/window names and English `Edit: /...` title. It is a
