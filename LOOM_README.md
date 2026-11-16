@@ -159,7 +159,7 @@ Implementation details:
   provider token counters/context-fill. Historical untracked cost remains unknown.
 - Tests use mocks, never paid calls. Manual check: branch from an old/intermediate reply, then
   try Edit prompt/Delete from here and verify exact history, draft, unchanged scene and reload.
-  Live model behavior with replay/bounded native forks still needs manual verification.
+  The user has manually verified conversation branching, including the live workflow.
 
 ### Chat, input, local settings, and edit permission
 
@@ -241,6 +241,21 @@ Implementation details:
   **UI, source files and external effects cannot be restored by HIP checkpoints.** All Python calls
   currently create/reuse the per-turn scene checkpoint, including UI-only calls. Python has full process
   privileges; Scene Edit's prohibition on source/file writes is an instruction policy, not isolation.
+- Recursive discovery is available in every permission mode through `loom_files`:
+  `find {op,path,pattern?,offset?,limit?}` finds files by case-insensitive basename glob;
+  `search_tree {op,path,query,pattern?,offset?,limit?}` searches literal text case-insensitively,
+  returning paths, 1-based line numbers and bounded excerpts. `path` is an absolute directory;
+  `pattern` defaults to `*` and cannot contain path separators. Offsets are zero-based;
+  limit defaults to 100 (maximum 200). Use `read` afterward for a fresh hash before editing.
+  Traversal checks cancellation, skips links/junctions, special files and protected paths;
+  text search also skips binary, non-UTF8 and over-1-MB files. Each operation visits at most
+  10,000 entries, reads at most 16 MB (conservatively reserved per read), and descends 32 levels.
+  Inspect `partial`, `skipped`, `stop_reasons`, and `rescan_required`: a limited scan is not
+  proof that no other matches exist. `next_offset` rescans in sorted depth-first order, not
+  a filesystem snapshot; tree changes can shift pages. Narrow the directory/pattern when
+  traversal limits are reached. Slow native filesystem calls can still delay cooperative Stop.
+  Manual check after **Reload Loom + Checkpoints**: in Read Only, ask Loom to locate the
+  implementation of a ko feature without supplying its filename, then inspect the matching lines.
 - `loom_files {requests_json}` accepts a batch of up to 20 absolute-path operations: paged `read`, immediate
   directory `list`, literal in-file `search`, new/full-file `write`, and precise `edit` with unique,
   nonoverlapping `{old,new}` replacements. UTF-8 text files up to 1 MB; bounded result payloads.
@@ -371,7 +386,7 @@ Milestones and remaining work, in small verifiable increments:
 
 1. **Harness threads (implemented):** create/rename/switch/delete persisted conversations;
    retain model choices, drafts and tool activity. One active agent turn per Houdini session.
-2. **History editing (implemented, pending manual verification):** Branch here at exact message
+2. **History editing (implemented, manually verified):** Branch here at exact message
    cuts, Delete from here, and Edit prompt; bounded native forks or fresh-context replay. Explicit scene
    restoration remains unimplemented; editable checkpoint IDs alone do not guarantee the scene
    as it was at message time. Never silently undo ko source changes.
@@ -380,7 +395,7 @@ Milestones and remaining work, in small verifiable increments:
    compaction with retained originals, usage/cache reporting where supported.
 4. **Tools (first increment implemented):** batched file reads/ranges, immediate directory listing,
    literal in-file search, hash-checked exact edits/new files including ko, and UI-thread Houdini Python.
-   Recursive search/find and richer file navigation remain future work. Tool Dev is the authorization
+   Bounded recursive `find`/`search_tree` are implemented; richer file navigation remains future work. Tool Dev is the authorization
    for precise file edits, without a separate pending-review UI. Scope is governed by plain instructions, not a
    claimed sandbox. Work inside the HIP first; promote proven reusable work into ko
    only with user agreement. Never self-edit Loom inside Houdini. Use Git rather than

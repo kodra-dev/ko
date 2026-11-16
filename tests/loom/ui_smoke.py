@@ -828,6 +828,24 @@ class UiTests(unittest.TestCase):
         self.assertEqual(box.parm("sizex").eval(), 1)
         self.assertEqual(len(self.panel.workspace.history.entries), 0)
 
+    def test_recursive_file_discovery_in_read_only_does_not_create_checkpoints(self):
+        import json
+        directory = Path(self.temp.name) / "discovery" / "nested"
+        directory.mkdir(parents=True)
+        path = directory / "feature.py"
+        path.write_text("# feature marker\n", encoding="utf-8")
+        before = len(self.panel.workspace.history.entries)
+        self._start_permission_turn("read_only")
+        success, result = self._call_tool("loom_files", {"requests_json": json.dumps([
+            {"op": "find", "path": str(directory.parent), "pattern": "*.py"},
+            {"op": "search_tree", "path": str(directory.parent), "query": "FEATURE MARKER"}])})
+        self.assertTrue(success, result)
+        self.assertEqual(result["results"][0]["matches"], [{"path": str(path)}])
+        self.assertEqual(result["results"][1]["matches"], [
+            {"path": str(path), "line": 1, "text": "# feature marker"}])
+        self.assertEqual(len(self.panel.workspace.history.entries), before)
+        self.assertEqual(path.read_text(encoding="utf-8"), "# feature marker\n")
+
     def test_tool_dev_writes_imports_and_tests_a_persistent_feature(self):
         import json
         path = Path(self.temp.name) / "ko_feature.py"

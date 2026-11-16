@@ -2,6 +2,7 @@
 
 These checks guard tool operations, not arbitrary Python. Modes are not a sandbox.
 """
+import fnmatch
 import hashlib
 import json
 import os
@@ -12,6 +13,10 @@ import uuid
 MAX_BYTES = 1_000_000
 MAX_RESULT = 32_000
 MUTATIONS = {"write", "edit"}
+MAX_TREE_ENTRIES = 10_000
+MAX_TREE_BYTES = 16_000_000
+MAX_TREE_DEPTH = 32
+MAX_TREE_OUTPUT = 20_000
 
 
 def requests_from_json(requests_json):
@@ -23,6 +28,8 @@ def requests_from_json(requests_json):
     allowed = {
         "read": {"offset", "limit"}, "list": {"offset", "limit"},
         "search": {"query", "offset", "limit"},
+        "find": {"pattern", "offset", "limit"},
+        "search_tree": {"query", "pattern", "offset", "limit"},
         "write": {"content", "expected_sha256"}, "edit": {"edits", "expected_sha256"},
     }
     for request in requests:
@@ -63,7 +70,8 @@ def _path(raw, write=False):
 def _read(path):
     if path.stat().st_size > MAX_BYTES:
         raise ValueError("Text file exceeds 1 MB; use a smaller source file")
-    data = path.read_bytes()
+    with path.open("rb") as stream:
+        data = stream.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES or b"\0" in data:
         raise ValueError("Not a supported text file (binary or over 1 MB)")
     return data, data.decode("utf-8")
@@ -103,8 +111,125 @@ def _replace(path, content, expected):
             "bytes": len(data), "checkpoint_reversible": False}
 
 
+def _tree(request, progress):
+    """Deterministic, bounded DFS. Pagination rescans; it is not a snapshot cursor."""
+    raw = Path(request["path"])
+    if raw.is_symlink() or raw.is_junction():
+        raise ValueError("Recursive roots must not be symlinks or junctions")
+    root = _path(raw)
+    if not root.is_dir():
+        raise ValueError("Recursive operations require a directory")
+    pattern = request.get("pattern", "*")
+    if not isinstance(pattern, str) or not pattern or len(pattern) > 256 or any(c in pattern for c in "/\\"):
+        raise ValueError("pattern must be a filename glob (no path separators), at most 256 characters")
+    query = request.get("query")
+    searching = request["op"] == "search_tree"
+    if searching and (not isinstance(query, str) or not query or len(query) > 1000):
+        raise ValueError("search_tree requires a nonempty literal query of at most 1000 characters")
+    needle = query.casefold() if searching else None
+    offset, limit = request.get("offset", 0), min(request.get("limit", 100), 200)
+    matches, reasons, skipped = [], set(), {}
+    visited = scanned_bytes = seen = output_size = 0
+    more = False
+
+    def skip(reason):
+        skipped[reason] = skipped.get(reason, 0) + 1
+
+    def emit(match):
+        nonlocal seen, more, output_size
+        seen += 1
+        if seen <= offset:
+            return True
+        size = len(json.dumps(match, ensure_ascii=False))
+        if len(matches) >= limit or output_size + size > MAX_TREE_OUTPUT:
+            more = True
+            if output_size + size > MAX_TREE_OUTPUT:
+                reasons.add("output_limit")
+            return False
+        matches.append(match)
+        output_size += size
+        return True
+
+    def walk(directory, depth):
+        nonlocal visited, scanned_bytes
+        entries = []
+        try:
+            with os.scandir(directory) as iterator:
+                for entry in iterator:
+                    progress()
+                    if visited >= MAX_TREE_ENTRIES:
+                        reasons.add("entry_limit")
+                        break
+                    visited += 1
+                    entries.append(entry)
+        except OSError:
+            skip("inaccessible")
+            return True
+        entries.sort(key=lambda item: (item.name.casefold(), item.name))
+        for entry in entries:
+            progress()
+            try:
+                # Check reparse points before resolution or opening; no links/devices.
+                info = entry.stat(follow_symlinks=False)
+                if entry.is_symlink() or getattr(info, "st_file_attributes", 0) & 0x400:
+                    skip("links")
+                    continue
+                try:
+                    path = _path(entry.path)
+                except PermissionError:
+                    skip("protected")
+                    continue
+                if stat.S_ISDIR(info.st_mode):
+                    if depth >= MAX_TREE_DEPTH:
+                        skip("depth_limit")
+                        reasons.add("depth_limit")
+                    elif not walk(path, depth + 1):
+                        return False
+                    continue
+                if not stat.S_ISREG(info.st_mode):
+                    skip("nonregular")
+                    continue
+                if not fnmatch.fnmatchcase(entry.name.casefold(), pattern.casefold()):
+                    continue
+                if not searching:
+                    if not emit({"path": str(path)}):
+                        return False
+                    continue
+                if info.st_size > MAX_BYTES:
+                    skip("unsupported_text")
+                    continue
+                # Reserve the full read allowance, even if the file grows after stat.
+                if scanned_bytes + MAX_BYTES + 1 > MAX_TREE_BYTES:
+                    reasons.add("byte_limit")
+                    return False
+                scanned_bytes += MAX_BYTES + 1
+                try:
+                    data, content = _read(path)
+                except (ValueError, UnicodeError):
+                    skip("unsupported_text")
+                    continue
+                scanned_bytes -= MAX_BYTES + 1 - len(data)
+                for number, line in enumerate(content.splitlines(), 1):
+                    progress()
+                    if needle in line.casefold():
+                        if not emit({"path": str(path), "line": number, "text": line[:1000]}):
+                            return False
+            except OSError:
+                skip("inaccessible")
+        return True
+
+    walk(root, 0)
+    return {"path": str(root), "matches": matches, "partial": bool(reasons or skipped or more),
+            "stop_reasons": sorted(reasons), "skipped": skipped, "entries_visited": visited,
+            "bytes_scanned": scanned_bytes,
+            "next_offset": offset + len(matches) if more and matches else None,
+            "rescan_required": bool(reasons), "pagination": "rescan; directory changes may shift results"}
+
+
 def _operation(request, progress):
     op = request["op"]
+    if op in {"find", "search_tree"}:
+        return _tree(request, progress)
     path = _path(request["path"], write=op in MUTATIONS)
     offset, limit = request.get("offset", 0), min(request.get("limit", 100), 200)
     if op == "read":
@@ -185,6 +310,12 @@ def file_operations(requests, progress):
                 if key in result:
                     result[key] = result[key][:max(0, MAX_RESULT - size - 1500)] if key == "text" else []
             result["truncated"] = True
+            if request["op"] in {"find", "search_tree"}:
+                # A batch-level trim must not advance past undisplayed matches.
+                result["next_offset"] = request.get("offset", 0)
+                result["partial"] = True
+                result["rescan_required"] = True
+                result["stop_reasons"] = sorted(set(result["stop_reasons"]) | {"batch_output_limit"})
             results.append(result)
             return {"status": "completed", "results": results, "remaining_requests_skipped": len(requests) - len(results)}
         results.append(result)

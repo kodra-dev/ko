@@ -32,6 +32,120 @@ class FileTests(unittest.TestCase):
         self.assertEqual(self.run_ops({"op": "list", "path": str(self.root)})[
             "results"][0]["entries"][0]["name"], "feature.py")
 
+    def test_recursive_find_search_and_paging(self):
+        nested = self.root / "nested"
+        nested.mkdir()
+        (nested / "Other.PY").write_text("target\nTARGET again\n", encoding="utf-8")
+        request = {"op": "find", "path": str(self.root), "pattern": "*.py", "limit": 1}
+        first = self.run_ops(request)["results"][0]
+        self.assertEqual(first["matches"], [{"path": str(self.path)}])
+        self.assertEqual(first["next_offset"], 1)
+        second = self.run_ops(dict(request, offset=1))["results"][0]
+        self.assertEqual(second["matches"][0]["path"], str(nested / "Other.PY"))
+        self.assertIsNone(second["next_offset"])
+        result = self.run_ops({"op": "search_tree", "path": str(self.root),
+                               "query": "TARGET", "pattern": "*.py"})["results"][0]
+        self.assertEqual([m["line"] for m in result["matches"]], [1, 2])
+        self.assertFalse(result["partial"])
+        self.assertEqual(result["matches"][1]["text"], "TARGET again")
+
+    def test_recursive_protected_and_unsupported_files(self):
+        for name in (".git", ".ssh", ".codex"):
+            directory = self.root / name
+            directory.mkdir()
+            (directory / "secret.py").write_text("secret")
+        (self.root / "auth.json").write_text("secret")
+        (self.root / "binary").write_bytes(b"secret\0")
+        (self.root / "nonutf8").write_bytes(b"\xff")
+        (self.root / "huge").write_bytes(b"x" * 1_000_001)
+        result = self.run_ops({"op": "search_tree", "path": str(self.root), "query": "secret"})["results"][0]
+        self.assertEqual(result["matches"], [])
+        self.assertEqual(result["skipped"]["protected"], 4)
+        self.assertEqual(result["skipped"]["unsupported_text"], 3)
+        self.assertTrue(result["partial"])
+
+    def test_recursive_limits_and_validation(self):
+        request = {"op": "find", "path": str(self.root)}
+        with patch("loom.files.MAX_TREE_ENTRIES", 0):
+            result = self.run_ops(request)["results"][0]
+            self.assertIn("entry_limit", result["stop_reasons"])
+            self.assertTrue(result["rescan_required"])
+        nested = self.root / "nested"
+        nested.mkdir()
+        (nested / "hidden.py").write_text("target")
+        with patch("loom.files.MAX_TREE_DEPTH", 0):
+            self.assertIn("depth_limit", self.run_ops(request)["results"][0]["stop_reasons"])
+        with patch("loom.files.MAX_TREE_BYTES", 1):
+            result = self.run_ops(dict(request, op="search_tree", query="target"))["results"][0]
+            self.assertIn("byte_limit", result["stop_reasons"])
+        with patch("loom.files.MAX_TREE_OUTPUT", 1):
+            result = self.run_ops(request)["results"][0]
+            self.assertIn("output_limit", result["stop_reasons"])
+        for bad in (dict(request, pattern="../*"), dict(request, pattern=""),
+                    dict(request, op="search_tree", query=""), dict(request, path=str(self.path))):
+            self.assertEqual(self.run_ops(bad)["status"], "failed")
+
+    def test_recursive_output_paging_and_batch_trim_do_not_lose_matches(self):
+        self.path.write_text(("target " + "x" * 1500 + "\n") * 50)
+        request = {"op": "search_tree", "path": str(self.root), "query": "target"}
+        result = self.run_ops(request)["results"][0]
+        self.assertIn("output_limit", result["stop_reasons"])
+        self.assertEqual(len(result["matches"][0]["text"]), 1000)
+        self.assertEqual(result["next_offset"], len(result["matches"]))
+        next_page = self.run_ops(dict(request, offset=result["next_offset"]))["results"][0]
+        self.assertEqual(next_page["matches"][0]["line"], len(result["matches"]) + 1)
+        batch = self.run_ops(request, request, request)
+        trimmed = batch["results"][-1]
+        self.assertTrue(trimmed["truncated"])
+        self.assertEqual(trimmed["next_offset"], 0)
+        self.assertEqual(trimmed["matches"], [])
+        self.assertEqual(batch["remaining_requests_skipped"], 1)
+
+    def test_recursive_inaccessible_directory_and_cancellation(self):
+        request = {"op": "find", "path": str(self.root)}
+        with patch("loom.files.os.scandir", side_effect=PermissionError("denied")):
+            result = self.run_ops(request)["results"][0]
+            self.assertTrue(result["partial"])
+            self.assertEqual(result["skipped"], {"inaccessible": 1})
+        calls = []
+        def progress():
+            calls.append(True)
+            if len(calls) == 3:
+                raise RuntimeError("cancelled traversal")
+        result = file_operations([request, {"op": "read", "path": str(self.path)}], progress)
+        self.assertEqual(result["status"], "failed")
+        self.assertEqual(len(result["results"]), 1)
+        self.assertIn("cancelled", result["results"][0]["error"])
+
+    def test_recursive_junction_is_not_followed(self):
+        import os
+        if os.name != "nt":
+            self.skipTest("Windows junction test")
+        import subprocess
+        with tempfile.TemporaryDirectory(prefix="loom-outside-") as outside:
+            Path(outside, "secret.py").write_text("secret")
+            link = self.root / "linked"
+            subprocess.run(["cmd", "/c", "mklink", "/J", str(link), outside],
+                           check=True, capture_output=True)
+            try:
+                result = self.run_ops({"op": "find", "path": str(self.root)})["results"][0]
+                self.assertEqual(result["matches"], [{"path": str(self.path)}])
+                self.assertEqual(result["skipped"]["links"], 1)
+                self.assertEqual(self.run_ops({"op": "find", "path": str(link)})["status"], "failed")
+            finally:
+                link.rmdir()
+
+    def test_recursive_tools_are_available_read_only_and_legacy(self):
+        tools = object.__new__(SceneTools)
+        tools.permission_mode = "read_only"
+        tools.tidy_scope = None
+        tools.progress = lambda: None
+        payload = json.dumps([{"op": "find", "path": str(self.root)}])
+        self.assertEqual(tools.dispatch("loom_files", {"requests_json": payload})["status"], "completed")
+        result = tools.dispatch("ko_scene", {"operation": "context", "path": "/",
+                                            "query": "@files:" + json.dumps({"requests_json": payload})})
+        self.assertEqual(result["status"], "completed")
+
     def test_exact_edit_preserves_crlf_and_rejects_stale_hash(self):
         sha = hashlib.sha256(self.path.read_bytes()).hexdigest()
         request = {"op": "edit", "path": str(self.path), "expected_sha256": sha,

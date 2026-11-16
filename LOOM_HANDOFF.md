@@ -7,7 +7,7 @@ Do not rebuild the completed Checkpoints/UI work. Read `AGENTS.md`, this file, a
 `LOOM_README.md`, then agree on the next small, manually verifiable milestone.
 
 Completed, user-verified behavior is documented in `LOOM_README.md`.
-Conversation-only branching is implemented below and awaits manual verification.
+Conversation-only branching is implemented and the user has now manually verified it.
 Do not implement this whole roadmap in one pass.
 
 Repo: `H:/Assets/Assets_3D/HoudiniScripts/ko`.
@@ -16,7 +16,7 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 
 ## Remaining tasks, in priority order
 
-### 1. Earlier-message branching / rewind — first increment implemented, pending manual verification
+### 1. Earlier-message branching / rewind — conversation branching manually verified
 
 - User rejected verbose menu labels and disabled old-message branching. Menu is now **Branch
   here**, **Delete from here**, and **Edit prompt** (user messages). Details live in tooltips.
@@ -35,14 +35,17 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
   all its actions and later messages, without accidentally cutting at a display index.
 - All actions reject busy/stale menus and never restore/change scene, checkpoints or files.
   Subsequent turns warn that historical observations can be stale; request live inspection.
-- Remaining: manual verification of live replay/bounded forks/history deletion and separate
-  explicit scene restoration with a validated scene/checkpoint association.
+- User confirmed manual verification of conversation branching. Separate explicit scene restoration
+  still requires a validated scene/checkpoint association; it is not part of conversation branching.
 - Checkpoints are editable versions: an ID alone does not guarantee its contents still
   match the scene when an earlier message was written. Design stale-context checks;
   do not advertise historical scene rewind without solving that association.
 - Never silently roll back ko source files as part of a conversation rewind.
 
 ### 2. Context management and observability
+
+User deferred detailed usage/cache reporting: estimates are sufficient for now. Recursive file
+retrieval below was selected as the next implementation milestone instead.
 
 - Stable/deterministic instruction and tool prefixes; append-only native conversation history.
 - Keep volatile scene/UI state near the latest user input, not in stable instructions.
@@ -56,7 +59,12 @@ All development changes remain **uncommitted**. Do not commit/push unless reques
 - `loom_python` executes requested HOM/UI work on the UI thread in Scene Edit or Tool Dev.
 - `loom_files` provides batched paged reads, immediate listing, literal in-file search, and
   hash-checked exact edits/new files; writes require Tool Dev. No pending-review popup.
-- Remaining: recursive file search/find and richer file navigation; do not rebuild working tools.
+- Recursive `find` (basename glob) and `search_tree` (literal text) are now implemented in
+  `files.py`, with read-only/legacy routing, paged results, bounded traversal/output and cooperative
+  cancellation. Links/junctions, credential/provider/Git paths and special files are skipped;
+  text search skips unsupported files. Limits and exclusions are explicit in result metadata.
+  Pagination rescans rather than retaining a filesystem snapshot; narrow scope on traversal limits.
+  Richer file navigation remains future work. Manual verification of this new increment is pending.
 - Precise writes/edits stay in the requested scope, including ko source when requested.
 - Work in the HIP first; promote reusable work into ko only with user agreement.
 - Scope/self-edit restrictions are working instructions, **not an OS security sandbox**.
@@ -227,7 +235,14 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
   never fall back visibly. `-Visible` requires explicit permission. Test process trees
   are isolated/terminated by the launcher job, not by killing artist processes.
 - Tested Houdini: `C:/Program Files/Side Effects Software/Houdini 22.0.466/bin/`.
-- Latest full offline suite: **233 tests** (96 unit, 49 HOM, 84 offscreen UI, 4 package reload).
+- Recursive discovery validation: **242 offline tests passed** (103 unit, 49 HOM, 86 offscreen UI,
+  4 package reload), plus 75 Fast tests. Covers recursive matches/paging, output/entry/byte/depth
+  limits, exclusions, a real Windows junction, inaccessible directories, cancellation, legacy routing,
+  and mocked read-only UI dispatch without scene checkpoints. Both hidden GUI attempts stopped at
+  the known legacy-root `isVisible()` startup assertion (`gui_startup.py:189`), before feature checks.
+  Logs: `%TEMP%/loom-gui-test-02f76a3bf7ac48949dcfc404e92bc85e` and
+  `%TEMP%/loom-gui-test-36b771cd99a34dc087db68014a79f285`. No visible fallback or paid calls.
+- Previous full offline suite: **233 tests** (96 unit, 49 HOM, 84 offscreen UI, 4 package reload).
   Python permission checks, shared checkpoints, partial failure, trace restoration/SystemExit,
   cooperative Stop, HIP switches, file hashing/exact edits/atomic failure/partial batches,
   frozen grants and legacy routes are covered offline. Python missing-API/partial/syntax recovery
@@ -277,6 +292,6 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
 ## Suggested first prompt in the new context
 
 > Read AGENTS.md, LOOM_HANDOFF.md and LOOM_README.md, and verify current code.
-> Conversation-only branching is implemented; check whether it has passed manual verification.
+> Conversation-only branching has passed user manual verification; recursive file discovery is implemented.
 > Do not implicitly restore scenes or files. Preserve history and independent Checkpoints.
 > Do not run paid provider tests without asking me first.
