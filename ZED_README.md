@@ -153,6 +153,21 @@ Set before launching Houdini:
 - `KO_ZED_WORKSPACE`: base directory for persistent workspace slots (prefer a local filesystem). Default:
   `$HOUDINI_USER_PREF_DIR/zed-editing`.
 
+Optional: hide SideFX Labs' **Edit in External Editor [Labs]** entries (parameter and shelf tool
+menus). Labs is ahead of this package on `HOUDINI_PATH` (see below), and menu files are parsed from the
+back of the path forwards, so this package's own menu files are read before the Labs items exist. The
+removals therefore live in `menu_overrides/`, which must be put first on the menu path. In the package
+JSON that loads this repo:
+
+```json
+{ "var": "HOUDINI_MENU_PATH", "value": "$KO/menu_overrides;&" }
+```
+
+Package order: Houdini scans `$HOUDINI_USER_PREF_DIR/packages`, then `$HSITE`, `$HOUDINI_PACKAGE_DIR`,
+and `$HFS/packages` last (which pulls in `sidefx_packages`, i.e. Labs), reading each directory's files
+alphabetically. Every `hpath` is prepended, so the package read last ends up first.
+If Labs is disabled, drop that line, or Houdini reports "Could not find element" at startup.
+
 Existing `EDITOR`, `VISUAL`, Zed user settings, and authentication files are not modified or copied.
 
 Direct Houdini Python UI-thread entry point:

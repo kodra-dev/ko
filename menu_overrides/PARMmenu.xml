@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Removals of other packages' menu items. This directory must be first on
+  HOUDINI_MENU_PATH (see ZED_README.md) so it is parsed after the package that
+  adds the item; the package root is parsed before SideFX Labs.
+-->
+<menuDocument>
+  <menu>
+    <!-- SideFX Labs "Edit in External Editor [Labs]"; Edit in Zed replaces it. -->
+    <removeItem id="open_external_editor"/>
+  </menu>
+</menuDocument>

@@ -388,6 +388,10 @@ class HoudiniAdapterTests(unittest.TestCase):
         tool_menu = ET.parse(ROOT / "ShelfToolMenu.xml").getroot()
         self.assertIn("ko_zed.menu_edit_tool(kwargs)",
                       tool_menu.findtext("menu/scriptItem[@id='ko_edit_shelf_tool_in_zed']/scriptCode"))
+        for name, removed in (("PARMmenu.xml", "open_external_editor"),
+                              ("ShelfToolMenu.xml", "expreditor_edit_shelf_tool")):
+            overrides = ET.parse(ROOT / "menu_overrides" / name).getroot()
+            self.assertIsNotNone(overrides.find(f"menu/removeItem[@id='{removed}']"))
         shelf = ET.parse(ROOT / "toolbar/ko_dev.shelf").getroot()
         self.assertIsNone(menu.find("menu/scriptItem[@id='ko_zed_sessions']"))
         for name in ("ko_edit_in_zed", "ko_zed_sessions", "ko_zed_shortcuts"):

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- See PARMmenu.xml in this directory for why removals live here. -->
+<menuDocument>
+  <menu>
+    <!-- SideFX Labs "Edit in External Editor [Labs]"; Edit in Zed replaces it. -->
+    <removeItem id="expreditor_edit_shelf_tool"/>
+  </menu>
+</menuDocument>
