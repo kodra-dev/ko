@@ -13,33 +13,13 @@
     <memberTool name="cycle_update_mode"/>
     <memberTool name="reset_current_sim"/>
     <memberTool name="ko_stowbar"/>
-    <memberTool name="ko_edit_in_zed"/>
-    <memberTool name="ko_zed_sessions"/>
-    <memberTool name="ko_zed_shortcuts"/>
+    <memberTool name="ko_zed_sync"/>
   </toolshelf>
 
-  <tool name="ko_edit_in_zed" label="Edit in Zed" icon="DATATYPES_code">
-    <helpText><![CDATA[Edit the selected node's code in a dedicated Zed window.
-Save in Zed to update Houdini without closing the tab. No blocking external-editor preference required.]]></helpText>
+  <tool name="ko_zed_sync" label="Sync Houdini → Zed" icon="ko_zed_sync">
+    <helpText><![CDATA[Refresh all attached Zed editing files from Houdini. Changed saved files are backed up first. Unsaved Zed buffers must be resolved in Zed. Manage individual sessions under Ko → Zed.]]></helpText>
     <script scriptType="python"><![CDATA[import ko_zed
-ko_zed.shelf_edit()]]></script>
-  </tool>
-
-  <tool name="ko_zed_sessions" label="Zed Sessions" icon="DATATYPES_code">
-    <helpText><![CDATA[Resolve conflicts, apply manually, reload from Houdini, toggle automatic application, or detach a Zed editing session.]]></helpText>
-    <script scriptType="python"><![CDATA[import ko_zed
-ko_zed.sessions()]]></script>
-  </tool>
-
-  <tool name="ko_zed_shortcuts" label="Zed Shortcuts" icon="DATATYPES_code">
-    <helpText><![CDATA[Toggle focused-field shortcuts: Ctrl+E opens the internal editor, Alt+E opens Zed.
-Enabled automatically at UI startup. Works through Houdini's native editor target resolution; no parameter selection guessing. Runtime bindings only.]]></helpText>
-    <script scriptType="python"><![CDATA[import hou
-import ko_zed_shortcuts
-try:
-    ko_zed_shortcuts.toggle()
-except Exception as error:
-    hou.ui.displayMessage(str(error), severity=hou.severityType.Error)]]></script>
+ko_zed.sync_to_zed()]]></script>
   </tool>
 
   <tool name="reload_ko" label="Reload Ko" icon="hicon:/SVGIcons.index?BUTTONS_reload.svg">

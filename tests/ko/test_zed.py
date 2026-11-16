@@ -258,6 +258,71 @@ class HoudiniAdapterTests(unittest.TestCase):
             bridge.scene_event("load")
             self.assertEqual(bridge.bindings, {})
 
+    def test_sync_exports_literal_code_and_backs_up_saved_edits(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "code.vfl"
+            path.write_text("Zed revision", encoding="utf-8")
+            text = 's@path = "$HIP/é"; // `literal`\n'
+            parm = FakeParm(text=text)
+            binding = zed.Binding(parm, path, "initial", auto=False,
+                                  paused="conflict", pending="Zed revision")
+            zed.Bridge.reload_from_houdini(binding)
+            self.assertEqual(path.read_text(encoding="utf-8"), text)
+            backups = list(path.parent.glob("*.backup-*"))
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups[0].read_text(), "Zed revision")
+            self.assertEqual((binding.baseline, binding.pending, binding.paused), (text, None, ""))
+            self.assertFalse(binding.auto)
+            self.assertFalse(parm.writes)
+            zed.Bridge.reload_from_houdini(binding)
+            self.assertEqual(len(list(path.parent.glob("*.backup-*"))), 1)
+            self.assertFalse(list(path.parent.glob("*.sync-*")))
+
+    def test_sync_recovers_missing_file_and_empty_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "code.vfl"
+            binding = zed.Binding(FakeParm(text=""), path, "initial")
+            zed.Bridge.reload_from_houdini(binding)
+            self.assertEqual(path.read_bytes(), b"")
+            self.assertEqual(binding.baseline, "")
+
+    def test_failed_export_preserves_file_and_baseline(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "code.vfl"
+            path.write_text("saved", encoding="utf-8")
+            binding = zed.Binding(FakeParm(), path, "baseline", paused="conflict")
+            with patch.object(Path, "replace", side_effect=PermissionError("busy")):
+                with self.assertRaises(PermissionError):
+                    zed.Bridge.reload_from_houdini(binding)
+            self.assertEqual(path.read_text(), "saved")
+            self.assertEqual(binding.baseline, "baseline")
+            self.assertEqual(binding.paused, "conflict")
+            self.assertFalse(list(path.parent.glob("*.sync-*")))
+            with patch.object(zed, "MAX_BYTES", 2):
+                with self.assertRaisesRegex(ValueError, "limit"):
+                    zed.Bridge.reload_from_houdini(binding)
+            binding.parm.locked = True
+            with self.assertRaisesRegex(ValueError, "locked"):
+                zed.Bridge.reload_from_houdini(binding)
+
+    def test_sync_ui_cancel_empty_and_partial_failure(self):
+        self.hou.ui.displayMessage = Mock(return_value=1)
+        self.hou.severityType = SimpleNamespace(Error="error")
+        with patch.object(zed, "_bridge", None), patch.object(zed, "bridge") as create:
+            zed.sync_to_zed()
+            create.assert_not_called()
+        bindings = [zed.Binding(FakeParm(), Path(name), "initial") for name in ("one", "two")]
+        with patch.object(zed, "_bridge", SimpleNamespace(bindings=dict(enumerate(bindings)))), \
+             patch.object(zed.Bridge, "reload_from_houdini") as reload:
+            zed.sync_to_zed()
+            reload.assert_not_called()
+            self.hou.ui.displayMessage.return_value = 0
+            reload.side_effect = [PermissionError("busy"), None]
+            zed.sync_to_zed()
+            self.assertEqual(reload.call_count, 2)
+            self.assertIn("sync failed", bindings[0].paused)
+            self.assertIn("1 editing file", self.hou.ui.setStatusMessage.call_args.args[0])
+
     def test_language_extensions(self):
         for node_type, name, tags, expected in [
             ("attribwrangle", "snippet", {}, ".vfl"),
@@ -284,9 +349,19 @@ class HoudiniAdapterTests(unittest.TestCase):
         menu = ET.parse(ROOT / "PARMmenu.xml").getroot()
         self.assertIsNotNone(menu.find("menu/scriptItem[@id='ko_edit_in_zed']"))
         shelf = ET.parse(ROOT / "toolbar/ko_dev.shelf").getroot()
+        self.assertIsNone(menu.find("menu/scriptItem[@id='ko_zed_sessions']"))
         for name in ("ko_edit_in_zed", "ko_zed_sessions", "ko_zed_shortcuts"):
-            self.assertIsNotNone(shelf.find(f"toolshelf/memberTool[@name='{name}']"))
-            self.assertIsNotNone(shelf.find(f"tool[@name='{name}']/script"))
+            self.assertIsNone(shelf.find(f"toolshelf/memberTool[@name='{name}']"))
+            self.assertIsNone(shelf.find(f"tool[@name='{name}']"))
+        self.assertIsNotNone(shelf.find("toolshelf/memberTool[@name='ko_zed_sync']"))
+        tool = shelf.find("tool[@name='ko_zed_sync']")
+        self.assertIn("ko_zed.sync_to_zed()", tool.findtext("script"))
+        ET.parse(ROOT / "config/Icons" / (tool.get("icon") + ".svg"))
+        main = ET.parse(ROOT / "MainMenuCommon.xml").getroot()
+        submenu = main.find("menuBar/subMenu[@id='ko_menu']/subMenu[@id='ko_zed_menu']")
+        self.assertEqual(submenu.findtext("label"), "Zed")
+        for name in ("sync", "sessions", "shortcuts"):
+            self.assertIsNotNone(submenu.find(f"scriptItem[@id='h.ko_zed_{name}']/scriptCode"))
 
 
 if __name__ == "__main__":

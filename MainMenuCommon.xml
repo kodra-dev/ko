@@ -11,6 +11,34 @@ import ko_parameters
 ko_parameters.toggle_parameters()
 ]]></scriptCode>
       </scriptItem>
+      <subMenu id="ko_zed_menu">
+        <label>Zed</label>
+        <scriptItem id="h.ko_zed_sync">
+          <label>Sync Houdini → Zed</label>
+          <scriptCode><![CDATA[
+import ko_zed
+ko_zed.sync_to_zed()
+]]></scriptCode>
+        </scriptItem>
+        <scriptItem id="h.ko_zed_sessions">
+          <label>Zed Sessions…</label>
+          <scriptCode><![CDATA[
+import ko_zed
+ko_zed.sessions()
+]]></scriptCode>
+        </scriptItem>
+        <scriptItem id="h.ko_zed_shortcuts">
+          <label>Toggle Zed Shortcuts</label>
+          <scriptCode><![CDATA[
+import hou
+import ko_zed_shortcuts
+try:
+    ko_zed_shortcuts.toggle()
+except Exception as error:
+    hou.ui.displayMessage(str(error), severity=hou.severityType.Error)
+]]></scriptCode>
+        </scriptItem>
+      </subMenu>
     </subMenu>
     <subMenu id="loom_menu">
       <label>Loom</label>

@@ -9,10 +9,5 @@
       <scriptCode><![CDATA[import ko_zed
 ko_zed.menu_edit(kwargs)]]></scriptCode>
     </scriptItem>
-    <scriptItem id="ko_zed_sessions">
-      <label>Zed Sessions…</label>
-      <scriptCode><![CDATA[import ko_zed
-ko_zed.sessions()]]></scriptCode>
-    </scriptItem>
   </menu>
 </menuDocument>

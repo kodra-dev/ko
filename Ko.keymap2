@@ -18431,6 +18431,21 @@
 					]
 				},
 				{
+					"action":"h.ko_zed_sessions",
+					"keys":[
+					]
+				},
+				{
+					"action":"h.ko_zed_shortcuts",
+					"keys":[
+					]
+				},
+				{
+					"action":"h.ko_zed_sync",
+					"keys":[
+					]
+				},
+				{
 					"action":"h.labs_check_node_versions",
 					"keys":[
 					]

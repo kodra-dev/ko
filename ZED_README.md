@@ -5,12 +5,17 @@ Windows / Houdini 22. No provider, Zed extension, or blocking external-editor pr
 ## Use
 
 1. Restart Houdini after installing/updating this package (it must be on `HOUDINI_PATH`).
-2. On **KoDev**, click **Edit in Zed** with a code node selected. If there are multiple code fields, choose one.
-   Alternatively, right-click a string/code **parameter label** → **Edit in Zed**.
+2. Right-click a string/code **parameter label** → **Edit in Zed**, or focus the field and press **Alt+E**.
 3. Save in Zed. After roughly 350–700 ms of idle UI time, the saved text is copied back into that parameter.
    Houdini remains usable; do not close the Zed tab to apply changes.
-4. **Zed Sessions** on KoDev or the parameter menu lets you apply manually, reload the saved file from
-   Houdini, toggle auto-apply for a binding, or detach it. Detaching retains the file and editor tab.
+4. **Ko → Zed → Zed Sessions…** lets you apply manually, reload one saved file from Houdini,
+   toggle auto-apply for a binding, or detach it. Detaching retains the file and editor tab.
+5. **Sync Houdini → Zed** on **KoDev** or under **Ko → Zed** refreshes **all attached editing files**
+   from their Houdini parameters after confirmation. It does not use node selection or attach new sessions.
+   Changed saved files get adjacent `.backup-*` recovery copies before atomic replacement; successful
+   exports clear conflict pauses and preserve each session's auto/manual setting. Failed exports stay
+   paused and are reported without stopping the remaining exports. Unsaved Zed buffers are not replaced:
+   resolve any reload/conflict prompt in Zed yourself.
 
 A first request claims a persistent workspace slot, normally `Houdini-Zed-01`. Further requests open
 tabs in that workspace, even if an unrelated Zed window has focus. Reopening the same parameter reuses
@@ -72,7 +77,7 @@ ko_zed_shortcuts.enable()
 
 While editing a parameter, **Ctrl+E → internal editor**, **Alt+E → Zed**, for both single-line string
 fields and multiline code fields. No unfocusing or hovering the label is required. Disable via the
-same shelf toggle, `ko_zed_shortcuts.disable()`, or `ko_zed.shutdown()`.
+**Ko → Zed → Toggle Zed Shortcuts**, `ko_zed_shortcuts.disable()`, or `ko_zed.shutdown()`.
 
 This does **not** override a supported Open Editor callback: none was exposed in the native widgets
 examined on Houdini 22.0.466 (no QAction; the parameter UI is drawn in native OpenGL widgets).

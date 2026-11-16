@@ -324,6 +324,28 @@ class Bridge:
         with hou.undos.group("Apply code from Zed"):
             binding.parm.set(text, follow_parm_reference=False)
 
+    @staticmethod
+    def reload_from_houdini(binding):
+        """Explicit Houdini-wins export; preserve the previous saved file for recovery."""
+        Bridge.validate(binding.parm)
+        text = binding.parm.unexpandedString()
+        encoded = text.encode("utf-8")
+        if len(encoded) > MAX_BYTES:
+            raise ValueError("Code exceeds the 4 MiB safety limit")
+        path = binding.path
+        if not path.exists() or path.read_bytes() != encoded:
+            if path.exists():
+                backup = path.with_name(path.name + ".backup-" + uuid.uuid4().hex[:8])
+                shutil.copy2(path, backup)
+            # Atomic replacement avoids exposing a partial export to Zed's watcher.
+            temporary = path.with_name(path.name + ".sync-" + uuid.uuid4().hex)
+            try:
+                temporary.write_bytes(encoded)
+                temporary.replace(path)
+            finally:
+                temporary.unlink(missing_ok=True)
+        binding.baseline, binding.pending, binding.paused = text, None, ""
+
     def tick(self):
         import hou
         while not self.launcher.errors.empty():
@@ -360,13 +382,7 @@ class Bridge:
             self.apply(b, text)
             b.baseline, b.pending, b.paused = text, None, ""
         elif action == 1:
-            self.validate(b.parm)
-            text = b.parm.unexpandedString()
-            # Preserve a conflicting saved revision before explicitly reloading.
-            backup = b.path.with_name(b.path.name + ".backup-" + uuid.uuid4().hex[:8])
-            shutil.copy2(b.path, backup)
-            b.path.write_text(text, encoding="utf-8")
-            b.baseline, b.pending, b.paused = text, None, ""
+            self.reload_from_houdini(b)
         elif action == 2:
             b.auto = not b.auto
         elif action == 3:
@@ -434,6 +450,36 @@ def shelf_edit():
             edit_parameter(candidates[0])
     except Exception as error:
         hou.ui.displayMessage(str(error), severity=hou.severityType.Error)
+
+
+def sync_to_zed():
+    """UI action: explicitly refresh all attached files, never guess from selection."""
+    import hou
+    if _bridge is None or not _bridge.bindings:
+        hou.ui.displayMessage("No Zed editing sessions are attached. Use Edit in Zed or Alt+E first.")
+        return
+    bindings = list(_bridge.bindings.values())
+    choice = hou.ui.displayMessage(
+        f"Sync {len(bindings)} attached editing file(s) from Houdini to Zed?\n\n"
+        "Houdini wins: changed saved files are backed up alongside the originals.\n"
+        "Unsaved Zed buffers are not replaced; resolve Zed's reload/conflict prompt yourself.",
+        buttons=("Sync", "Cancel"), default_choice=1, close_choice=1)
+    if choice != 0:
+        return
+    synced = 0
+    errors = []
+    for binding in bindings:
+        try:
+            Bridge.reload_from_houdini(binding)
+            synced += 1
+        except Exception as error:
+            # Keep failed sessions paused so stale file contents cannot auto-apply.
+            binding.paused = "Houdini → Zed sync failed: " + str(error)
+            errors.append(f"{binding.path.name}: {error}")
+    hou.ui.setStatusMessage(f"Zed: synced {synced} editing file(s) from Houdini.")
+    if errors:
+        hou.ui.displayMessage("Some Zed files could not be synced:\n" + "\n".join(errors),
+                              severity=hou.severityType.Error)
 
 
 def sessions():
