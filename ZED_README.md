@@ -6,6 +6,8 @@ Windows / Houdini 22. No provider, Zed extension, or blocking external-editor pr
 
 1. Restart Houdini after installing/updating this package (it must be on `HOUDINI_PATH`).
 2. Right-click a string/code **parameter label** → **Edit in Zed**, or focus the field and press **Alt+E**.
+   Right-click a **shelf tool** → **Edit in Zed** edits that tool's script the same way; saving
+   writes it back to the tool (and its `.shelf` file). Tool sessions survive loading another HIP.
 3. Save in Zed. After roughly 350–700 ms of idle UI time, the saved text is copied back into that parameter.
    Houdini remains usable; do not close the Zed tab to apply changes.
 4. **Ko → Zed → Zed Sessions…** lets you apply manually, reload one saved file from Houdini,

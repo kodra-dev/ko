@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<menuDocument>
+  <menu>
+    <scriptItem id="ko_edit_shelf_tool_in_zed">
+      <label>Edit in Zed</label>
+      <insertAtIndex>1</insertAtIndex>
+      <scriptCode><![CDATA[import ko_zed
+ko_zed.menu_edit_tool(kwargs)]]></scriptCode>
+    </scriptItem>
+  </menu>
+</menuDocument>

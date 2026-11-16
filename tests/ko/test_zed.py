@@ -271,6 +271,30 @@ class HoudiniAdapterTests(unittest.TestCase):
             bridge.scene_event("load")
             self.assertEqual(bridge.bindings, {})
 
+    def test_shelf_tool_script_round_trips_and_survives_scene_load(self):
+        tool = Mock(script=Mock(return_value="print(1)"), language=Mock(return_value="python"))
+        tools = {"my_tool": tool}
+        self.hou.shelves = SimpleNamespace(tool=tools.get)
+        self.hou.scriptLanguage = SimpleNamespace(Python="python")
+        with tempfile.TemporaryDirectory() as directory:
+            bridge = zed.Bridge.__new__(zed.Bridge)
+            bridge.root = Path(directory)
+            bridge.bindings = {}
+            bridge.launcher = Mock()
+            path = bridge.attach_tool("my_tool")
+            self.assertEqual((path.suffix, path.read_text()), (".py", "print(1)"))
+            self.assertEqual(bridge.attach_tool("my_tool"), path)
+            binding, = bridge.bindings.values()
+            zed.Bridge.apply(binding, "print(2)")
+            tool.setScript.assert_called_once_with("print(2)")
+            bridge.scene_event("load")
+            self.assertEqual(len(bridge.bindings), 1)
+            self.assertTrue(zed.alive(binding.parm))
+            del tools["my_tool"]
+            self.assertFalse(zed.alive(binding.parm))
+            with self.assertRaisesRegex(ValueError, "no longer exists"):
+                bridge.attach_tool("gone")
+
     def test_sync_exports_literal_code_and_backs_up_saved_edits(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "code.vfl"
@@ -361,6 +385,9 @@ class HoudiniAdapterTests(unittest.TestCase):
     def test_menu_and_shelf_xml(self):
         menu = ET.parse(ROOT / "PARMmenu.xml").getroot()
         self.assertIsNotNone(menu.find("menu/scriptItem[@id='ko_edit_in_zed']"))
+        tool_menu = ET.parse(ROOT / "ShelfToolMenu.xml").getroot()
+        self.assertIn("ko_zed.menu_edit_tool(kwargs)",
+                      tool_menu.findtext("menu/scriptItem[@id='ko_edit_shelf_tool_in_zed']/scriptCode"))
         shelf = ET.parse(ROOT / "toolbar/ko_dev.shelf").getroot()
         self.assertIsNone(menu.find("menu/scriptItem[@id='ko_zed_sessions']"))
         for name in ("ko_edit_in_zed", "ko_zed_sessions", "ko_zed_shortcuts"):

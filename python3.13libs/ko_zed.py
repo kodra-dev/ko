@@ -240,6 +240,46 @@ class Binding:
             self.paused = str(error)
 
 
+class ToolTarget:
+    """Parameter-shaped view of a shelf tool's script, so Binding/Bridge can edit it."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def tool(self):
+        import hou
+        tool = hou.shelves.tool(self.name)
+        if tool is None:
+            raise ValueError(f"Shelf tool {self.name} no longer exists.")
+        return tool
+
+    def unexpandedString(self):
+        return self.tool().script()
+
+    def set(self, text, follow_parm_reference=False):
+        self.tool().setScript(text)  # Houdini saves the owning .shelf file.
+
+    def keyframes(self):
+        return ()
+
+    def isLocked(self):
+        return False
+
+    def path(self):
+        return "shelf tool " + self.name
+
+
+def alive(target):
+    import hou
+    if isinstance(target, ToolTarget):
+        return hou.shelves.tool(target.name) is not None
+    try:
+        target.node().sessionId()
+        return True
+    except hou.ObjectWasDeleted:
+        return False
+
+
 def extension_for(parm):
     tags = parm.parmTemplate().tags()
     lang = tags.get("editorlang", "").lower()
@@ -298,24 +338,35 @@ class Bridge:
     def scene_event(self, event):
         import hou
         if event in (hou.hipFileEventType.BeforeLoad, hou.hipFileEventType.BeforeClear):
-            self.bindings.clear()
+            # Shelf tools are not scene data; only parameter bindings go stale.
+            self.bindings = {k: b for k, b in self.bindings.items() if isinstance(b.parm, ToolTarget)}
 
     def attach(self, parm):
         import hou
         if parm.parmTemplate().type() != hou.parmTemplateType.String:
             raise ValueError("Choose a string/code parameter.")
-        self.validate(parm)
-        key = (parm.node().sessionId(), parm.name())
+        return self.attach_target((parm.node().sessionId(), parm.name()), parm,
+                                  parm.node().name() + "_" + parm.name(), extension_for(parm))
+
+    def attach_tool(self, name):
+        import hou
+        target = ToolTarget(name)
+        python = target.tool().language() == hou.scriptLanguage.Python
+        return self.attach_target(("shelf tool", name), target, "tool_" + name, ".py" if python else ".cmd")
+
+    def attach_target(self, key, target, stem, extension):
+        import hou
+        self.validate(target)
         binding = self.bindings.get(key)
         if binding is None:
-            text = parm.unexpandedString()  # Never eval: preserve $variables and backticks.
-            name = re.sub(r"[^A-Za-z0-9_-]", "_", parm.node().name() + "_" + parm.name())[:100]
-            path = self.root / (name + "-" + uuid.uuid4().hex[:8] + extension_for(parm))
+            text = target.unexpandedString()  # Never eval: preserve $variables and backticks.
+            name = re.sub(r"[^A-Za-z0-9_-]", "_", stem)[:100]
+            path = self.root / (name + "-" + uuid.uuid4().hex[:8] + extension)
             path.write_text(text, encoding="utf-8")
-            binding = Binding(parm, path, text)
+            binding = Binding(target, path, text)
             self.bindings[key] = binding
         self.launcher.open(binding.path)
-        hou.ui.setStatusMessage("Zed: opening " + parm.path())
+        hou.ui.setStatusMessage("Zed: opening " + target.path())
         return binding.path
 
     @staticmethod
@@ -359,9 +410,7 @@ class Bridge:
         while not self.launcher.errors.empty():
             hou.ui.setStatusMessage("Zed: " + self.launcher.errors.get_nowait(), severity=hou.severityType.Warning)
         for key, binding in list(self.bindings.items()):
-            try:
-                binding.parm.node().sessionId()
-            except hou.ObjectWasDeleted:
+            if not alive(binding.parm):
                 del self.bindings[key]
                 continue
             previous = binding.paused
@@ -435,6 +484,15 @@ def menu_edit(kwargs):
     try:
         for parm in kwargs.get("parms", []):
             edit_parameter(parm)
+    except Exception as error:
+        hou.ui.displayMessage(str(error), severity=hou.severityType.Error)
+
+
+def menu_edit_tool(kwargs):
+    """Shelf tool right-click menu: edit the tool's script."""
+    import hou
+    try:
+        bridge().attach_tool(kwargs["ownername"])
     except Exception as error:
         hou.ui.displayMessage(str(error), severity=hou.severityType.Error)
 
