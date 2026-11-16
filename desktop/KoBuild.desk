@@ -24,7 +24,7 @@ root {
         }
     }
 
-    panel parmeditor -w 2598 509 738 864 {
+    panel parmeditor -w 2598 582 738 864 {
         pane KoParameters -a 1 -l 10 -H /obj/ -T OBJ -m parmeditor
     }
 }
