@@ -13,7 +13,7 @@ Windows / Houdini 22. No provider, Zed extension, or blocking external-editor pr
 4. **Ko → Zed → Zed Sessions…** lets you apply manually, reload one saved file from Houdini,
    toggle auto-apply for a binding, or detach it. Detaching retains the file and editor tab.
 5. **Sync Houdini → Zed** on **KoDev** or under **Ko → Zed** refreshes **all attached editing files**
-   from their Houdini parameters after confirmation. It does not use node selection or attach new sessions.
+   from their Houdini parameters immediately, without a confirmation prompt. It does not use node selection or attach new sessions.
    Changed saved files get adjacent `.backup-*` recovery copies before atomic replacement; successful
    exports clear conflict pauses and preserve each session's auto/manual setting. Failed exports stay
    paused and are reported without stopping the remaining exports. Unsaved Zed buffers are not replaced:

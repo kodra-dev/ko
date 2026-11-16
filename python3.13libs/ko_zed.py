@@ -525,13 +525,6 @@ def sync_to_zed():
         hou.ui.displayMessage("No Zed editing sessions are attached. Use Edit in Zed or Alt+E first.")
         return
     bindings = list(_bridge.bindings.values())
-    choice = hou.ui.displayMessage(
-        f"Sync {len(bindings)} attached editing file(s) from Houdini to Zed?\n\n"
-        "Houdini wins: changed saved files are backed up alongside the originals.\n"
-        "Unsaved Zed buffers are not replaced; resolve Zed's reload/conflict prompt yourself.",
-        buttons=("Sync", "Cancel"), default_choice=1, close_choice=1)
-    if choice != 0:
-        return
     synced = 0
     errors = []
     for binding in bindings:

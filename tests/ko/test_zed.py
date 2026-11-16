@@ -342,21 +342,21 @@ class HoudiniAdapterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "locked"):
                 zed.Bridge.reload_from_houdini(binding)
 
-    def test_sync_ui_cancel_empty_and_partial_failure(self):
-        self.hou.ui.displayMessage = Mock(return_value=1)
+    def test_sync_ui_empty_and_partial_failure(self):
+        self.hou.ui.displayMessage = Mock()
         self.hou.severityType = SimpleNamespace(Error="error")
         with patch.object(zed, "_bridge", None), patch.object(zed, "bridge") as create:
             zed.sync_to_zed()
             create.assert_not_called()
+        self.hou.ui.displayMessage.reset_mock()
         bindings = [zed.Binding(FakeParm(), Path(name), "initial") for name in ("one", "two")]
         with patch.object(zed, "_bridge", SimpleNamespace(bindings=dict(enumerate(bindings)))), \
              patch.object(zed.Bridge, "reload_from_houdini") as reload:
-            zed.sync_to_zed()
-            reload.assert_not_called()
-            self.hou.ui.displayMessage.return_value = 0
             reload.side_effect = [PermissionError("busy"), None]
             zed.sync_to_zed()
             self.assertEqual(reload.call_count, 2)
+            # Only the error report is shown; there is no confirmation prompt.
+            self.hou.ui.displayMessage.assert_called_once()
             self.assertIn("sync failed", bindings[0].paused)
             self.assertIn("1 editing file", self.hou.ui.setStatusMessage.call_args.args[0])
 
