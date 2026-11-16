@@ -13,7 +13,7 @@
     <memberTool name="toggle_template"/>
   </toolshelf>
 
-  <tool name="first_operator" label="FirstOperator" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/firstoperator.svg">
+  <tool name="first_operator" label="FirstOperator" icon="firstoperator">
     <toolMenuContext name="viewer">
       <contextNetType>OBJ</contextNetType>
       <contextNetType>SOP</contextNetType>
@@ -54,7 +54,7 @@ pane.setCurrentNode(node)
 pane.frameSelection()]]></script>
   </tool>
 
-  <tool name="last_operator" label="LastOperator" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/lastoperator.svg">
+  <tool name="last_operator" label="LastOperator" icon="lastoperator">
     <toolMenuContext name="viewer">
       <contextNetType>OBJ</contextNetType>
       <contextNetType>SOP</contextNetType>
@@ -95,7 +95,7 @@ pane.setCurrentNode(node)
 pane.frameSelection()]]></script>
   </tool>
 
-  <tool name="prev_operator" label="Prevperator" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/prevoperator.svg">
+  <tool name="prev_operator" label="Prevperator" icon="prevoperator">
     <toolMenuContext name="viewer">
       <contextNetType>OBJ</contextNetType>
       <contextNetType>SOP</contextNetType>
@@ -133,7 +133,7 @@ if next_node and next_node.parent() == node.parent():
     pane.frameSelection()]]></script>
   </tool>
 
-  <tool name="next_operator" label="NextOperator" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/nextoperator.svg">
+  <tool name="next_operator" label="NextOperator" icon="nextoperator">
     <toolMenuContext name="viewer">
       <contextNetType>OBJ</contextNetType>
       <contextNetType>SOP</contextNetType>

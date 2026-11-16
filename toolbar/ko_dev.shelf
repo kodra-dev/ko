@@ -122,7 +122,7 @@ for n in reversed(ancestors):
     <script scriptType="hscript"><![CDATA[texcache -c]]></script>
   </tool>
 
-  <tool name="ko_stowbar" label="KoStowbar" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/kostowbar.svg">
+  <tool name="ko_stowbar" label="KoStowbar" icon="kostowbar">
     <helpText><![CDATA["""Toggle stowbar, but keep 'Operation Controls' visible"""]]></helpText>
     <toolMenuContext name="viewer">
       <contextNetType>OBJ</contextNetType>

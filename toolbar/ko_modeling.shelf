@@ -237,7 +237,7 @@ toolutils.homeToSelectionNetworkEditorsFor(merge_sop)
 ]]></script>
   </tool>
 
-  <tool name="isolate" label="Isolate" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/isolate.svg">
+  <tool name="isolate" label="Isolate" icon="isolate">
     <toolMenuContext name="viewer">
       <contextNetType>SOP</contextNetType>
     </toolMenuContext>
@@ -250,7 +250,7 @@ node = soptoolutils.genericTool(kwargs, 'blast')
 node.setName("isolate", unique_name=True)]]></script>
   </tool>
 
-  <tool name="ko_fuse" label="KoFuse" icon="H:/Assets/Assets_2D/Houdini-Icons/SOP/fuse.svg">
+  <tool name="ko_fuse" label="KoFuse" icon="SOP_fuse">
     <helpText><![CDATA[= KoFuse =
 
 """Similar to built-in Fuse but not limited by distance"""]]></helpText>
@@ -264,7 +264,7 @@ node = soptoolutils.genericTool(kwargs, 'fuse::2.0')
 node.parm("usetol3d").set(False)]]></script>
   </tool>
 
-  <tool name="retopo" label="Retopo" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/retopo.svg">
+  <tool name="retopo" label="Retopo" icon="retopo">
     <toolMenuContext name="viewer">
       <contextNetType>SOP</contextNetType>
     </toolMenuContext>
@@ -354,7 +354,7 @@ else:
 ]]></script>
   </tool>
 
-  <tool name="ko_polyfill" label="KoPolyFill" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/kopolyfill.svg">
+  <tool name="ko_polyfill" label="KoPolyFill" icon="kopolyfill">
     <helpText><![CDATA[= KoPolyFill =
 
 """Similar to built-in PolyFill but just simply create a single polygon without completing bourndaries by default"""]]></helpText>
@@ -387,7 +387,7 @@ kwargs['parms'] = {
 soptoolutils.genericTool(kwargs, 'polyfill')]]></script>
   </tool>
 
-  <tool name="ko_polyfill_grid" label="KoPolyFill Grid" icon="H:/Assets/Assets_2D/Houdini-Icons/SOP/polyfill.svg">
+  <tool name="ko_polyfill_grid" label="KoPolyFill Grid" icon="SOP_polyfill">
     <helpText><![CDATA[= KoPolyFill Grid =
 
 """Similar to built-in PolyFill but creates quad grid by default"""]]></helpText>
@@ -399,7 +399,7 @@ kwargs['parms'] = {
 soptoolutils.genericTool(kwargs, 'polyfill')]]></script>
   </tool>
 
-  <tool name="ko_edit" label="KoEdit" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/koedit.svg">
+  <tool name="ko_edit" label="KoEdit" icon="koedit">
     <helpText><![CDATA[= KoEdit =
 
 """Similar to built-in Edit but doesn't recompute the point normals and uses local frame by default"""]]></helpText>
@@ -418,7 +418,7 @@ kwargs['parms'] = {
 node = soptoolutils.genericTool(kwargs, 'edit', isreusable=True)]]></script>
   </tool>
 
-  <tool name="ko_edit_mirror" label="KoEditMirror" icon="H:/Assets/Assets_2D/Houdini-Icons/KO/koeditmirror.svg">
+  <tool name="ko_edit_mirror" label="KoEditMirror" icon="koeditmirror">
     <helpText><![CDATA[= KoEdit =
 
 """Similar to built-in Edit but doesn't recompute the point normals, while using local frame and mirror by default"""]]></helpText>

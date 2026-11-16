@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 12.7 12.7"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3 (0e150ed6c4, 2023-07-21)"
+   sodipodi:docname="prevoperator.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="17.061615"
+     inkscape:cx="21.891245"
+     inkscape:cy="19.019301"
+     inkscape:window-width="2560"
+     inkscape:window-height="1411"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <inkscape:path-effect
+       effect="mirror_symmetry"
+       start_point="6.098985,1.705827"
+       end_point="6.098985,4.9624059"
+       center_point="6.098985,3.3341165"
+       id="path-effect1"
+       is_visible="true"
+       lpeversion="1.2"
+       lpesatellites=""
+       mode="free"
+       discard_orig_path="false"
+       fuse_paths="true"
+       oposite_fuse="false"
+       split_items="false"
+       split_open="false"
+       link_styles="false" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="color:#000000;fill:#ffffff;fill-opacity:1;stroke:#2f2f2f;stroke-width:0.2;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       d="M 6.3194855,1.8964273 3.0570618,5.4290042 C 2.9490591,5.5711516 2.8896474,6.6969653 3.0008917,6.8350135 3.112162,6.9730031 3.2902082,6.9707837 3.3993292,6.8300435 l 2.918203,-2.7584658 2.9821873,2.7584705 c 0.109336,0.1423889 0.288888,0.1446182 0.40039,0.00497 0.110696,-0.138735 0.1744731,-1.2645391 0.06593,-1.4060093 z"
+       id="path1-1"
+       sodipodi:nodetypes="ccccccccc" />
+    <circle
+       style="fill:#ffffff;fill-opacity:1;stroke:#2f2f2f;stroke-width:0.2;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       id="path2"
+       cx="6.3499999"
+       cy="9.6779928"
+       r="1.1708176" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#2f2f2f;stroke-width:0.2;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1"
+       id="rect2"
+       width="1.0268024"
+       height="3.1544497"
+       x="5.8365989"
+       y="5.0040336" />
+  </g>
+</svg>
