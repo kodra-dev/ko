@@ -289,6 +289,39 @@ class CompilerTests(unittest.TestCase):
         self.assertIn('fit', self.ws.builtins)
         self.assertIn('range', self.ws.documentation('fit').lower())
 
+    def test_case_one_builtin_completion_hover_and_definition(self):
+        server = Server()
+        self.addCleanup(server.close)
+        server.workspace = self.ws
+        self.ws.documentation_dir = self.root/'docs'
+        text = 'float value = fit(0.5, 0, 1, 0, 10);\nv@P *= value;'
+        uri = path_uri(self.root/'case1.vfl')
+        server.handle('textDocument/didOpen', {'textDocument': {'uri': uri, 'text': text, 'version': 1}})
+        doc = self.ws.document(uri)
+        position = doc.position(text.index('fit')+2)
+        params = {'textDocument': {'uri': uri}, 'position': position}
+        completion = server.handle('textDocument/completion', params)
+        self.assertIn('fit', [item['label'] for item in completion['items']])
+        hover = server.handle('textDocument/hover', params)
+        self.assertIn('fit(', hover['contents']['value'])
+        self.assertIn('SideFX', hover['contents']['value'])
+        definition = server.handle('textDocument/definition', params)
+        self.assertTrue(uri_path(definition[0]['uri']).is_file())
+        # Anywhere inside the argument list falls back to the enclosing call.
+        name_range = hover['range']
+        for offset in (text.index('(')+1, text.index('0.5'), text.index(', 0,')+1, text.index('10)')+2):
+            inner = server.handle('textDocument/hover', {'textDocument': {'uri': uri}, 'position': doc.position(offset)})
+            self.assertIn('fit(', inner['contents']['value'], offset)
+            self.assertEqual(inner['range'], name_range)
+        # Variables inside arguments keep their own hover; outside calls has none.
+        own = 'float a = 1;\nfloat b = fit(a, 0, 1, 0, 10);\n'
+        server.handle('textDocument/didOpen', {'textDocument': {'uri': uri, 'text': own, 'version': 2}})
+        doc = self.ws.document(uri)
+        inner = server.handle('textDocument/hover', {'textDocument': {'uri': uri}, 'position': doc.position(own.index('(a')+1)})
+        self.assertIn('float a', inner['contents']['value'])
+        outside = server.handle('textDocument/hover', {'textDocument': {'uri': uri}, 'position': doc.position(own.index('1;'))})
+        self.assertIsNone(outside)
+
     def test_local_rename_ignores_comments_strings_attributes(self):
         text = 'float weight=2; f@weight=weight; printf("weight %g", weight); // weight\n'
         result = self.refactor(text, 'weight', 'strength')

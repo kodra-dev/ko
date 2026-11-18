@@ -230,31 +230,21 @@ class Server:
         if method == 'textDocument/completion':
             return self.completion(doc, offset)
         if method == 'textDocument/hover':
-            if not token or token.kind not in ('id', 'attribute'):
+            content = self.hover(doc, token) if token and token.kind in ('id', 'attribute') else None
+            if content:
+                return {'contents': {'kind': 'markdown', 'value': content}, 'range': doc.range(token.start, token.end)}
+            if token and token.kind in ('comment', 'directive'):
                 return None
-            symbol = doc.resolve(token)
-            members = self.member_symbols(doc, token)
-            macros = [(d, t, definition) for d, t, definition in self.workspace.macros(doc) if t.text == token.text]
-            if token.kind == 'attribute':
-                typ = self.workspace.receiver_type(doc, [token]) or 'unknown type'
-                content = '```vex\n' + typ + ' ' + token.text + '\n```\n\nGeometry binding; availability depends on the execution context.'
-            elif members:
-                content = '\n\n'.join('```vex\n' + (s.signature or s.type + ' ' + s.name) + '\n```\n\n' + s.doc for _, s in members)
-            elif symbol and symbol.kind in (8, 13):
-                content = '```vex\n' + symbol.type + ' ' + symbol.name + '\n```'
-            elif macros:
-                content = '\n\n'.join('```vex\n' + definition + '\n```' for _, _, definition in macros)
-                content += '\n\nMacro navigation candidates; conditional branches are not evaluated by the browsing index.'
-            else:
-                signatures = self.workspace.signatures(token.text, doc)
-                if not signatures:
-                    return None
-                content = '\n\n'.join('```vex\n' + sig + '\n```' for sig, _, _ in signatures[:16])
-                descriptions = list(dict.fromkeys(description for _, description, _ in signatures if description))
-                content += '\n\n' + '\n\n'.join(descriptions[:3])
-                if any(uri for _, _, uri in signatures):
-                    content += '\n\nHeader declarations are navigation candidates; conditional branches and overloads are not type-resolved.'
-            return {'contents': {'kind': 'markdown', 'value': content}, 'range': doc.range(token.start, token.end)}
+            # Inside an argument list (literal, separator, whitespace, or a name
+            # with nothing of its own to show): describe the enclosing call.
+            call = self.enclosing_call(doc, offset + 1 if token and token.text == '(' else offset)
+            if not call:
+                return None
+            name = call[0][call[1]-1]
+            content = self.hover(doc, name)
+            if not content:
+                return None
+            return {'contents': {'kind': 'markdown', 'value': content}, 'range': doc.range(name.start, name.end)}
         if method == 'textDocument/definition':
             for t, m, uri in self.workspace.includes(doc):
                 if t.start <= offset <= t.end and uri:
@@ -375,25 +365,53 @@ class Server:
         result = [item for name, item in sorted(items.items()) if name.startswith(prefix)]
         return {'isIncomplete': len(result) > 500, 'items': result[:500]}
 
-    def signature_help(self, doc, offset):
+    def hover(self, doc, token):
+        """Markdown hover for an id/attribute token, or None when nothing is known."""
+        symbol = doc.resolve(token)
+        members = self.member_symbols(doc, token)
+        macros = [(d, t, definition) for d, t, definition in self.workspace.macros(doc) if t.text == token.text]
+        if token.kind == 'attribute':
+            typ = self.workspace.receiver_type(doc, [token]) or 'unknown type'
+            return '```vex\n' + typ + ' ' + token.text + '\n```\n\nGeometry binding; availability depends on the execution context.'
+        if members:
+            return '\n\n'.join('```vex\n' + (s.signature or s.type + ' ' + s.name) + '\n```\n\n' + s.doc for _, s in members)
+        if symbol and symbol.kind in (8, 13):
+            return '```vex\n' + symbol.type + ' ' + symbol.name + '\n```'
+        if macros:
+            return '\n\n'.join('```vex\n' + definition + '\n```' for _, _, definition in macros)
+        signatures = self.workspace.signatures(token.text, doc)
+        if not signatures:
+            return None
+        descriptions = list(dict.fromkeys(description for _, description, _ in signatures if description))
+        return '\n\n'.join(['```vex\n' + sig + '\n```' for sig, _, _ in signatures[:16]] + descriptions[:3])
+
+    def enclosing_call(self, doc, offset):
+        """(code tokens before offset, index of the call's '(', argument index) or None."""
         stack = []
         code = [t for t in doc.code if t.start < offset]
         for i, t in enumerate(code):
             if t.text in ('(', '[', '{'):
-                stack.append([t.text, code[i-1].text if i else '', 0, i])
+                stack.append([t.text, code[i-1] if i else None, 0, i])
             elif t.text in (')', ']', '}'):
                 if stack:
                     stack.pop()
             elif t.text in (',', ';') and stack and stack[-1][0] == '(':
                 stack[-1][2] += 1
-        call = next((s for s in reversed(stack) if s[0] == '(' and s[1] not in KEYWORDS), None)
-        if not call:
+        call = next((s for s in reversed(stack) if s[0] == '(' and s[1] is not None
+                     and s[1].kind == 'id' and s[1].text not in KEYWORDS), None)
+        return (code, call[3], call[2]) if call else None
+
+    def signature_help(self, doc, offset):
+        found = self.enclosing_call(doc, offset)
+        if not found:
             return None
-        if call[3] >= 2 and code[call[3]-2].text in ('.', '->'):
-            typ = self.workspace.receiver_type(doc, code[:call[3]-2])
-            signatures = [(s.signature, s.doc, d.uri) for d, s in self.workspace.members(doc, typ or '') if s.name == call[1] and s.kind == 12]
+        code, paren, argument = found
+        name = code[paren-1].text
+        if paren >= 2 and code[paren-2].text in ('.', '->'):
+            typ = self.workspace.receiver_type(doc, code[:paren-2])
+            signatures = [(s.signature, s.doc, d.uri) for d, s in self.workspace.members(doc, typ or '') if s.name == name and s.kind == 12]
         else:
-            signatures = self.workspace.signatures(call[1], doc)
+            signatures = self.workspace.signatures(name, doc)
         items = []
         for sig, documentation, _ in signatures:
             arguments = sig[sig.find('(')+1:sig.rfind(')')]
@@ -411,8 +429,8 @@ class Server:
                 parameters.append(arguments[start:].strip())
             items.append({'label': sig, 'parameters': [{'label': label} for label in parameters],
                           'documentation': {'kind': 'markdown', 'value': documentation}})
-        active = next((i for i, item in enumerate(items) if len(item['parameters']) > call[2]), 0)
-        return {'signatures': items, 'activeSignature': active, 'activeParameter': call[2]} if items else None
+        active = next((i for i, item in enumerate(items) if len(item['parameters']) > argument), 0)
+        return {'signatures': items, 'activeSignature': active, 'activeParameter': argument} if items else None
 
 
 def read_message(stream):
