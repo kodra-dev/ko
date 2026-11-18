@@ -87,7 +87,8 @@ class GuiSmokeTest:
         self.stage = -1
         self.pane = None
         self.duplicate = None
-        self.next_run = time.monotonic() + 3
+        self.created = time.monotonic()
+        self.next_run = self.created + 3
         self.timer = QtCore.QTimer(hou.qt.mainWindow())
         self.timer.timeout.connect(self.tick)
         self.timer.start(150)
@@ -147,6 +148,22 @@ class GuiSmokeTest:
         try:
             import loom
             log(f"STAGE {self.stage}")
+            if self.stage == -1 and getattr(self, "checkpoint_pane", None) is None:
+                # Houdini can still be (re)building its main window when startup scripts'
+                # timers fire; panes floated then may be hidden. Require a stable window.
+                main = hou.qt.mainWindow()
+                if main is None or not main.isVisible():
+                    self.main_stable_since = None
+                    if time.monotonic() - getattr(self, "created", time.monotonic()) < 60:
+                        self.next_run = time.monotonic() + 0.3
+                        return
+                    raise RuntimeError("Houdini main window never became visible")
+                if getattr(self, "main_stable_since", None) is None:
+                    self.main_stable_since = time.monotonic()
+                if time.monotonic() - self.main_stable_since < 2:
+                    self.next_run = time.monotonic() + 0.3
+                    return
+                log(f"Main window stable after {time.monotonic() - self.created:.1f}s")
             if self.stage == -1:
                 self.desktop = current_desktop()
                 expected = os.environ.get("LOOM_GUI_TEST_DESKTOP")
@@ -167,6 +184,16 @@ class GuiSmokeTest:
                         self.checkpoint_pane.activeInterfaceScriptErrors()))
                 assert hasattr(self.checkpoint_widget, "workspace"), repr([
                     w.toPlainText() for w in self.checkpoint_widget.findChildren(QtWidgets.QPlainTextEdit)])
+                # On a hidden desktop Houdini may still be showing its windows when this
+                # timer starts; floating panes created then stay hidden for a while. Wait
+                # (never force-show) until the first native floating pane is really shown.
+                main = hou.qt.mainWindow()  # Can transiently be None during startup.
+                if not (main is not None and main.isVisible() and self.checkpoint_widget.isVisible()):
+                    if time.monotonic() - self.checkpoint_started < 60:
+                        return
+                    raise RuntimeError("Checkpoint pane never became visible: main_window="
+                                       + repr(main is not None and main.isVisible()))
+                log(f"Checkpoint pane visible after {time.monotonic() - self.checkpoint_started:.1f}s")
                 # A saved legacy desktop still loads, then migrates to the new interface.
                 hou.pypanel.installFile(str(REPO / "python_panels/loom_legacy.pypanel"))
                 legacy = hou.ui.curDesktop().createFloatingPaneTab(
@@ -185,7 +212,14 @@ class GuiSmokeTest:
                         chain.append((widget.objectName(), type(widget).__name__, widget.isVisible(), widget.isHidden(),
                                       widget.width(), widget.height()))
                         widget = widget.parentWidget()
-                    log("Legacy visibility: " + repr(chain) + " errors=" + self.pane.activeInterfaceScriptErrors())
+                    floating = self.pane.floatingPanel()
+                    log("Legacy visibility: " + repr(chain) + " errors=" + self.pane.activeInterfaceScriptErrors()
+                        + f" elapsed={time.monotonic() - self.legacy_started:.1f}"
+                        + f" floating={floating is not None}"
+                        + f" checkpoint_visible={self.checkpoint_widget.isVisible()}"
+                        + f" main_window={hou.qt.mainWindow() is not None and hou.qt.mainWindow().isVisible()}"
+                        + " panes=" + repr([(p.name(), p.type().name(), p.floatingPanel() is not None)
+                                            for p in hou.ui.paneTabs()]))
                 assert root.isVisible()
                 self.pane = loom.open_pane()
                 assert self.pane.name() == self.legacy_name

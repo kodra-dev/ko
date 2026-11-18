@@ -235,6 +235,12 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
   never fall back visibly. `-Visible` requires explicit permission. Test process trees
   are isolated/terminated by the launcher job, not by killing artist processes.
 - Tested Houdini: `C:/Program Files/Side Effects Software/Houdini 22.0.466/bin/`.
+- **Fixed (2026-11-18):** the recurring legacy-root `isVisible()` startup failure noted below.
+  On the hidden desktop Houdini's main window is not stable until ~9.5 s after startup (it can
+  transiently be `None`); the test previously opened panes at 3 s, so floated panes could stay
+  hidden. `gui_startup.py` now waits for the main window to be visible for 2 s, then for the
+  Checkpoints pane to be visible (never force-shown), before creating the legacy pane.
+  Result: 10/10 consecutive hidden full GUI passes on 22.0.466 (previously ~2 failures in 7).
 - Recursive discovery validation: **242 offline tests passed** (103 unit, 49 HOM, 86 offscreen UI,
   4 package reload), plus 75 Fast tests. Covers recursive matches/paging, output/entry/byte/depth
   limits, exclusions, a real Windows junction, inaccessible directories, cancellation, legacy routing,
