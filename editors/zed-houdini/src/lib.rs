@@ -6,7 +6,14 @@ struct Vex;
 impl Vex {
     fn options(id: &zed::LanguageServerId, worktree: &zed::Worktree) -> zed::Result<Value> {
         let settings = LspSettings::for_worktree(id.as_ref(), worktree)?;
-        runtime::options(settings.settings, settings.initialization_options)
+        let own = runtime::options(settings.settings, settings.initialization_options)?;
+        if id.as_ref() == runtime::VEX_SERVER {
+            return Ok(own);
+        }
+        // Other servers share the Houdini/Python choice made for ko-vex unless overridden.
+        let vex = LspSettings::for_worktree(runtime::VEX_SERVER, worktree)?;
+        let shared = runtime::options(vex.settings, vex.initialization_options)?;
+        Ok(runtime::inherit(&shared, own))
     }
 }
 
@@ -22,6 +29,7 @@ impl zed::Extension for Vex {
                     env: binary.env.unwrap_or_default().into_iter().collect() });
             }
         }
+        let module = runtime::server_module(id.as_ref()).ok_or_else(|| format!("Unknown language server {}", id.as_ref()))?;
         let options = Self::options(id, worktree)?;
         let mut hfs = options.get("houdiniPath").and_then(Value::as_str).map(str::to_owned);
         // Compatibility only: old project files are optional, never generated.
@@ -57,7 +65,7 @@ impl zed::Extension for Vex {
             discovered["python"].as_str().ok_or("Houdini discovery did not return a Python interpreter")?.to_owned()
         } else {
             worktree.which("python3").or_else(|| worktree.which("python"))
-                .ok_or("Python 3.10+ not found; set lsp.ko-vex.settings.pythonPath")?
+                .ok_or_else(|| format!("Python 3.10+ not found; set lsp.{}.settings.pythonPath", id.as_ref()))?
         };
         if let Some(path) = hfs { env.push(("KO_VEX_HOUDINI".into(), path)); }
         // PWD is set by Zed's WASI host to this extension's writable work directory.
@@ -65,7 +73,7 @@ impl zed::Extension for Vex {
         let server = runtime::install_bundle(&base)?;
         env.push(("KO_VEX_CACHE".into(), base.join("docs").to_string_lossy().into_owned()));
         Ok(zed::Command { command, args: vec!["-I".into(), "-S".into(), "-c".into(), runtime::BOOTSTRAP.into(),
-                         server.to_string_lossy().into_owned()], env })
+                         server.to_string_lossy().into_owned(), module.into()], env })
     }
 
     fn language_server_initialization_options(&mut self, id: &zed::LanguageServerId, worktree: &zed::Worktree) -> zed::Result<Option<Value>> {
@@ -73,7 +81,9 @@ impl zed::Extension for Vex {
     }
 
     fn language_server_workspace_configuration(&mut self, id: &zed::LanguageServerId, worktree: &zed::Worktree) -> zed::Result<Option<Value>> {
-        Ok(Some(serde_json::json!({"ko-vex": Self::options(id, worktree)?})))
+        let mut configuration = serde_json::Map::new();
+        configuration.insert(id.as_ref().to_owned(), Self::options(id, worktree)?);
+        Ok(Some(Value::Object(configuration)))
     }
 }
 zed::register_extension!(Vex);

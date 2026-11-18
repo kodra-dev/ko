@@ -44,10 +44,12 @@ foreach ($name in @('src', 'languages', 'server')) {
 foreach ($name in @('Cargo.toml','Cargo.lock','rust-toolchain.toml','build.rs','src','languages')) {
     Copy-Item (Join-Path $repo "editors/zed-houdini/$name") $extension -Recurse -Force
 }
-$server = Join-Path $extension 'server/ko_vex_lsp'
-New-Item -ItemType Directory -Force $server | Out-Null
-Get-ChildItem (Join-Path $repo 'tools/vex-lsp/ko_vex_lsp') -File -Filter '*.py' |
-    Copy-Item -Destination $server -Force
+foreach ($package in @(@('tools/vex-lsp', 'ko_vex_lsp'), @('tools/apex-lsp', 'ko_apex_lsp'))) {
+    $server = Join-Path $extension ('server/' + $package[1])
+    New-Item -ItemType Directory -Force $server | Out-Null
+    Get-ChildItem (Join-Path $repo ($package[0] + '/' + $package[1])) -File -Filter '*.py' |
+        Copy-Item -Destination $server -Force
+}
 $url = ([uri]($grammar.Replace('\','/') + '/')).AbsoluteUri.TrimEnd('/')
 $template = [IO.File]::ReadAllText((Join-Path $repo 'editors/zed-houdini/extension.toml.in'))
 # JSON string quoting is also valid TOML basic-string quoting. Preserve the
@@ -57,4 +59,4 @@ $manifest = $template.Replace('@GRAMMAR_REPOSITORY@', $url).Replace('@GRAMMAR_RE
 [IO.File]::WriteAllText((Join-Path $extension 'extension.toml'), $manifest)
 Write-Host "Prepared extension: $extension"
 Write-Host 'In Zed: Extensions -> Install Dev Extension -> select that folder.'
-Write-Host 'Then open VEX in any workspace. No per-workspace setup is needed.'
+Write-Host 'Then open VEX (.vfl) or APEX Script (.apex) in any workspace. No per-workspace setup is needed.'

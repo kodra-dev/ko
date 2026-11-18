@@ -491,7 +491,7 @@ class PackagingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='ko-vex-default-package-') as directory:
             root = Path(directory)
             repo = TOOL.parents[1]
-            for relative in ('editors/zed-houdini', 'editors/tree-sitter-vex', 'tools/vex-lsp'):
+            for relative in ('editors/zed-houdini', 'editors/tree-sitter-vex', 'tools/vex-lsp', 'tools/apex-lsp'):
                 shutil.copytree(repo/relative, root/relative,
                                 ignore=shutil.ignore_patterns('target', 'node_modules', '__pycache__'))
             (root/'scripts').mkdir()
@@ -534,18 +534,30 @@ class PackagingTests(unittest.TestCase):
             self.assertIn('file:///', manifest)
             self.assertIn('%20', manifest)
             self.assertTrue((extension/'server/ko_vex_lsp/discovery.py').is_file())
+            self.assertTrue((extension/'server/ko_apex_lsp/catalog.py').is_file())
+            self.assertTrue((extension/'languages/apex/config.toml').is_file())
+            self.assertIn('[language_servers.ko-apex]', manifest)
+            self.assertTrue(manifest.startswith('id = "ko-houdini"\n'))
+            self.assertNotIn('[grammars.python]', manifest)
             self.assertTrue((extension/'build.rs').is_file())
             self.assertFalse(list(destination.rglob('settings.json')))
             self.assertFalse(list(destination.rglob('vex-lsp.json')))
-            # Bootstrap only the packaged copy, with script-directory imports disabled.
-            bootstrap = "import sys,runpy;sys.path.insert(0,sys.argv[1]);runpy.run_module('ko_vex_lsp',run_name='__main__')"
+            # Bootstrap only the packaged copy, with script-directory imports disabled,
+            # using the same bootstrap source the extension sends.
+            runtime = (extension/'src/runtime.rs').read_text(encoding='utf-8')
+            bootstrap = json.loads(re.search(r'pub const BOOTSTRAP: &str = ("(?:\\.|[^"\\])*");', runtime)[1])
             body = json.dumps({'jsonrpc':'2.0','id':1,'method':'initialize','params': {
                 'rootUri':path_uri(root), 'initializationOptions':{'discoverHoudini':False}}}).encode()
-            result = subprocess.run([sys.executable, '-I', '-S', '-c', bootstrap, str(extension/'server')],
-                                    input=b'Content-Length: '+str(len(body)).encode()+b'\r\n\r\n'+body,
-                                    capture_output=True, timeout=15)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(read_message(io.BytesIO(result.stdout))['result']['serverInfo']['name'], 'ko-vex-lsp')
+            for package, name in (('ko_vex_lsp', 'ko-vex-lsp'), ('ko_apex_lsp', 'ko-apex-lsp')):
+                result = subprocess.run([sys.executable, '-I', '-S', '-c', bootstrap, str(extension/'server'), package],
+                                        input=b'Content-Length: '+str(len(body)).encode()+b'\r\n\r\n'+body,
+                                        capture_output=True, timeout=15)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                stream, messages = io.BytesIO(result.stdout), []
+                while (message := read_message(stream)) is not None:
+                    messages.append(message)
+                response = next(m for m in messages if m.get('id') == 1)
+                self.assertEqual(response['result']['serverInfo']['name'], name)
 
     def test_native_probe_chooses_supported_houdini_python(self):
         with tempfile.TemporaryDirectory() as directory:

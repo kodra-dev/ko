@@ -188,8 +188,9 @@ mouse position, or matching code text.
   checked against installed Zed 1.28.1's source. An actual GUI routing acceptance run is still required.
 - File suffixes: VEX `.vfl`, Python `.py`, APEX Script `.apex`, OpenCL `.cl`, other strings `.txt`.
   APEX does not deliberately masquerade as Python even though Houdini tags it as Python.
-  VEX language support is separate from this bridge; Python checker setup is described above.
-  Standalone VEX tooling and setup are now documented in [VEX_README.md](VEX_README.md).
+  VEX and APEX Script language support is separate from this bridge; Python checker setup is described
+  above. Standalone VEX tooling and setup are documented in [VEX_README.md](VEX_README.md), and APEX
+  Script support (the same Zed extension) in [APEX_README.md](APEX_README.md).
 - Text files are UTF-8, up to 4 MiB. Files remain under the workspace for recovery; no automatic deletion.
 - The existing **Reload Ko** action preserves the live bridge. For a clean developer restart, run
   `import ko_zed; ko_zed.shutdown()` first. Shutdown leaves Zed and saved editing files intact.

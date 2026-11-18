@@ -17,11 +17,18 @@ fn collect(root: &Path, directory: &Path, files: &mut Vec<(String, String)>) {
 fn main() {
     let crate_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
     let bundled = crate_dir.join("server");
-    let root = if bundled.is_dir() { bundled } else { crate_dir.join("../../tools/vex-lsp") };
-    println!("cargo:rerun-if-changed={}", root.display());
+    // (root, package): a packaged extension has server/<package>; a checkout has tools/*-lsp.
+    let packages = if bundled.is_dir() {
+        vec![(bundled.clone(), "ko_vex_lsp"), (bundled, "ko_apex_lsp")]
+    } else {
+        vec![(crate_dir.join("../../tools/vex-lsp"), "ko_vex_lsp"), (crate_dir.join("../../tools/apex-lsp"), "ko_apex_lsp")]
+    };
     let mut files = Vec::new();
-    // Only the runtime package is embedded, not packaging scripts or tests.
-    collect(&root, &root.join("ko_vex_lsp"), &mut files);
+    // Only the runtime packages are embedded, not packaging scripts or tests.
+    for (root, package) in &packages {
+        println!("cargo:rerun-if-changed={}", root.display());
+        collect(root, &root.join(package), &mut files);
+    }
     files.sort();
     let mut hash = 0xcbf29ce484222325u64;
     for (path, content) in &files {

@@ -3,6 +3,7 @@
 This is independent of `ko_zed`: Houdini does **not** have to be running.
 It uses an installed Houdini's `vcc` and documentation, not an AI/provider.
 No authentication, global editor settings, or scene cooking is involved.
+The same extension also provides APEX Script (`.apex`) support; see [APEX_README.md](APEX_README.md).
 
 ## Available now
 
@@ -48,7 +49,10 @@ it from the repository root with:
 ./scripts/houdini_package.ps1
 ```
 
-In Zed: **Extensions → Install Dev Extension**, select that folder. Then open
+In Zed: **Extensions → Install Dev Extension**, select that folder. The extension
+is **Houdini Languages** (id `ko-houdini`) and provides VEX and APEX Script. If an
+older **Houdini VEX** (id `ko-vex`) dev extension is installed, uninstall it first:
+both define the VEX language. Then open
 VEX in **any workspace**, including the existing Houdini–Zed slot folders.
 You do not run a setup script, start a server, install Python separately, or
 create `vex-lsp.json` / per-workspace `.zed/settings.json`.
