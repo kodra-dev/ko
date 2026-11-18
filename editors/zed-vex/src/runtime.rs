@@ -3,6 +3,14 @@ use zed_extension_api::serde_json::{self, Value};
 
 include!(concat!(env!("OUT_DIR"), "/server_bundle.rs"));
 
+// Keep the executable name unqualified: Zed matches process capabilities against
+// the requested command literally (not the basename of an absolute PATH result).
+pub const DISCOVERY_PROGRAM: &str = "powershell.exe";
+pub const DISCOVERY_ARGS: &[&str] = &[
+    "-NoLogo", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command",
+    include_str!("discover_runtime.ps1"),
+];
+
 pub const BOOTSTRAP: &str = "import sys,runpy; assert sys.version_info >= (3,10), 'Ko VEX requires Python 3.10+'; sys.path.insert(0,sys.argv[1]); runpy.run_module('ko_vex_lsp',run_name='__main__')";
 
 pub fn options(settings: Option<Value>, initialization: Option<Value>) -> Result<Value, String> {
@@ -47,19 +55,38 @@ mod tests {
         let python = Path::new(&hfs).join("python313/python.exe");
         let mut command = Command::new(python);
         command.args(["-I", "-S", "-c", BOOTSTRAP]).arg(&directory)
+            .env("KO_VEX_CACHE", base.join("docs"))
             .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
         #[cfg(windows)] {
             use std::os::windows::process::CommandExt;
             command.creation_flags(0x08000000);
         }
         let mut child = command.spawn().unwrap();
-        let body = serde_json::json!({"jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
-            "rootUri":format!("file:///{}", base.to_string_lossy().replace('\\', "/")),
-            "initializationOptions":{"discoverHoudini":false}}}).to_string();
-        write!(child.stdin.take().unwrap(), "Content-Length: {}\r\n\r\n{}", body.len(), body).unwrap();
+        let root_uri = format!("file:///{}", base.to_string_lossy().replace('\\', "/"));
+        let uri = format!("{root_uri}/case1.vfl");
+        let messages = [
+            serde_json::json!({"jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
+                "rootUri":root_uri, "initializationOptions":{"houdiniPath":hfs}}}),
+            serde_json::json!({"jsonrpc":"2.0", "method":"textDocument/didOpen", "params":{
+                "textDocument":{"uri":uri,"version":1,"text":"float value = fit(0.5, 0, 1, 0, 10);"}}}),
+            serde_json::json!({"jsonrpc":"2.0", "id":2,"method":"textDocument/completion","params":{
+                "textDocument":{"uri":uri},"position":{"line":0,"character":16}}}),
+            serde_json::json!({"jsonrpc":"2.0", "id":3,"method":"textDocument/hover","params":{
+                "textDocument":{"uri":uri},"position":{"line":0,"character":15}}}),
+        ];
+        let mut input = child.stdin.take().unwrap();
+        for message in messages {
+            let body = message.to_string();
+            write!(input, "Content-Length: {}\r\n\r\n{}", body.len(), body).unwrap();
+        }
+        drop(input);
         let result = child.wait_with_output().unwrap();
         assert!(result.status.success(), "{}", String::from_utf8_lossy(&result.stderr));
-        assert!(String::from_utf8_lossy(&result.stdout).contains("ko-vex-lsp"));
+        let output = String::from_utf8_lossy(&result.stdout);
+        assert!(output.contains("ko-vex-lsp"));
+        assert!(output.contains("\"label\": \"fit\""), "{output}");
+        assert!(output.contains("SideFX documentation"), "{output}");
+        assert!(!output.contains("\"error\":"), "{output}");
         assert!(!base.join("vex-lsp.json").exists());
         assert!(!base.join(".zed").exists());
         fs::remove_dir_all(base).unwrap();

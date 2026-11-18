@@ -3,6 +3,7 @@ from pathlib import Path
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -385,6 +386,25 @@ class DiscoveryTests(unittest.TestCase):
 
 @unittest.skipUnless(os.name == 'nt' and shutil.which('pwsh') and shutil.which('git'), 'Windows packaging tests')
 class PackagingTests(unittest.TestCase):
+    def assert_discovery_permission(self, extension):
+        import tomllib
+        manifest = tomllib.loads((extension/'extension.toml').read_text(encoding='utf-8'))
+        runtime = (extension/'src/runtime.rs').read_text(encoding='utf-8')
+        program = json.loads(re.search(r'pub const DISCOVERY_PROGRAM: &str = ("[^"]+");', runtime)[1])
+        argument_source = re.search(r'pub const DISCOVERY_ARGS:.*?= &\[(.*?)\];', runtime, re.S)[1]
+        prefix = [json.loads(value) for value in re.findall(r'"(?:\\.|[^"\\])*"', argument_source.split('include_str!')[0])]
+        # Read bytes: include_str! preserves CRLF, unlike Python's read_text().
+        script = (extension/'src/discover_runtime.ps1').read_bytes().decode('utf-8')
+        capabilities = manifest.get('capabilities', [])
+        self.assertEqual(capabilities, [{'kind': 'process:exec', 'command': program, 'args': prefix + [script]}])
+        self.assertNotIn('*', capabilities[0]['args'])
+        self.assertNotIn('**', capabilities[0]['args'])
+        # Prevent silently switching the request back to an absolute PATH result:
+        # Zed's capability matcher compares the requested command literally.
+        lib = (extension/'src/lib.rs').read_text(encoding='utf-8')
+        self.assertIn('zed::process::Command::new(runtime::DISCOVERY_PROGRAM)', lib)
+        self.assertIn('.args(runtime::DISCOVERY_ARGS.iter().copied())', lib)
+
     def test_default_output_is_repo_local_and_gitignored(self):
         with tempfile.TemporaryDirectory(prefix='ko-vex-default-package-') as directory:
             root = Path(directory)
@@ -402,6 +422,7 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             generated = root/'build/zed-vex'
             self.assertTrue((generated/'zed-extension/extension.toml').is_file())
+            self.assert_discovery_permission(generated/'zed-extension')
             for relative in ('zed-extension/extension.toml', 'grammar/src/parser.c'):
                 ignored = subprocess.run(['git', '-C', str(root), 'check-ignore', '--quiet', str(generated/relative)])
                 self.assertEqual(ignored.returncode, 0, relative)
@@ -423,6 +444,7 @@ class PackagingTests(unittest.TestCase):
                     (destination/'zed-extension/server/ko_vex_lsp/stale.py').write_text('obsolete')
                     (destination/'grammar/src/stale.c').write_text('obsolete')
             extension = destination/'zed-extension'
+            self.assert_discovery_permission(extension)
             self.assertFalse((extension/'server/ko_vex_lsp/stale.py').exists())
             self.assertFalse((destination/'grammar/src/stale.c').exists())
             manifest = (extension/'extension.toml').read_text()

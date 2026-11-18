@@ -5,6 +5,12 @@ schema_version = 1
 authors = ["Ko contributors"]
 description = "Standalone Houdini VEX highlighting, navigation, completion and compiler-gated local rename."
 
+# Allow only our fixed runtime-discovery command, not arbitrary shell execution.
+# The packager fills in the exact script argument from the source used by Rust.
+capabilities = [
+  { kind = "process:exec", command = "powershell.exe", args = ["-NoLogo", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command", @DISCOVERY_SCRIPT@] }
+]
+
 [language_servers.ko-vex]
 name = "Ko VEX"
 languages = ["VEX"]

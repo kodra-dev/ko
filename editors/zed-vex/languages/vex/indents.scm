@@ -1,3 +1,3 @@
-(block) @indent
-(parameter_list) @indent
-(initializer) @indent
+(block "}" @end) @indent
+(parameter_list ")" @end) @indent
+(initializer "}" @end) @indent

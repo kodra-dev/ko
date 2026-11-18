@@ -70,6 +70,10 @@ At first VEX language-server startup on Windows the extension:
 
 The one-time discovery probe is a hidden, no-profile PowerShell process. It is
 not a shell proxy for the LSP connection: Zed launches Python directly afterwards.
+The generated manifest grants `process:exec` only for the exact fixed discovery
+command and arguments, not arbitrary shell commands. After regenerating a package
+with manifest/startup changes, **rebuild or reinstall the dev extension** in Zed;
+restarting only the language server does not reload its extension permissions.
 Startup diagnostics identify the chosen Houdini installation; with multiple
 versions, use the override below if the newest is not the one you want.
 
@@ -84,6 +88,13 @@ The server indexes includes regardless of their editor language; unsaved header
 changes require that header to be attached to the **same VEX server instance**.
 Cross-worktree delivery of external header buffers is still pending manual Zed
 acceptance. Project-specific associations can use Zed's `file_types`.
+
+If syntax highlighting works but `fi` completion / `fit` hover do not, check
+`zed: open log` for a `ko-vex` startup error. Highlighting and word-based
+suggestions can work without the VEX language server. A `process:exec ... was not
+listed in the extension manifest` error means an outdated/missing startup
+permission; regenerate the package and rebuild/reinstall the extension, rather
+than broadening Zed's global permissions.
 
 ## Optional normal Zed settings
 

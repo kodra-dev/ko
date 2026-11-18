@@ -50,7 +50,11 @@ Get-ChildItem (Join-Path $repo 'tools/vex-lsp/ko_vex_lsp') -File -Filter '*.py' 
     Copy-Item -Destination $server -Force
 $url = ([uri]($grammar.Replace('\','/') + '/')).AbsoluteUri.TrimEnd('/')
 $template = [IO.File]::ReadAllText((Join-Path $repo 'editors/zed-vex/extension.toml.in'))
-[IO.File]::WriteAllText((Join-Path $extension 'extension.toml'), $template.Replace('@GRAMMAR_REPOSITORY@', $url).Replace('@GRAMMAR_REV@', $revision))
+# JSON string quoting is also valid TOML basic-string quoting. Preserve the
+# script exactly (including line endings), so capability checks match include_str!.
+$discovery = [IO.File]::ReadAllText((Join-Path $extension 'src/discover_runtime.ps1')) | ConvertTo-Json -Compress
+$manifest = $template.Replace('@GRAMMAR_REPOSITORY@', $url).Replace('@GRAMMAR_REV@', $revision).Replace('@DISCOVERY_SCRIPT@', $discovery)
+[IO.File]::WriteAllText((Join-Path $extension 'extension.toml'), $manifest)
 Write-Host "Prepared extension: $extension"
 Write-Host 'In Zed: Extensions -> Install Dev Extension -> select that folder.'
 Write-Host 'Then open VEX in any workspace. No per-workspace setup is needed.'

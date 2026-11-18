@@ -36,11 +36,8 @@ impl zed::Extension for Vex {
         let command = if let Some(python) = options.get("pythonPath").and_then(Value::as_str) {
             python.to_owned()
         } else if zed::current_platform().0 == zed::Os::Windows {
-            let shell = worktree.which("powershell.exe").ok_or("Windows PowerShell not found; set lsp.ko-vex.settings.pythonPath")?;
-            let mut probe = zed::process::Command::new(shell).args([
-                "-NoLogo", "-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden", "-Command",
-                include_str!("discover_runtime.ps1"),
-            ]);
+            let mut probe = zed::process::Command::new(runtime::DISCOVERY_PROGRAM)
+                .args(runtime::DISCOVERY_ARGS.iter().copied());
             // Pass only discovery variables, not arbitrary shell environment/secrets.
             for (key, value) in worktree.shell_env() {
                 if ["HFS", "ProgramFiles", "ProgramW6432"].iter().any(|wanted| key.eq_ignore_ascii_case(wanted)) {
