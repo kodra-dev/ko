@@ -3,9 +3,12 @@ from pathlib import Path
 import json
 import re
 import sys
+import threading
 import traceback
 
-from .compiler import CompilerError, KNOWN_ATTRS, RefactorError, compile_ast, rename
+from .compiler import KNOWN_ATTRS, RefactorError, rename
+from .diagnostics import Diagnostics
+from .validation import Context
 from .model import Document, KEYWORDS, TYPES, path_uri, uri_path
 from .workspace import Workspace, MAX_FILE
 
@@ -32,47 +35,127 @@ def location(doc, token):
 
 
 class Server:
-    def __init__(self, notify=lambda *args: None):
-        self.notify = notify
+    def __init__(self, notify=lambda *args: None, request=lambda *args: None):
+        self.notify, self.request = notify, request
         self.workspace = None
         self.options = {}
         self.shutdown = False
+        self.lock = threading.RLock()
+        self.checker = None
+        self.watch_dynamic = False
+        self.watch_registration = 0
+        self.watch_roots = ()
 
-    def diagnostics(self, doc, compiler=False):
-        diagnostics = [{'range': doc.range(t.start, t.end), 'severity': 1, 'source': 'vex-lsp', 'message': message}
-                       for t, message in doc.errors]
-        for t, m, uri in self.workspace.includes(doc):
-            if not uri:
-                diagnostics.append({'range': doc.range(t.start, t.end), 'severity': 2, 'source': 'vex-lsp',
-                                    'message': 'Header not found: ' + m[2] + '. Check lsp.ko-vex.settings.includePaths in Zed.'})
-        if compiler and self.workspace.settings.get('compilerDiagnostics') and self.workspace.mode == 'source':
-            try:
-                compile_ast(self.workspace, doc)
-            except CompilerError as error:
-                diagnostics.extend(error.diagnostics or [{'range': doc.range(0, 0), 'severity': 1, 'source': 'vcc', 'message': str(error)}])
-            except Exception as error:
-                self.notify('window/logMessage', {'type': 2, 'message': 'VCC validation unavailable: ' + str(error)})
-        self.notify('textDocument/publishDiagnostics', {'uri': doc.uri, 'version': doc.version, 'diagnostics': diagnostics})
+    def compiler_enabled(self):
+        return self.workspace.settings.get('compilerDiagnostics', True) and self.workspace.vcc.is_file()
 
-    def refresh_diagnostics(self):
-        # Header edits can resolve or invalidate includes in already-open files.
-        for doc in self.workspace.open.values():
-            self.diagnostics(doc)
+    def structural(self, doc):
+        result = [{'range': doc.range(t.start, t.end), 'severity': 1, 'source': 'vex-lsp', 'message': message}
+                  for t, message in doc.errors]
+        # With a compiler, it decides which conditional includes are active.
+        if not self.compiler_enabled():
+            for t, m, uri in self.workspace.includes(doc):
+                if not uri:
+                    result.append({'range': doc.range(t.start, t.end), 'severity': 2, 'source': 'vex-lsp',
+                                   'message': 'Header not found: '+m[2]+'. Check lsp.ko-vex.settings.includePaths in Zed.'})
+        return result
+
+    def publish_diagnostics(self, doc, values):
+        self.notify('textDocument/publishDiagnostics', {'uri': doc.uri, 'version': doc.version, 'diagnostics': values})
+
+    def checked(self, job, result):
+        with self.lock:
+            if self.checker is None or not self.checker.current(job):
+                return
+            doc = self.workspace.open.get(job.uri)
+            if doc is None or doc.version != job.version:
+                return
+            values = result.diagnostics
+            # Successful compiler validation also clears structural errors from
+            # inactive preprocessor branches. Keep the cheap fallback only when
+            # the compilation environment could not be reconstructed.
+            if any(d.get('code') == 'validation-unavailable' for d in values):
+                values = self.structural(doc)+values
+            self.publish_diagnostics(doc, values)
+            self.register_watchers()
+
+    def schedule(self, changed=(), immediate=False, all_documents=False, disk_changes=()):
+        if self.shutdown:
+            return
+        if self.compiler_enabled():
+            if self.checker is None:
+                self.checker = Diagnostics(self.checked)
+            context = Context.capture(self.workspace)
+            buffers = {uri: (d.text, d.version) for uri, d in self.workspace.open.items()}
+            delay = min(5000, max(100, int(self.workspace.settings.get('diagnosticsDebounceMs', 500)))) / 1000
+            targets = self.checker.update(context, buffers, set(changed), immediate, all_documents, delay, disk_changes)
+        else:
+            if self.checker:
+                self.checker.close(wait=False)
+                self.checker = None
+            targets = set(self.workspace.open) if all_documents else set(changed)
+        for uri in targets:
+            if uri in self.workspace.open:
+                doc = self.workspace.open[uri]
+                self.publish_diagnostics(doc, self.structural(doc))
+
+    def register_watchers(self):
+        if not self.watch_dynamic:
+            return
+        roots = list(dict.fromkeys([self.workspace.root]+list(self.workspace.include_paths)))
+        if self.checker:
+            with self.checker.condition:
+                dependencies = set().union(*self.checker.dependencies.values()) if self.checker.dependencies else set()
+            for uri in dependencies:
+                parent = uri_path(uri).parent
+                if not any(parent.is_relative_to(root) for root in roots):
+                    roots.append(parent)
+        roots = [p for p in roots if not any(p != other and p.is_relative_to(other) for other in roots)]
+        signature = tuple(sorted(p.as_posix() for p in roots))
+        if signature == self.watch_roots:
+            return
+        self.watch_roots = signature
+        if self.watch_registration:
+            self.request('client/unregisterCapability', {'unregisterations': [
+                {'id': 'ko-vex-files-'+str(self.watch_registration), 'method': 'workspace/didChangeWatchedFiles'}]})
+        self.watch_registration += 1
+        self.request('client/registerCapability', {'registrations': [{
+            'id': 'ko-vex-files-'+str(self.watch_registration), 'method': 'workspace/didChangeWatchedFiles',
+            'registerOptions': {'watchers': [{'globPattern': p.as_posix().rstrip('/')+'/**/*.{h,vexh,vfl}', 'kind': 7} for p in roots]}}]})
+
+    def close(self):
+        with self.lock:
+            checker, self.checker = self.checker, None
+        if checker:
+            checker.close()
 
     def handle(self, method, params):
+        if method in ('shutdown', 'exit'):
+            self.close()
+        with self.lock:
+            if self.checker and method in ('workspace/didChangeConfiguration', 'textDocument/prepareRename', 'textDocument/rename', 'textDocument/references'):
+                with self.checker.suspend():
+                    return self._handle(method, params)
+            return self._handle(method, params)
+
+    def _handle(self, method, params):
         p = params or {}
         if method == 'initialize':
             root = uri_path(p['rootUri']) if p.get('rootUri') else Path.cwd()
             if not p.get('rootUri') and p.get('workspaceFolders'):
                 root = uri_path(p['workspaceFolders'][0]['uri'])
+            self.watch_dynamic = p.get('capabilities', {}).get('workspace', {}).get('didChangeWatchedFiles', {}).get('dynamicRegistration', False)
             self.options = p.get('initializationOptions') or {}
             self.workspace = Workspace(root, load_settings(root, self.options))
             return {'capabilities': CAPABILITIES, 'serverInfo': {'name': 'ko-vex-lsp', 'version': '0.1.0'}}
         if method == 'initialized':
+            self.register_watchers()
             if self.workspace.builtin_error:
                 self.notify('window/logMessage', {'type': 2, 'message': self.workspace.builtin_error})
             else:
                 self.notify('window/logMessage', {'type': 3, 'message': 'Ko VEX using Houdini at ' + str(self.workspace.hfs) + '. Override with lsp.ko-vex.settings.houdiniPath.'})
+            if not self.workspace.settings.get('compilerDiagnostics', True):
+                self.notify('window/logMessage', {'type': 3, 'message': 'Live VEX diagnostics disabled by compilerDiagnostics: false.'})
             return None
         if method == 'shutdown':
             self.shutdown = True
@@ -80,7 +163,14 @@ class Server:
         if method == 'exit':
             raise SystemExit(0 if self.shutdown else 1)
         if method == 'textDocument/didSave':
-            self.diagnostics(self.workspace.document(p['textDocument']['uri']), compiler=True)
+            self.schedule([p['textDocument']['uri']], immediate=True)
+            return None
+        if method == 'workspace/didChangeWatchedFiles':
+            changes = p.get('changes', [])
+            for change in changes:
+                self.workspace.cache.pop(change['uri'], None)
+            changed = [change['uri'] for change in changes]
+            self.schedule(changed, all_documents=any(change.get('type') in (1, 3) for change in changes), disk_changes=changed)
             return None
         if method in ('$/cancelRequest', '$/setTrace'):
             return None
@@ -89,7 +179,8 @@ class Server:
                 value = p['settings'] or {}
                 self.options = value.get('ko-vex', value)
             self.workspace.configure(load_settings(self.workspace.root, self.options))
-            self.refresh_diagnostics()
+            self.schedule(all_documents=True)
+            self.register_watchers()
             return None
         if method == 'textDocument/didOpen':
             d = p['textDocument']
@@ -97,7 +188,7 @@ class Server:
             if len(d['text'].encode('utf-8')) > MAX_FILE:
                 raise ValueError('Document exceeds the 4 MiB limit')
             self.workspace.open[d['uri']] = Document(d['uri'], d['text'], d.get('version'))
-            self.refresh_diagnostics()
+            self.schedule([d['uri']])
             return None
         if method == 'textDocument/didChange':
             d = p['textDocument']
@@ -115,14 +206,15 @@ class Server:
             if len(text.encode('utf-8')) > MAX_FILE:
                 raise ValueError('Document exceeds the 4 MiB limit')
             self.workspace.open[d['uri']] = Document(d['uri'], text, d['version'])
-            self.refresh_diagnostics()
+            self.schedule([d['uri']])
             return None
         if method == 'textDocument/didClose':
             uri = p['textDocument']['uri']
             self.workspace.open.pop(uri, None)
             self.workspace.cache.pop(uri, None)
             self.notify('textDocument/publishDiagnostics', {'uri': uri, 'diagnostics': []})
-            self.refresh_diagnostics()
+            self.schedule([uri])
+            self.register_watchers()
             return None
         doc = self.workspace.document(p['textDocument']['uri']) if 'textDocument' in p else None
         if doc:
@@ -333,29 +425,44 @@ def read_message(stream):
 
 
 def main():
+    output_lock = threading.Lock()
+    request_id = 0
+
     def send(message):
         body = json.dumps(message, ensure_ascii=False).encode('utf-8')
-        sys.stdout.buffer.write(('Content-Length: ' + str(len(body)) + '\r\n\r\n').encode('ascii') + body)
-        sys.stdout.buffer.flush()
+        # A result and a background notification must never interleave frames.
+        with output_lock:
+            sys.stdout.buffer.write(('Content-Length: '+str(len(body))+'\r\n\r\n').encode('ascii')+body)
+            sys.stdout.buffer.flush()
 
-    server = Server(lambda method, params: send({'jsonrpc': '2.0', 'method': method, 'params': params}))
-    while True:
-        try:
-            message = read_message(sys.stdin.buffer)
-            if message is None:
-                return
-            if 'method' not in message:
-                continue
+    def request(method, params):
+        nonlocal request_id
+        request_id += 1
+        send({'jsonrpc': '2.0', 'id': 'ko-vex-'+str(request_id), 'method': method, 'params': params})
+
+    server = Server(lambda method, params: send({'jsonrpc': '2.0', 'method': method, 'params': params}), request)
+    try:
+        while True:
             try:
-                result = server.handle(message['method'], message.get('params'))
-                if 'id' in message:
-                    send({'jsonrpc': '2.0', 'id': message['id'], 'result': result})
-            except Exception as error:
-                if 'id' in message:
-                    code = -32601 if isinstance(error, KeyError) else -32803 if isinstance(error, RefactorError) else -32603
-                    send({'jsonrpc': '2.0', 'id': message['id'], 'error': {'code': code, 'message': str(error)}})
-                else:
-                    print(str(error), file=sys.stderr)
-        except (ValueError, OSError):
-            traceback.print_exc(file=sys.stderr)
-            return
+                message = read_message(sys.stdin.buffer)
+                if message is None:
+                    return
+                if 'method' not in message:
+                    if message.get('error'):
+                        print('Client rejected VEX capability registration: '+str(message['error']), file=sys.stderr)
+                    continue
+                try:
+                    result = server.handle(message['method'], message.get('params'))
+                    if 'id' in message:
+                        send({'jsonrpc': '2.0', 'id': message['id'], 'result': result})
+                except Exception as error:
+                    if 'id' in message:
+                        code = -32601 if isinstance(error, KeyError) else -32803 if isinstance(error, RefactorError) else -32603
+                        send({'jsonrpc': '2.0', 'id': message['id'], 'error': {'code': code, 'message': str(error)}})
+                    else:
+                        print(str(error), file=sys.stderr)
+            except (ValueError, OSError):
+                traceback.print_exc(file=sys.stderr)
+                return
+    finally:
+        server.close()

@@ -6,8 +6,9 @@ compiler validation; this is deliberately not advertised as a VEX type checker.
 from dataclasses import dataclass, field
 from pathlib import Path
 import bisect
+import os
 import re
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
 TYPES = set('void int float vector2 vector vector4 matrix2 matrix3 matrix string dict bsdf'.split())
@@ -29,6 +30,13 @@ def uri_path(uri):
     if parsed.netloc:
         value = '//' + parsed.netloc + value
     return Path(value).resolve()
+
+
+def uri_key(uri):
+    """Compare file URIs without losing the client's spelling for LSP replies."""
+    parsed = urlparse(uri)
+    path = unquote(parsed.path).replace('\\', '/')
+    return parsed.scheme, parsed.netloc.casefold(), path.casefold() if os.name == 'nt' else path
 
 
 @dataclass(frozen=True)

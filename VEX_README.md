@@ -25,8 +25,9 @@ No authentication, global editor settings, or scene cooking is involved.
   reindexed lazily. Cycles and graph/file-size limits are handled.
 - **Compiler-gated local variable and parameter rename and find-references.**
   See the safety boundary below.
-- Delimiter/missing-literal-header diagnostics while editing. Optional actual
-  compiler errors on save for standalone source mode.
+- Live compiler errors **and warnings** for snippets and standalone sources:
+  wrong argument types/counts, unknown functions, syntax errors, and problems in
+  included headers. Checks run after a short typing pause, without requiring Save.
 
 This is a useful first version, **not a complete VEX compiler frontend or a
 claim of full IDE parity**. In particular, browsing an included declaration is
@@ -113,7 +114,9 @@ in normal Zed user settings (apply everywhere) or project settings (if desired):
         "context": "cvex",
         "mode": "snippet",
         "compilerTimeout": 8,
-        "compilerDiagnostics": false
+        "compilerDiagnostics": true,
+        "diagnosticsDebounceMs": 500,
+        "diagnosticsMaxProblems": 50
       }
     }
   }
@@ -140,20 +143,71 @@ Houdini path tokens. Installed package discovery can include inactive packages.
 For exact session-specific selection/precedence, list its effective directories
 in `includePaths`. `HOUDINI_VEX_PATH` is not an include-path variable here.
 
-`mode: "snippet"` supports wrangle-style statement buffers. Local rename
-validation uses a temporary CVEX wrapper and same-width attribute substitutions.
-Explicit attribute prefixes and known standard bindings are supported; unknown
-types cause refusal. This is not a faithful reproduction of every generated
-Houdini kernel.
+`mode: "snippet"` supports wrangle-style statement buffers. Diagnostic checking
+uses a temporary CVEX wrapper and same-width attribute substitutions; included
+header definitions remain outside that wrapper. Explicit attribute prefixes and
+known standard bindings are supported. For custom untyped bindings, configure
+`attributeTypes`, for example `{"custom_velocity": "vector"}`, in the same
+`lsp.ko-vex.settings` object, or use `v@custom_velocity` in the code. Unknown types
+produce an informational **validation unavailable** diagnostic rather than
+invented type errors. This is not a reproduction of every scene-generated kernel.
 
-Use `mode: "source"` for standalone VEX compilation units. With
-`compilerDiagnostics: true`, saves report actual compiler errors and header
-locations. Compilation is not triggered on each keystroke, and diagnostics are
-not enabled for approximate wrangle wrappers.
+Use `mode: "source"` for standalone VEX compilation units. Explicit shader/context
+functions and opened `.h` / `.vexh` files are also checked as standalone source.
+Both modes have live diagnostics enabled by default. To opt out, set
+`compilerDiagnostics: false`. If you copied the old example containing `false`,
+remove that override or change it to `true`.
 
 Restart the language server after changing the installation or Python override.
 Old `vex-lsp.json` files and `initialization_options` remain compatible, but are
 not created or required. Zed options override old project-file values.
+
+## Live diagnostics and resource use
+
+For example, this now reports the compiler's argument error and candidate signature:
+
+```c
+#include <kinefx.h>
+getpointlocaltransform(0, "0");
+```
+
+Changing the call to `getpointlocaltransform("0", 0)` clears it automatically.
+
+- **One background worker and at most one background compiler process.** Hover,
+  completion and other ordinary requests do not wait for compilation. Foreground
+  rename/reference checks suspend background compilation so they do not compete.
+- **Trailing-edge debounce:** 500 ms by default (configurable from 100–5000 ms).
+  Each open document has only one pending check; obsolete revisions are not queued.
+  Save requests an immediate check. Unchanged inputs reuse a bounded result cache.
+- **Cancellation and version safety:** edits, closes, configuration changes and
+  relevant header updates cancel obsolete work. Compiler children are killed and
+  reaped. Late results cannot overwrite newer versions, reopened files, or results
+  from a replacement checker. Closing a file clears its published diagnostics.
+- **No resident compiler or idle polling.** The worker sleeps when idle. Header
+  edits invalidate known dependents, including unsaved VEX header buffers attached
+  to the same server. File watchers use LSP capability registration when the client
+  supports it; otherwise disk changes are picked up on the next edit/save/check.
+- **No AST dumps for diagnostics.** The usual literal-include snippet needs one
+  `vcc` invocation. Complex preprocessing uses native `vcc -E` first so macro and
+  conditional-include semantics are not guessed. Error ranges use UTF-16 LSP
+  positions; macro-expanded code uses the correct whole source line where columns
+  cannot be mapped faithfully. Header errors include related source locations.
+- **Bounded memory/storage:** lightweight directive/attribute indexes, not duplicate
+  scope trees; an estimated 16 MiB / 128-file retained header-index cache; a 32 MiB
+  snapshot-index budget; 16 cached result sets; and a 32 MiB retained source-mirror
+  budget. Mirrors are reused, not rewritten when unchanged, and removed on shutdown.
+  Large inputs that exceed a budget report validation unavailable rather than
+  launching unbounded work. The existing 4 MiB file / 16 MiB graph limits also apply.
+- Compiler output is file-backed, with 1 MiB diagnostic capture and up to 16 MiB
+  preprocessed/compiled output. `diagnosticsMaxProblems` defaults to 50 (maximum
+  200). `compilerTimeout` defaults to 8 seconds, shared by preprocessing and
+  compilation. Compiler processes run at lowered priority where supported. No
+  generated VEX, scene, or Houdini application is executed.
+
+Delimiter checks still provide immediate feedback while typing. Native validation
+supersedes them, including clearing structural errors in inactive preprocessor
+branches. Availability messages (unknown bindings, resource/time limits, missing
+compiler) are not presented as proven errors in your VEX code.
 
 ## Developer packaging (not user setup)
 
@@ -237,9 +291,9 @@ HIP/HDA or unopened workspace file has been searched.
   indexing. It is not general expression inference or a complete method system.
 - No formatter, workspace-wide symbol/refactor engine, or scene-aware bindings.
 - No bridge dependency or bridge changes in this implementation.
-- Requests are processed serially. Compiler operations have per-process timeouts
-  but are not asynchronously cancelled; cancellation/worker scheduling is future
-  work. Large compiler requests can temporarily delay other language requests.
+- Live diagnostics run off the request loop and support cancellation. Foreground
+  rename/reference validation remains synchronous and can temporarily delay other
+  requests; this change does not claim asynchronous refactoring.
 - Bounds: 4 MiB per file, 256 indexed files, 16 MiB per include graph.
 - Syntax grammar/corpus and Rust/WASM builds are tested, but actual extension
   installation and feature behavior inside Zed still need manual acceptance.
@@ -256,7 +310,7 @@ Local compiler smoke (no GUI, `hou`, scene, provider, or subscription use):
 
 ```powershell
 $env:KO_VEX_TEST_HFS = 'C:/Program Files/Side Effects Software/Houdini 22.0.466'
-python -m unittest discover -s tests/ko -p test_vex_lsp.py -v
+python -m unittest discover -s tests/ko -p 'test_vex*.py' -v
 Remove-Item Env:KO_VEX_TEST_HFS
 ```
 
@@ -287,5 +341,7 @@ Manual Zed acceptance:
 5. Rename a local in a nested shadowing example; inspect the edit preview. Ensure
    strings, comments and same-named attributes remain unchanged.
 6. Try a collision, macro invocation and function rename; verify safe refusal.
-7. Verify source-mode compiler errors after saving invalid standalone code.
+7. Type `getpointlocaltransform(0, "0")` after including `<kinefx.h>`; verify the
+   argument error appears without saving, then clears after fixing it. Test a
+   compiler warning, a missing semicolon, and an unsaved/disk header edit too.
 8. Verify unrelated Python/C/C++ projects and global Zed settings are unchanged.

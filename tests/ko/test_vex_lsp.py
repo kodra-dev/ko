@@ -304,12 +304,14 @@ class CompilerTests(unittest.TestCase):
     def test_source_save_compiler_diagnostics(self):
         notifications = []
         server = Server(lambda method, params: notifications.append((method, params)))
+        self.addCleanup(server.close)
         server.handle('initialize', {'rootUri': path_uri(self.root), 'initializationOptions': {
             'houdiniPath': os.environ['KO_VEX_TEST_HFS'], 'mode': 'source', 'compilerDiagnostics': True}})
         uri = path_uri(self.root/'main.vfl')
         text = 'cvex test(){float result=missing();}'
         server.handle('textDocument/didOpen', {'textDocument': {'uri': uri, 'text': text, 'version': 1}})
         server.handle('textDocument/didSave', {'textDocument': {'uri': uri}})
+        self.assertTrue(server.checker.wait_idle(15))
         diagnostics = notifications[-1][1]['diagnostics']
         error = next(d for d in diagnostics if d['source'] == 'vcc')
         self.assertEqual(error['range']['start']['line'], 0)
