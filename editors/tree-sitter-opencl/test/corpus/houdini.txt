@@ -1,0 +1,364 @@
+==================
+Bindings and @KERNEL
+==================
+#bind point &P float3
+#bind ramp myramp float
+@KERNEL
+{
+    float3 pos = @P;
+    pos += (float3)(1, 2, 3) * @myramp(0.5f);
+    @P.set(pos);
+}
+
+---
+
+(source_file
+  (bind_directive)
+  (bind_directive)
+  (kernel_block
+    (kernel_marker)
+    (block
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (expression
+            (binding))))
+      (expression_statement
+        (expression
+          (assignment_expression
+            (expression
+              (identifier))
+            (expression
+              (binary_expression
+                (expression
+                  (cast_expression
+                    (type_specifier
+                      (primitive_type))
+                    (expression
+                      (parenthesized_expression
+                        (comma_expression
+                          (expression
+                            (number))
+                          (expression
+                            (number))
+                          (expression
+                            (number)))))))
+                (expression
+                  (call_expression
+                    (expression
+                      (binding))
+                    (argument_list
+                      (expression
+                        (number))))))))))
+      (expression_statement
+        (expression
+          (call_expression
+            (expression
+              (member_expression
+                (expression
+                  (binding))
+                (identifier)))
+            (argument_list
+              (expression
+                (identifier)))))))))
+
+==================
+Plain kernel with address spaces
+==================
+#include <matrix.h>
+kernel void move(global float * restrict P, int n, __local int *tmp)
+{
+    int idx = get_global_id(0);
+    if (idx >= n) return;
+    float3 v = vload3(idx, P);
+    vstore3(v + (float3)(0, 1, 0), idx, P);
+}
+
+---
+
+(source_file
+  (include_directive)
+  (function_definition
+    (qualifier)
+    (type_specifier
+      (primitive_type))
+    (identifier)
+    (parameter_list
+      (parameter
+        (qualifier)
+        (type_specifier
+          (primitive_type))
+        (pointer
+          (qualifier))
+        (identifier))
+      (parameter
+        (type_specifier
+          (primitive_type))
+        (identifier))
+      (parameter
+        (qualifier)
+        (type_specifier
+          (primitive_type))
+        (pointer)
+        (identifier)))
+    (block
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (expression
+            (call_expression
+              (expression
+                (identifier))
+              (argument_list
+                (expression
+                  (number)))))))
+      (if_statement
+        (expression
+          (binary_expression
+            (expression
+              (identifier))
+            (expression
+              (identifier))))
+        (return_statement))
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (expression
+            (call_expression
+              (expression
+                (identifier))
+              (argument_list
+                (expression
+                  (identifier))
+                (expression
+                  (identifier)))))))
+      (expression_statement
+        (expression
+          (call_expression
+            (expression
+              (identifier))
+            (argument_list
+              (expression
+                (binary_expression
+                  (expression
+                    (identifier))
+                  (expression
+                    (cast_expression
+                      (type_specifier
+                        (primitive_type))
+                      (expression
+                        (parenthesized_expression
+                          (comma_expression
+                            (expression
+                              (number))
+                            (expression
+                              (number))
+                            (expression
+                              (number)))))))))
+              (expression
+                (identifier))
+              (expression
+                (identifier)))))))))
+
+==================
+Preprocessor inside parameter lists
+==================
+kernel void k(int n
+#ifdef HAS_mass
+    , global const float *mass
+#endif
+)
+{
+    unsigned i = 0;
+    mat3 m;
+}
+
+---
+
+(source_file
+  (function_definition
+    (qualifier)
+    (type_specifier
+      (primitive_type))
+    (identifier)
+    (parameter_list
+      (parameter
+        (type_specifier
+          (primitive_type))
+        (identifier))
+      (preprocessor)
+      (parameter
+        (qualifier)
+        (qualifier)
+        (type_specifier
+          (primitive_type))
+        (pointer)
+        (identifier))
+      (preprocessor))
+    (block
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (expression
+            (number))))
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier))))))
+
+==================
+Casts, compound literals and designated initializers
+==================
+static fpreal2 f(fpreal2 v)
+{
+    int i = (int)floor(v.x);
+    struct S s = { .size = @pos.len, .P = @pos.data };
+    return (fpreal2){v.x, (fpreal)i};
+}
+
+---
+
+(source_file
+  (function_definition
+    (qualifier)
+    (type_specifier
+      (primitive_type))
+    (identifier)
+    (parameter_list
+      (parameter
+        (type_specifier
+          (primitive_type))
+        (identifier)))
+    (block
+      (declaration
+        (type_specifier
+          (primitive_type))
+        (declarator
+          (identifier)
+          (expression
+            (cast_expression
+              (type_specifier
+                (primitive_type))
+              (expression
+                (call_expression
+                  (expression
+                    (identifier))
+                  (argument_list
+                    (expression
+                      (member_expression
+                        (expression
+                          (identifier))
+                        (identifier))))))))))
+      (declaration
+        (type_specifier
+          (type_identifier))
+        (declarator
+          (identifier)
+          (initializer
+            (initializer_item
+              (designated_initializer
+                (identifier)
+                (expression
+                  (member_expression
+                    (expression
+                      (binding))
+                    (identifier)))))
+            (initializer_item
+              (designated_initializer
+                (identifier)
+                (expression
+                  (member_expression
+                    (expression
+                      (binding))
+                    (identifier))))))))
+      (return_statement
+        (expression
+          (cast_expression
+            (type_specifier
+              (primitive_type))
+            (initializer
+              (initializer_item
+                (expression
+                  (member_expression
+                    (expression
+                      (identifier))
+                    (identifier))))
+              (initializer_item
+                (expression
+                  (cast_expression
+                    (type_specifier
+                      (primitive_type))
+                    (expression
+                      (identifier))))))))))))
+
+==================
+Typedef structs and macro invocations
+==================
+typedef struct __attribute__((aligned(16))) {
+    float3 lo, hi;
+} AABB;
+INSTANTIATE(float, 3)
+@WRITEBACK
+{
+    @P.set(@P + @v * @TimeInc);
+}
+
+---
+
+(source_file
+  (typedef_declaration
+    (struct_body_type
+      (attribute_specifier
+        (expression
+          (call_expression
+            (expression
+              (identifier))
+            (argument_list
+              (expression
+                (number))))))
+      (field_list
+        (declaration
+          (type_specifier
+            (primitive_type))
+          (declarator
+            (identifier))
+          (declarator
+            (identifier)))))
+    (declarator
+      (identifier)))
+  (macro_invocation
+    (identifier)
+    (macro_arguments
+      (primitive_type)
+      (number)))
+  (kernel_block
+    (kernel_marker)
+    (block
+      (expression_statement
+        (expression
+          (call_expression
+            (expression
+              (member_expression
+                (expression
+                  (binding))
+                (identifier)))
+            (argument_list
+              (expression
+                (binary_expression
+                  (expression
+                    (binding))
+                  (expression
+                    (binary_expression
+                      (expression
+                        (binding))
+                      (expression
+                        (binding)))))))))))))

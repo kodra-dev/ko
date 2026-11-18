@@ -1,0 +1,5 @@
+{
+  "grammars": [{ "name": "houdini_opencl", "camelcase": "HoudiniOpencl", "scope": "source.houdini-opencl", "path": ".", "file-types": ["cl"] }],
+  "metadata": { "version": "0.1.0", "license": "MIT", "description": "Houdini OpenCL grammar", "authors": [{ "name": "Ko contributors" }] },
+  "bindings": { "c": true }
+}
