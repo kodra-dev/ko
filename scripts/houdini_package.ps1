@@ -4,13 +4,13 @@
 param([string]$Destination)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
-$defaultDestination = Join-Path $repo 'build/zed-vex'
+$defaultDestination = Join-Path $repo 'build/zed-houdini'
 if ([string]::IsNullOrWhiteSpace($Destination)) { $Destination = $defaultDestination }
 $Destination = [IO.Path]::GetFullPath($Destination).TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
 $insideRepo = $Destination.Equals($repo, [StringComparison]::OrdinalIgnoreCase) -or
     $Destination.StartsWith($repo + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)
 if ($insideRepo -and -not $Destination.Equals($defaultDestination, [StringComparison]::OrdinalIgnoreCase)) {
-    throw 'In-repository output must use the gitignored build/zed-vex directory, not a source directory.'
+    throw 'In-repository output must use the gitignored build/zed-houdini directory, not a source directory.'
 }
 New-Item -ItemType Directory -Force $Destination | Out-Null
 $grammar = Join-Path $Destination 'grammar'
@@ -42,14 +42,14 @@ foreach ($name in @('src', 'languages', 'server')) {
     if (Test-Path $generatedSource) { Remove-Item $generatedSource -Recurse -Force }
 }
 foreach ($name in @('Cargo.toml','Cargo.lock','rust-toolchain.toml','build.rs','src','languages')) {
-    Copy-Item (Join-Path $repo "editors/zed-vex/$name") $extension -Recurse -Force
+    Copy-Item (Join-Path $repo "editors/zed-houdini/$name") $extension -Recurse -Force
 }
 $server = Join-Path $extension 'server/ko_vex_lsp'
 New-Item -ItemType Directory -Force $server | Out-Null
 Get-ChildItem (Join-Path $repo 'tools/vex-lsp/ko_vex_lsp') -File -Filter '*.py' |
     Copy-Item -Destination $server -Force
 $url = ([uri]($grammar.Replace('\','/') + '/')).AbsoluteUri.TrimEnd('/')
-$template = [IO.File]::ReadAllText((Join-Path $repo 'editors/zed-vex/extension.toml.in'))
+$template = [IO.File]::ReadAllText((Join-Path $repo 'editors/zed-houdini/extension.toml.in'))
 # JSON string quoting is also valid TOML basic-string quoting. Preserve the
 # script exactly (including line endings), so capability checks match include_str!.
 $discovery = [IO.File]::ReadAllText((Join-Path $extension 'src/discover_runtime.ps1')) | ConvertTo-Json -Compress

@@ -11,6 +11,8 @@ Default-Icons
 /.zed/
 
 # Generated VEX extension package and language-server documentation
+/build/zed-houdini/
+# Output location before the extension was renamed to ko-houdini
 /build/zed-vex/
 .vex-lsp/
 

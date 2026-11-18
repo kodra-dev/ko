@@ -38,14 +38,14 @@ not the same as proving a particular overload/conditional branch is active.
 The prepared local extension is at:
 
 ```text
-build/zed-vex/zed-extension
+build/zed-houdini/zed-extension
 ```
 
 That path is relative to this repository and is generated/gitignored. Regenerate
 it from the repository root with:
 
 ```powershell
-./scripts/vex_package.ps1
+./scripts/houdini_package.ps1
 ```
 
 In Zed: **Extensions → Install Dev Extension**, select that folder. Then open
@@ -211,8 +211,8 @@ compiler) are not presented as proven errors in your VEX code.
 
 ## Developer packaging (not user setup)
 
-Run `./scripts/vex_package.ps1` from the repository root to regenerate the
-installable **development artifact** under `build/zed-vex/`. The entire generated
+Run `./scripts/houdini_package.ps1` from the repository root to regenerate the
+installable **development artifact** under `build/zed-houdini/`. The entire generated
 directory, including its grammar cache and any Zed build outputs, is gitignored;
 only sources and the packaging script belong in version control. An optional
 `-Destination` override can place output outside the repository.
@@ -240,7 +240,7 @@ from PowerShell at this repository root with:
 rustup run 1.99.1 "$env:LOCALAPPDATA/Programs/Zed/bin/zed.exe" .
 ```
 
-Then retry **Install Dev Extension → `build/zed-vex/zed-extension`**. The
+Then retry **Install Dev Extension → `build/zed-houdini/zed-extension`**. The
 `rustup run` override applies only to that Zed process; it does not change your
 global Rust default. Fully quitting matters: a CLI request routed to an already
 running Zed instance does not update that instance's environment.
@@ -331,7 +331,7 @@ npm test
 Extension build:
 
 ```powershell
-cd editors/zed-vex
+cd editors/zed-houdini
 cargo build --locked --target wasm32-wasip2
 ```
 
