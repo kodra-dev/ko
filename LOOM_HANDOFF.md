@@ -11,8 +11,8 @@ Conversation-only branching is implemented and the user has now manually verifie
 Do not implement this whole roadmap in one pass.
 
 Repo: `H:/Assets/Assets_3D/HoudiniScripts/ko`.
-All development changes remain **uncommitted**. Do not commit/push unless requested.
-`Ko.keymap2` contains an unrelated user change: preserve it.
+Loom work through recursive file discovery is committed (`c9926b5`, `800738d`, `fb14f77`);
+later commits are unrelated Zed extension work. Do not commit/push unless requested.
 
 ## Remaining tasks, in priority order
 
@@ -292,6 +292,7 @@ Read root `AGENTS.md` and `tests/loom/AGENTS.md`.
 ## Suggested first prompt in the new context
 
 > Read AGENTS.md, LOOM_HANDOFF.md and LOOM_README.md, and verify current code.
-> Conversation-only branching has passed user manual verification; recursive file discovery is implemented.
+> Conversation-only branching has passed user manual verification; recursive file discovery is
+> implemented and committed, pending live manual verification.
 > Do not implicitly restore scenes or files. Preserve history and independent Checkpoints.
 > Do not run paid provider tests without asking me first.
