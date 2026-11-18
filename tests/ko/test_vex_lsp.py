@@ -183,6 +183,17 @@ class ProtocolTests(WorkspaceTests):
         found = self.request('textDocument/definition', text.index('custom_global')+2)
         self.assertEqual(uri_path(found[0]['uri']), self.inc/'custom.h')
 
+    def test_no_completion_while_typing_a_number(self):
+        self.server.workspace.builtins = {'fit10': [{'return': 'float', 'args': ['float']}],
+                                          'atan2': [{'return': 'float', 'args': ['float', 'float']}]}
+        def complete(text):
+            self.server.workspace.open[self.doc.uri] = Document(self.doc.uri, text, 3)
+            return [i['label'] for i in self.request('textDocument/completion', len(text))['items']]
+        for text in ('float b = a * 2', 'float b = 2.0', 'float b = .5', 'float b = 1e5', 'float b = 2f'):
+            self.assertEqual(complete(text), [], text)
+        self.assertIn('fit10', complete('float b = fit1'))
+        self.assertIn('atan2', complete('float b = atan2'))
+
     def test_builtin_completion_documentation_is_lazy(self):
         ws = self.server.workspace
         ws.builtins = {'fit': [{'return': 'float', 'args': ['float', 'float']}]}

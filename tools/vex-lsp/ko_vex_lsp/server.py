@@ -10,6 +10,9 @@ from .compiler import KNOWN_ATTRS, RefactorError, rename
 from .diagnostics import Diagnostics
 from .validation import Context
 from .model import Document, KEYWORDS, TYPES, path_uri, uri_path
+
+# A numeric literal being typed at the cursor (not an identifier containing digits).
+NUMBER_PREFIX = re.compile(r'(?:^|[^A-Za-z_0-9.])\.?\d[A-Za-z_0-9.]*$')
 from .workspace import Workspace, MAX_FILE
 
 CAPABILITIES = {
@@ -325,6 +328,9 @@ class Server:
                 for name in self.workspace.include_completions(doc, prefix, include[1] == '"')]}
         token = doc.token_at(offset)
         if token and token.kind in ('comment', 'string', 'directive'):
+            return {'isIncomplete': False, 'items': []}
+        if NUMBER_PREFIX.search(doc.text[max(0, offset-256):offset]):
+            # Typing a number (2, 2.0, .5, 1e5): Zed would fuzzy-match it to vector2, fit10, ...
             return {'isIncomplete': False, 'items': []}
         prefix_match = re.search(r'[A-Za-z_][A-Za-z_0-9]*$', doc.text[:offset])
         prefix = prefix_match.group() if prefix_match else ''
