@@ -16,6 +16,7 @@ pub const BOOTSTRAP: &str = "import sys,runpy; assert sys.version_info >= (3,10)
 
 pub const VEX_SERVER: &str = "ko-vex";
 pub const APEX_SERVER: &str = "ko-apex";
+pub const OPENCL_SERVER: &str = "ko-opencl";
 // Settings a server inherits from lsp.ko-vex when its own settings omit them.
 pub const SHARED_SETTINGS: &[&str] = &["houdiniPath", "pythonPath", "discoverHoudini"];
 
@@ -23,6 +24,7 @@ pub fn server_module(id: &str) -> Option<&'static str> {
     match id {
         VEX_SERVER => Some("ko_vex_lsp"),
         APEX_SERVER => Some("ko_apex_lsp"),
+        OPENCL_SERVER => Some("ko_opencl_lsp"),
         _ => None,
     }
 }
@@ -79,6 +81,7 @@ mod tests {
         assert!(merged.get("context").is_none());
         assert_eq!(server_module("ko-apex"), Some("ko_apex_lsp"));
         assert_eq!(server_module("ko-vex"), Some("ko_vex_lsp"));
+        assert_eq!(server_module("ko-opencl"), Some("ko_opencl_lsp"));
         assert_eq!(server_module("other"), None);
     }
     #[test]
@@ -167,6 +170,46 @@ mod tests {
         fs::remove_dir_all(base).unwrap();
     }
     #[test]
+    fn bundled_houdini_python_runs_embedded_opencl_lsp() {
+        use std::{io::Write, process::{Command, Stdio}};
+        let Ok(hfs) = std::env::var("KO_VEX_TEST_HFS") else { return; };
+        let base = std::env::temp_dir().join(format!("ko-opencl-lsp-smoke-{}", std::process::id()));
+        let directory = install_bundle(&base).unwrap();
+        let mut command = Command::new(Path::new(&hfs).join("python313/python.exe"));
+        command.args(["-I", "-S", "-c", BOOTSTRAP]).arg(&directory).arg("ko_opencl_lsp")
+            .stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped());
+        #[cfg(windows)] {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x08000000);
+        }
+        let mut child = command.spawn().unwrap();
+        let root_uri = format!("file:///{}", base.to_string_lossy().replace('\\', "/"));
+        let uri = format!("{root_uri}/case.cl");
+        let text = "#bind point &P float3\n#bind point mass flot\n@KERNEL\n{\n    mat3identity(m);\n}\n";
+        let messages = [
+            serde_json::json!({"jsonrpc":"2.0", "id":1, "method":"initialize", "params":{
+                "rootUri":root_uri, "initializationOptions":{"houdiniPath":hfs}}}),
+            serde_json::json!({"jsonrpc":"2.0", "method":"textDocument/didOpen", "params":{
+                "textDocument":{"uri":uri,"version":1,"text":text}}}),
+            serde_json::json!({"jsonrpc":"2.0", "id":2,"method":"textDocument/hover","params":{
+                "textDocument":{"uri":uri},"position":{"line":4,"character":6}}}),
+        ];
+        let mut input = child.stdin.take().unwrap();
+        for message in messages {
+            let body = message.to_string();
+            write!(input, "Content-Length: {}\r\n\r\n{}", body.len(), body).unwrap();
+        }
+        drop(input);
+        let result = child.wait_with_output().unwrap();
+        assert!(result.status.success(), "{}", String::from_utf8_lossy(&result.stderr));
+        let output = String::from_utf8_lossy(&result.stdout);
+        assert!(output.contains("ko-opencl-lsp"), "{output}");
+        assert!(output.contains("is not a documented #bind flag or type"), "{output}");
+        assert!(output.contains("mat3identity(mat3 a)"), "{output}");
+        assert!(!output.contains("\"error\":"), "{output}");
+        fs::remove_dir_all(base).unwrap();
+    }
+    #[test]
     fn bundle_is_self_contained_and_repairs_files() {
         let base = std::env::temp_dir().join(format!("ko-vex-rust-{}", std::process::id()));
         let directory = install_bundle(&base).unwrap();
@@ -174,6 +217,8 @@ mod tests {
         assert!(directory.join("ko_vex_lsp/discovery.py").is_file());
         assert!(directory.join("ko_apex_lsp/__main__.py").is_file());
         assert!(directory.join("ko_apex_lsp/catalog.py").is_file());
+        assert!(directory.join("ko_opencl_lsp/__main__.py").is_file());
+        assert!(directory.join("ko_opencl_lsp/builtins.py").is_file());
         let target = directory.join("ko_vex_lsp/model.py");
         fs::write(&target, "damaged").unwrap();
         assert_eq!(install_bundle(&base).unwrap(), directory);

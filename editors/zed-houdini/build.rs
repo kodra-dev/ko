@@ -19,9 +19,10 @@ fn main() {
     let bundled = crate_dir.join("server");
     // (root, package): a packaged extension has server/<package>; a checkout has tools/*-lsp.
     let packages = if bundled.is_dir() {
-        vec![(bundled.clone(), "ko_vex_lsp"), (bundled, "ko_apex_lsp")]
+        vec![(bundled.clone(), "ko_vex_lsp"), (bundled.clone(), "ko_apex_lsp"), (bundled, "ko_opencl_lsp")]
     } else {
-        vec![(crate_dir.join("../../tools/vex-lsp"), "ko_vex_lsp"), (crate_dir.join("../../tools/apex-lsp"), "ko_apex_lsp")]
+        vec![(crate_dir.join("../../tools/vex-lsp"), "ko_vex_lsp"), (crate_dir.join("../../tools/apex-lsp"), "ko_apex_lsp"),
+             (crate_dir.join("../../tools/opencl-lsp"), "ko_opencl_lsp")]
     };
     let mut files = Vec::new();
     // Only the runtime packages are embedded, not packaging scripts or tests.

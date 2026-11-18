@@ -1,7 +1,7 @@
 # Houdini code in Zed
 
 Edit Houdini parameters and shelf tools in [Zed](https://zed.dev), with language support for VEX,
-APEX Script and Houdini Python. Windows, Houdini 22.
+APEX Script, Houdini OpenCL and Houdini Python. Windows, Houdini 22.
 
 ## Setup
 
@@ -23,7 +23,7 @@ The `HOUDINI_MENU_PATH` line hides SideFX Labs' duplicate **Edit in External Edi
 Remove it if Labs is disabled, or Houdini reports "Could not find element" at startup.
 Restart Houdini after installing or updating the repo.
 
-**2. Install the Zed extension** (VEX and APEX Script support):
+**2. Install the Zed extension** (VEX, APEX Script and OpenCL support):
 
 ```powershell
 ./scripts/houdini_package.ps1
@@ -69,7 +69,7 @@ Good to know:
 | `.vfl`, `.vexh` | VEX | Completion, hover docs, signature help, go to definition, live compiler errors and warnings, safe rename of local variables |
 | `.apex` | APEX Script | Completion, hover docs, signature help, go to definition, syntax errors and unsupported constructs (`while`, `class`, …) |
 | `.py` | Python | `hou` completion, hover and type checking, through Zed's built-in Python support |
-| `.cl` | OpenCL | Nothing Houdini-specific yet |
+| `.cl` | Houdini OpenCL | Completion and hover for `@` bindings and their methods, `#bind` types and flags, Houdini's OpenCL headers and OpenCL built-ins; signature help, go to definition, `#bind` and bracket checks |
 
 **VEX** uses your Houdini's own compiler (`vcc`) and help, so built-ins and errors match your
 version. Wrangle snippets are checked as snippets. Use `v@name`-style prefixes, or set
@@ -80,6 +80,15 @@ in Houdini's packages, and in `includePaths`.
 **APEX Script** reads Houdini's own list of APEX functions. It can't report undefined names or
 wrong argument types, because header templates and saved subgraphs define names it doesn't see;
 Houdini's node errors remain the reference.
+
+**OpenCL** understands Houdini's additions: `#bind` lines, `@KERNEL`/`@WRITEBACK` blocks, and `@name`
+bindings with the methods their kind allows (`@P.set()`, `@surface.worldSample()`, `@ramp(0.5)`, …).
+Headers come from `$HFS/houdini/ocl/include`; `matrix.h` is available without an include, as in
+Houdini's snippets. There is **no compile check**: Houdini generates the real kernel from the `@`
+syntax inside the node, so compile errors still appear only on the node. An `@name` with no `#bind`
+is not flagged, because the node's Bindings tab can declare it. Words in `#bind` lines that the help
+page doesn't document are shown as information, not errors. Houdini's own `.h` headers stay C/C++ in
+Zed; pick **Houdini OpenCL** in the language selector to edit one with these features.
 
 **Python** needs no setup for code opened from Houdini. For a folder you open in Zed yourself
 (such as a tools repo), run once:
@@ -131,14 +140,16 @@ Zed settings (all optional), in your Zed user settings:
 ```
 
 `houdiniPath` and `pythonPath` (a Python 3.10+ to run the servers instead of Houdini's) also apply to
-APEX Script; put them under `"ko-apex"` to set them for APEX only. Other VEX options: `mode`
+APEX Script and OpenCL; put them under `"ko-apex"` or `"ko-opencl"` to set them for one language.
+OpenCL also takes `includePaths` (extra header folders) and `defaultIncludes` (default `["matrix.h"]`)
+under `"ko-opencl"`. Other VEX options: `mode`
 (`"snippet"` or `"source"`), `context` (e.g. `"cvex"`), `compilerTimeout` (seconds),
 `diagnosticsDebounceMs`, `diagnosticsMaxProblems`.
 
 ## Troubleshooting
 
-- **Highlighting works but no completion or hover:** run **zed: open log** and look for `ko-vex` or
-  `ko-apex` errors. A `process:exec … not listed` error means the extension is outdated: run the
+- **Highlighting works but no completion or hover:** run **zed: open log** and look for `ko-vex`,
+  `ko-apex` or `ko-opencl` errors. A `process:exec … not listed` error means the extension is outdated: run the
   package script again and rebuild it.
 - **Installing the extension fails with "cannot find the `wasm32-wasip2` target":** Zed's default
   Rust is too old. Quit Zed completely, install the pinned toolchain
@@ -154,12 +165,13 @@ APEX Script; put them under `"ko-apex"` to set them for APEX only. Other VEX opt
 ## For developers
 
 - Offline tests (no Houdini, Zed or network): `python -m unittest discover -s tests/ko`. Set
-  `KO_VEX_TEST_HFS` to a Houdini install folder to also run the tests that use its compiler and
-  APEX function list.
+  `KO_VEX_TEST_HFS` to a Houdini install folder to also run the tests that use its compiler,
+  APEX function list and OpenCL headers.
 - Extension tests: `cargo test --manifest-path editors/zed-houdini/Cargo.toml`.
 - Edit-in-Zed shortcut GUI test: `./scripts/zed_gui_test.ps1`. Headless Houdini smoke test:
   `hython tests/ko/zed_houdini_smoke.py`.
-- Layout: `editors/zed-houdini` (Zed extension), `editors/tree-sitter-vex` (VEX grammar; `npm ci`,
-  `npm run generate`, `npm test`), `tools/vex-lsp` and `tools/apex-lsp` (language servers, bundled
-  into the extension), `editors/houdini-python` (Python stubs and settings), `python3.13libs/ko_zed*.py`
+- Layout: `editors/zed-houdini` (Zed extension), `editors/tree-sitter-vex` and
+  `editors/tree-sitter-opencl` (grammars; `npm ci`, `npm run generate`, `npm test`), `tools/vex-lsp`,
+  `tools/apex-lsp` and `tools/opencl-lsp` (language servers, bundled into the extension). The OpenCL
+  built-in list is generated from clang's `opencl-c.h` by `scripts/opencl_builtins.py`; `editors/houdini-python` (Python stubs and settings), `python3.13libs/ko_zed*.py`
   (the Houdini side).

@@ -502,7 +502,8 @@ class PackagingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='ko-vex-default-package-') as directory:
             root = Path(directory)
             repo = TOOL.parents[1]
-            for relative in ('editors/zed-houdini', 'editors/tree-sitter-vex', 'tools/vex-lsp', 'tools/apex-lsp'):
+            for relative in ('editors/zed-houdini', 'editors/tree-sitter-vex', 'editors/tree-sitter-opencl',
+                             'tools/vex-lsp', 'tools/apex-lsp', 'tools/opencl-lsp'):
                 shutil.copytree(repo/relative, root/relative,
                                 ignore=shutil.ignore_patterns('target', 'node_modules', '__pycache__'))
             (root/'scripts').mkdir()
@@ -516,7 +517,7 @@ class PackagingTests(unittest.TestCase):
             generated = root/'build/zed-houdini'
             self.assertTrue((generated/'zed-extension/extension.toml').is_file())
             self.assert_discovery_permission(generated/'zed-extension')
-            for relative in ('zed-extension/extension.toml', 'grammar/src/parser.c'):
+            for relative in ('zed-extension/extension.toml', 'grammar/src/parser.c', 'grammar-opencl/src/parser.c'):
                 ignored = subprocess.run(['git', '-C', str(root), 'check-ignore', '--quiet', str(generated/relative)])
                 self.assertEqual(ignored.returncode, 0, relative)
             rejected = subprocess.run(command + ['-Destination', str(root/'editors/zed-houdini')],
@@ -548,6 +549,19 @@ class PackagingTests(unittest.TestCase):
             self.assertTrue((extension/'server/ko_apex_lsp/catalog.py').is_file())
             self.assertTrue((extension/'languages/apex/config.toml').is_file())
             self.assertIn('[language_servers.ko-apex]', manifest)
+            self.assertTrue((extension/'server/ko_opencl_lsp/builtins.py').is_file())
+            self.assertTrue((extension/'languages/opencl/config.toml').is_file())
+            self.assertIn('[language_servers.ko-opencl]', manifest)
+            self.assertIn('[grammars.houdini_opencl]', manifest)
+            self.assertTrue((destination/'grammar-opencl/src/parser.c').is_file())
+            # Each grammar has its own cache commit; the manifest pins both revisions.
+            import tomllib
+            grammars = tomllib.loads(manifest)['grammars']
+            self.assertNotEqual(grammars['vex']['rev'], grammars['houdini_opencl']['rev'])
+            self.assertTrue(grammars['houdini_opencl']['repository'].endswith('grammar-opencl'))
+            # .h stays with C/C++; only .cl is claimed.
+            config = tomllib.loads((extension/'languages/opencl/config.toml').read_text(encoding='utf-8'))
+            self.assertEqual(config['path_suffixes'], ['cl'])
             self.assertTrue(manifest.startswith('id = "ko-houdini"\n'))
             self.assertNotIn('[grammars.python]', manifest)
             self.assertTrue((extension/'build.rs').is_file())
@@ -559,7 +573,8 @@ class PackagingTests(unittest.TestCase):
             bootstrap = json.loads(re.search(r'pub const BOOTSTRAP: &str = ("(?:\\.|[^"\\])*");', runtime)[1])
             body = json.dumps({'jsonrpc':'2.0','id':1,'method':'initialize','params': {
                 'rootUri':path_uri(root), 'initializationOptions':{'discoverHoudini':False}}}).encode()
-            for package, name in (('ko_vex_lsp', 'ko-vex-lsp'), ('ko_apex_lsp', 'ko-apex-lsp')):
+            for package, name in (('ko_vex_lsp', 'ko-vex-lsp'), ('ko_apex_lsp', 'ko-apex-lsp'),
+                                  ('ko_opencl_lsp', 'ko-opencl-lsp')):
                 result = subprocess.run([sys.executable, '-I', '-S', '-c', bootstrap, str(extension/'server'), package],
                                         input=b'Content-Length: '+str(len(body)).encode()+b'\r\n\r\n'+body,
                                         capture_output=True, timeout=15)
