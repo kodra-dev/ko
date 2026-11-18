@@ -123,6 +123,54 @@ def prepare_workspace(root):
         pass
 
 
+def python_setup_inputs():
+    """Collect, on the UI thread, what the Python workspace setup needs from Houdini."""
+    import hou
+    import sys
+    # Houdini's sys.path holds every $HOUDINI_PATH/pythonX.Ylibs (HFS, packages, this repo),
+    # its site-packages (numpy, PySide6) and viewer state folders. Leave out the standard
+    # library and interpreter folders: checkers use their own typeshed stubs for those.
+    # resolve() also expands Windows 8.3 short names (C:/PROGRA~1/...).
+    interpreter = {Path(p).resolve() for p in (sys.prefix, sys.base_prefix, Path(sys.executable).parent)}
+    interpreter |= {p / name for p in set(interpreter) for name in ("Lib", "lib", "DLLs")}
+    paths = []
+    for entry in sys.path:
+        if not entry or not Path(entry).is_dir():
+            continue  # '' (current directory) and zipped stdlib.
+        path = Path(entry).resolve()
+        if path not in interpreter and path != Path.cwd().resolve() and str(path) not in paths:
+            paths.append(str(path))
+    source = getattr(hou, "__file__", None)
+    return {"hou_source": str(Path(source).resolve()) if source else None, "library_paths": paths,
+            "houdini_version": hou.applicationVersionString()}
+
+
+def start_python_setup(root, errors, inputs=None):
+    """Point the slot's Python servers at the repo's hou stubs, in the background.
+
+    Generates editors/houdini-python/stubs/<version>/hou.pyi first if this
+    Houdini version has none yet (parsing hou.py takes ~1 s).
+    """
+    import ko_hou_stubs
+    try:
+        inputs = inputs if inputs is not None else python_setup_inputs()
+    except Exception as error:  # Optional convenience: never block editing.
+        errors.put("Python type stubs unavailable: " + str(error))
+        return None
+
+    def work():
+        try:
+            result = ko_hou_stubs.prepare_python_workspace(root, **inputs)
+            if result["settings"] not in ("written", "unchanged"):
+                errors.put("Python settings " + result["settings"])
+        except Exception as error:
+            errors.put("Python type stubs unavailable: " + str(error))
+
+    thread = threading.Thread(target=work, name="ko-zed-python-setup", daemon=True)
+    thread.start()
+    return thread
+
+
 class Launcher:
     """Serialize startup/open requests off the Houdini thread, including cold starts."""
     def __init__(self, root, executable, exists=window_exists, run=subprocess.run, lease=None):
@@ -135,6 +183,9 @@ class Launcher:
         self.uncertain = False
         self.lease = lease
         self.stopping = threading.Event()
+        # Optional thread preparing workspace files (Python stubs/config). The first
+        # open waits briefly for it, so Zed's language servers start with the config.
+        self.ready: threading.Thread | None = None
         self.worker = threading.Thread(target=self._work, name="ko-zed-launcher", daemon=True)
         self.worker.start()
 
@@ -186,6 +237,9 @@ class Launcher:
                 path = self.requests.get()
                 if path is None or self.stopping.is_set():
                     return
+                ready, self.ready = self.ready, None
+                if ready is not None:
+                    ready.join(10)
                 try:
                     self._open(path)
                 except Exception as error:
@@ -321,6 +375,7 @@ class Bridge:
             self.timer.setInterval(350)
             self.timer.timeout.connect(self.tick)
             self.launcher = Launcher(self.root, executable, lease=lease)
+            self.launcher.ready = start_python_setup(self.root, self.launcher.errors)
             hou.hipFile.addEventCallback(self.scene_event)
             self.timer.start()
         except Exception:

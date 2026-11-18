@@ -1,0 +1,3 @@
+# Ruff settings for Python code edited from Houdini. Ruff does not read
+# builtins/__builtins__.pyi, so it needs the same implicit names here.
+builtins = ["hou", "kwargs"]

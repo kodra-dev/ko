@@ -34,6 +34,57 @@ An uncertain startup refuses further launches rather than repeatedly spawning po
 The existing preview-tab setting is written only when a slot's `.zed/settings.json` is first created;
 subsequent openings preserve any edits you made to that file.
 
+## Python: `hou` completion and type checking
+
+Zed's built-in Python support (basedpyright and Ruff) works on Houdini Python code without an extra
+extension. It only needs to find this repo's support files in `editors/houdini-python/`:
+
+- `stubs/<houdini version>/hou.pyi`, e.g. `stubs/22.0.466/hou.pyi`: a typed stub generated from that
+  Houdini's `hou.py`, committed here. `hou.py` itself only has C++ type strings (`"HOM_Node *"`), so
+  without the stub `hou.pwd()` is `Unknown`. With it, `hou.pwd().geometry().points()` completes and is
+  type-checked, and hover shows the HOM docstrings. Generated; don't edit it.
+- `builtins/__builtins__.pyi`: names code stored in Houdini gets without an import (`hou`, `kwargs`).
+- `ruff.toml`: the same two names for Ruff, which does not read `__builtins__.pyi`.
+
+**Code edited through the bridge** needs no setup. When the bridge starts it updates the slot's
+`.zed/settings.json` in the background, pointing basedpyright at the stub for the running Houdini
+version, `builtins/`, and the library folders on Houdini's `sys.path` (every `python3.13libs`
+including `apex`/`kinefx` and this repo, Houdini's site-packages with numpy and PySide6, viewer states),
+and Ruff at `ruff.toml`. If this Houdini version has no stub folder yet, the bridge generates it in
+this repo; commit the new folder. The first Zed open waits up to 10 s for this.
+
+**Any other folder** you open in Zed directly, such as this repo or another tools repo:
+
+```powershell
+python python3.13libs/ko_hou_stubs.py "C:/Program Files/Side Effects Software/Houdini 22.0.466" --project .
+```
+
+This updates `<folder>/.zed/settings.json` (this repo gitignores it, since it holds machine paths)
+with the stub, the Houdini install's library folders and the folder's own `python3.13libs`. Normal
+modules must still `import hou`, so the implicit names are **not** added; pass `--implicit-hou` for
+a folder of snippets or callbacks that run inside Houdini. Without `--project`, the command only
+generates the stub folder, e.g. for a new Houdini version.
+
+Both merge into an existing `.zed/settings.json` rather than replacing it. Ko always sets
+basedpyright's `stubPath`, its own `extraPaths` entries (Houdini library folders and `builtins/`;
+paths you add are kept after them) and Ruff's `configuration`. It adds `typeCheckingMode: "standard"`
+and `preview_tabs` only if you have not set them. Everything else in the file is left as is, and
+an upgrade to a new Houdini version just moves the stub path. Zed allows comments in the file but
+they cannot survive a JSON rewrite, so when a commented file has to change it is first copied to
+`settings.json.backup-<id>`. An invalid file is not touched; the bridge reports it in the status bar.
+After settings change while Zed is open, run **editor: restart language server** in Zed once.
+A `pyrightconfig.json` or `[tool.basedpyright]` in a project takes precedence over these Zed settings.
+
+Stub limits:
+- Functions declared to return `hou.Node` return a stub-only `_AnyNode` combining every node subclass,
+  because HOM returns the actual type (a `SopNode` in a Python SOP). Classes with subclasses also accept
+  unknown attributes, so a typo on a node or prim is not reported.
+- Types SWIG does not describe (`Parm.eval()`, `attribValue()`, overloads taking `*args`) are `Any`.
+  Methods added from Houdini's Python portion are included, untyped.
+- `apex` and other compiled modules besides `hou` have no stubs yet (`apex.Graph` is reported unknown).
+- `from hutil.Qt import QtWidgets` is a runtime shim that checkers cannot follow; for completion,
+  import from `PySide6` directly (which is what `hutil.Qt` resolves to in Houdini 22).
+
 ## Remember folded docks without changing normal Zed preferences
 
 1. Restart Houdini after this update, then use **Alt+E** or **Edit in Zed** to open the new persistent slot.
@@ -137,7 +188,7 @@ mouse position, or matching code text.
   checked against installed Zed 1.28.1's source. An actual GUI routing acceptance run is still required.
 - File suffixes: VEX `.vfl`, Python `.py`, APEX Script `.apex`, OpenCL `.cl`, other strings `.txt`.
   APEX does not deliberately masquerade as Python even though Houdini tags it as Python.
-  Language highlighting/LSP/semantic rename support in Zed is separate from this bridge.
+  VEX language support is separate from this bridge; Python checker setup is described above.
   Standalone VEX tooling and setup are now documented in [VEX_README.md](VEX_README.md).
 - Text files are UTF-8, up to 4 MiB. Files remain under the workspace for recovery; no automatic deletion.
 - The existing **Reload Ko** action preserves the live bridge. For a clean developer restart, run
@@ -211,6 +262,11 @@ Manual GUI acceptance (not run automatically):
    folded layout returns and unrelated projects' docks stay unchanged. Repeat after restarting Houdini.
 10. Run a second Houdini process: verify it uses slot `02`, with independent layout and parameter bindings.
     Exit/crash one process and verify a new bridge can reclaim that free slot without reconnecting old tabs.
+11. Edit a Python SOP's code in Zed: `geo.` completes `Geometry` methods, hover shows HOM docs, and
+    neither basedpyright nor Ruff reports `hou`/`kwargs` as undefined (this also confirms Zed passes the
+    `lsp` settings through). Add your own setting to the slot's `.zed/settings.json`, restart Houdini,
+    and verify it is kept. Open this repo in Zed after `ko_hou_stubs.py ... --project .`: `hou.`
+    completes in `ko_*.py`.
 
 References: https://zed.dev/docs/reference/cli and the installed Zed source at commit
 `e8bc16acee5ae1937600d571d441c4b5d7b0d288` (`crates/zed/src/zed/open_listener.rs`,

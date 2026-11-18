@@ -7,6 +7,9 @@ Default-Icons
 *_auto*.hdalc
 
 
+# Per-machine Zed project settings (written by ko_hou_stubs.py --project)
+/.zed/
+
 # Generated VEX extension package and language-server documentation
 /build/zed-vex/
 .vex-lsp/
