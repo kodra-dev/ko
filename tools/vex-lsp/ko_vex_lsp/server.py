@@ -293,15 +293,27 @@ class Server:
                 return item
             return [entry(s) for s in doc.root.symbols]
         if method == 'textDocument/prepareRename':
-            return rename(self.workspace, doc, token, '', prepare=True)
+            return self.rename_request(doc, token, prepare=True)
         if method == 'textDocument/rename':
-            return rename(self.workspace, doc, token, p['newName'])
+            return self.rename_request(doc, token, p['newName'])
         if method == 'textDocument/references':
             rename(self.workspace, doc, token, '', prepare=True)
             symbol = doc.resolve(token)
             return [location(doc, t) for t in doc.code if t.kind == 'id' and doc.resolve(t) is symbol
                     and (p.get('context', {}).get('includeDeclaration', True) or t is not symbol.token)]
         raise KeyError('Method not supported: ' + method)
+
+    def rename_request(self, doc, token, new_name='', prepare=False):
+        try:
+            return rename(self.workspace, doc, token, new_name, prepare=prepare)
+        except RefactorError as error:
+            # Zed's rename error toast does not display the JSON-RPC error text.
+            # Send an explicit user-facing warning as well as retaining the RPC
+            # failure, so a refusal is never mistaken for an empty/successful edit.
+            message = 'VEX rename refused: ' + str(error)
+            self.notify('window/showMessage', {'type': 2, 'message': message})
+            self.notify('window/logMessage', {'type': 2, 'message': message})
+            raise
 
     def member_symbols(self, doc, token):
         if not token or token.kind != 'id':

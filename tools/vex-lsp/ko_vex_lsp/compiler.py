@@ -230,11 +230,13 @@ def rename(workspace, doc, token, new_name, prepare=False):
         raise RefactorError('Compiler source mapping does not exactly match the resolved identifiers; refusing rename.')
     if prepare:
         return {'range': doc.range(token.start, token.end), 'placeholder': symbol.name}
-    if not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*', new_name) or new_name in KEYWORDS:
-        raise RefactorError('The new name must be a non-keyword VEX identifier.')
+    if new_name in KEYWORDS:
+        raise RefactorError(f'{new_name!r} is a VEX keyword; choose a different name.')
+    if not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]*', new_name):
+        raise RefactorError(f'{new_name!r} is not a valid VEX identifier; use letters, digits and underscores, starting with a letter or underscore.')
     if new_name != symbol.name:
         if new_name in workspace.builtins or any(t.text == new_name for d in graph for t in d.tokens if t.kind == 'id') or new_name in macro_names:
-            raise RefactorError('The new name already occurs in this compilation unit; choose an unambiguous name.')
+            raise RefactorError(f'{new_name!r} already occurs in this compilation unit; choose an unambiguous name to avoid name capture.')
     text = doc.text
     for t in reversed(refs):
         text = text[:t.start] + new_name + text[t.end:]

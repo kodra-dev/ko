@@ -9,12 +9,14 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 TOOL = Path(__file__).resolve().parents[2] / 'tools/vex-lsp'
 sys.path.insert(0, str(TOOL))
 from ko_vex_lsp.model import Document, path_uri, uri_path
 from ko_vex_lsp.workspace import Workspace
-from ko_vex_lsp.server import Server, read_message
+from ko_vex_lsp.server import Server, main as run_server, read_message
 from ko_vex_lsp.compiler import RefactorError, rename, source_for
 from ko_vex_lsp.discovery import find_houdini
 
@@ -191,6 +193,48 @@ class ProtocolTests(WorkspaceTests):
         resolved = self.server.handle('completionItem/resolve', item)
         self.assertIn('SideFX', resolved['documentation']['value'])
 
+    def test_refused_rename_displays_reason_and_preserves_rpc_failure(self):
+        text = 'float weight=1; printf("%g",weight);'
+        for method in ('textDocument/prepareRename', 'textDocument/rename'):
+            for reason in ("'for' is a VEX keyword; choose a different name.",
+                           "'other' already occurs in this compilation unit; choose an unambiguous name.",
+                           'Only resolved local variables and function parameters can currently be renamed.'):
+                with self.subTest(method=method, reason=reason):
+                    def packet(message):
+                        body = json.dumps(message).encode('utf-8')
+                        return b'Content-Length: ' + str(len(body)).encode() + b'\r\n\r\n' + body
+                    params = {'textDocument': {'uri': self.doc.uri}, 'position': {'line': 0, 'character': 7}}
+                    if method.endswith('/rename'):
+                        params['newName'] = 'for'
+                    incoming = io.BytesIO(b''.join(packet(message) for message in [
+                        {'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {
+                            'rootUri': path_uri(self.root), 'initializationOptions': {'discoverHoudini': False}}},
+                        {'jsonrpc': '2.0', 'method': 'textDocument/didOpen', 'params': {
+                            'textDocument': {'uri': self.doc.uri, 'version': 1, 'text': text}}},
+                        {'jsonrpc': '2.0', 'id': 2, 'method': method, 'params': params},
+                    ]))
+                    outgoing = io.BytesIO()
+                    with patch('ko_vex_lsp.server.rename', side_effect=RefactorError(reason)), \
+                         patch('ko_vex_lsp.server.sys.stdin', SimpleNamespace(buffer=incoming)), \
+                         patch('ko_vex_lsp.server.sys.stdout', SimpleNamespace(buffer=outgoing)):
+                        run_server()
+                    outgoing.seek(0)
+                    messages = []
+                    while (message := read_message(outgoing)) is not None:
+                        messages.append(message)
+                    warnings = [m['params'] for m in messages if m.get('method') == 'window/showMessage']
+                    self.assertEqual(warnings, [{'type': 2, 'message': 'VEX rename refused: ' + reason}])
+                    self.assertTrue(any(m.get('method') == 'window/logMessage' and reason in m['params']['message'] for m in messages))
+                    response = next(m for m in messages if m.get('id') == 2)
+                    self.assertEqual(response['error'], {'code': -32803, 'message': reason})
+                    self.assertNotIn('result', response)
+
+    def test_successful_rename_does_not_display_refusal_warning(self):
+        result = {'documentChanges': []}
+        with patch('ko_vex_lsp.server.rename', return_value=result):
+            self.assertEqual(self.request('textDocument/rename', self.doc.text.index('x'), newName='renamed'), result)
+        self.assertFalse(any(method == 'window/showMessage' for method, _ in self.notifications))
+
     def test_incremental_changes_and_versions(self):
         offset = self.doc.text.index('helper')
         self.server.handle('textDocument/didChange', {'textDocument': {'uri': self.doc.uri, 'version': 2}, 'contentChanges': [
@@ -267,9 +311,12 @@ class CompilerTests(unittest.TestCase):
         self.assertEqual(len(result['documentChanges'][0]['edits']), 4)
 
     def test_reject_capture_keywords_and_invalid_source(self):
-        for text, old, new in [('float a=1,b=2; printf("%g",a+b);', 'a', 'b'),
-                               ('float a=1;', 'a', 'for'), ('float a=missing();', 'a', 'valid')]:
-            with self.assertRaises(RefactorError):
+        for text, old, new, reason in [
+                ('float a=1,b=2; printf("%g",a+b);', 'a', 'b', "'b' already occurs"),
+                ('float a=1;', 'a', 'for', "'for' is a VEX keyword"),
+                ('float a=1;', 'a', '1bad', "'1bad' is not a valid VEX identifier"),
+                ('float a=missing();', 'a', 'valid', 'undefined function')]:
+            with self.subTest(new_name=new), self.assertRaisesRegex(RefactorError, reason):
                 self.refactor(text, old, new)
 
     def test_reject_macro_and_members(self):

@@ -272,6 +272,10 @@ Comments, strings, member names and geometry attribute names are not local-varia
 references. Renaming `weight` does not rename `f@weight` or `"weight"`.
 Houdini installation files are read-only for refactoring.
 
+Refusals display a **VEX rename refused: …** warning with the reason, and write
+that same reason to the language-server log. Zed may also display its generic
+“Rename via ko-vex failed” toast; the explicit warning carries the explanation.
+
 **Refused/not implemented:** function/struct/member/global/attribute/macro rename,
 externally bound shader parameters, unbraced loop scopes, documents declaring
 structs, document preprocessing beyond literal includes, macro invocation in the
