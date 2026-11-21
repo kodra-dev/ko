@@ -5,27 +5,27 @@ playbar      -1
 shelf        -1
 menubar      -1
 statusbar    -1
-radial menu set defaultmodeling
+radial menu set ko_adjust
 root {
     split 0.635188 H {
         tabs 0 1 {
-            pane panetab1 -a 0 -l 10 -H /obj/ -T OBJ -m sceneview
+            pane panetab1 -a 0 -l 10 -H /obj/geo1/ -T SOP -m sceneview
             pane panetab4 -a 0 -l 10 -H /img/ -T IMG -m imageview
-            pane panetab11 -a 0 -l 10 -H /obj/ -T OBJ -m details
+            pane panetab11 -a 0 -l 10 -H /obj/geo1/ -T SOP -m details
         }
         split 0.546942 V R {
             tabs 0 1 {
-                pane panetab2 -a 0 -l 10 -H /obj/ -T OBJ -m neteditor
+                pane panetab2 -a 0 -l 10 -H /obj/geo1/ -T SOP -m neteditor
             }
             tabs 0 1 {
-                pane panetab3 -a 0 -l 10 -H /obj/ -T OBJ -m details
-                pane panetab7 -a 1 -l 10 -H /obj/ -T OBJ -m pythonpanel
+                pane panetab3 -a 0 -l 10 -H /obj/geo1/ -T SOP -m details
+                pane panetab7 -a 0 -l 10 -H /obj/geo1/ -T SOP -m pythonpanel
             }
         }
     }
 
-    panel parmeditor -w 2598 582 738 864 {
-        pane KoParameters -a 1 -l 10 -H /obj/ -T OBJ -m parmeditor
+    panel parmeditor -w 2598 494 738 915 {
+        pane KoParameters -a 0 -l 10 -H /obj/geo1/ -T SOP -m parmeditor
     }
 }
 shelfdock -o 1 -l icon_and_text -G "0.50 0.50" add shelf_set_1 shelf_set_2
@@ -38,7 +38,7 @@ viewtype -t ortho_top ${DESKNAME}.panetab1.world.`vpname("${DESKNAME}.panetab1.w
 viewtype -t perspective ${DESKNAME}.panetab1.world.`vpname("${DESKNAME}.panetab1.world",2)`
 geospreadsheet -c 0 -l horizontal -s 0.5 -m none -f 0 panetab11
 scenegraphtree -S 0.25 -m 2 -p "/collections /lights" -c  -i  -o  -x 1 -s 1 -M 0 -C primtype,descendants,kind,populated,loaded,activation,visibility,solo,selectability  panetab11
-networkeditor -p '{\n	"backgroundimagebrightness":"1.0",\n	"gridmode":"0",\n	"showcopsmenu":"1",\n	"taskgraphcollapsemode":"Off",\n	"showtasksmenu":"1",\n	"useworkitemcolorattribute":"0",\n	"typesidebarsplit":"0.25",\n	"forcewirestyle":"-1",\n	"showmenu":"1",\n	"gridxstep":"2.0",\n	"treesplit":"0.25",\n	"showparmdialogmax":"1",\n	"perfstatname":"Time",\n	"palettemode":"0",\n	"taskgraphsortdirection":"0",\n	"showchilddep":"1",\n	"backgroundimageediting":"0",\n	"showtaskgraphperf":"0",\n	"showgrouplist":"0",\n	"showperfstats":"1",\n	"showparmdialog":"0",\n	"overviewmode":"2",\n	"showdep":"0",\n	"palettecolors":"",\n	"showspareinputdep":"1",\n	"workitemcolorattribute":"",\n	"palettesize":"210 210",\n	"showtypesidebar":"0",\n	"showtree":"0",\n	"overviewbounds":"0.000000 0.000000 247.710638 279.612766",\n	"taskgraphperfstatname":"Cook Time",\n	"gridystep":"1.0",\n	"taskgraphsortcriteria":"Automatic",\n	"workitemattrtocollapseby":"",\n	"grouplistsplit":"0.75"\n}\n' panetab2
+networkeditor -p '{\n	"backgroundimagebrightness":"1.0",\n	"gridmode":"0",\n	"showcopsmenu":"1",\n	"taskgraphcollapsemode":"Off",\n	"showtasksmenu":"1",\n	"useworkitemcolorattribute":"0",\n	"typesidebarsplit":"0.25",\n	"forcewirestyle":"-1",\n	"showmenu":"1",\n	"gridxstep":"2.0",\n	"treesplit":"0.25",\n	"showparmdialogmax":"1",\n	"perfstatname":"Time",\n	"palettemode":"0",\n	"taskgraphsortdirection":"0",\n	"showchilddep":"1",\n	"backgroundimageediting":"0",\n	"showtaskgraphperf":"0",\n	"showgrouplist":"0",\n	"showperfstats":"1",\n	"showparmdialog":"0",\n	"overviewmode":"0",\n	"showdep":"0",\n	"palettecolors":"",\n	"showspareinputdep":"1",\n	"workitemcolorattribute":"",\n	"palettesize":"210 210",\n	"showtypesidebar":"0",\n	"showtree":"0",\n	"overviewbounds":"0.000000 0.000000 247.710638 279.612766",\n	"taskgraphperfstatname":"Cook Time",\n	"gridystep":"1.0",\n	"taskgraphsortcriteria":"Automatic",\n	"workitemattrtocollapseby":"",\n	"grouplistsplit":"0.75"\n}\n' panetab2
 netcolumns -c display,xray,select,origin,capture,bone -n OBJ panetab2
 netcolumns -c display,render,template,selectabletemplate,highlight,unload,bypass,lock -n SOP panetab2
 netcolumns -c delscript,comment -n CHOPNET panetab2
@@ -61,3 +61,4 @@ geospreadsheet -c 0 -l horizontal -s 0.5 -m none -f 0 panetab3
 scenegraphtree -S 0.25 -m 2 -p "" -c  -i  -o  -t  -x 1 -s 1 -M 0 -C primtype,childcount,kind,populated,loaded,activation,visibility,solo,selectability  panetab3
 pythonpanel -s on -t off -n loom_checkpoints panetab7
 parmeditor -T 0.25 -w 0 KoParameters
+pythonpanel -s on -t off -n ko_adjust_parts pythonpanel
