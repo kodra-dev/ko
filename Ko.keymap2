@@ -6901,7 +6901,7 @@
 														},
 														{
 															"action":"h.pane.gview.state.sop.ko_adjust.toggle_move_direction",
-															"keys":["Alt+Ctrl+M"
+															"keys":["N"
 															]
 														},
 														{
