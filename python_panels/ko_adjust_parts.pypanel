@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pythonPanelDocument>
+  <interface name="ko_adjust_parts" label="KoAdjust Parts" icon="SOP_visibility" showNetworkNavigationBar="false">
+    <script><![CDATA[
+import hou
+from hutil.Qt import QtCore
+from ko_adjust_parts import PartsPanel
+panel = None
+
+def _hide_chrome():
+    if panel is None:
+        return
+    pane = kwargs.get('paneTab')
+    if pane is None:
+        pane = next((p for p in hou.ui.paneTabs() if p.type() == hou.paneTabType.PythonPanel
+                     and p.activeInterfaceRootWidget() is panel), None)
+    panel.hide_chrome(pane)
+
+def onCreateInterface():
+    global panel
+    panel = PartsPanel()
+    pane = kwargs.get('paneTab')
+    if pane is not None:
+        panel.bind(pane.currentNode())
+    QtCore.QTimer.singleShot(0, _hide_chrome)
+    return panel
+
+def onNodePathChanged(node):
+    if panel is not None:
+        panel.bind(node)
+
+def onActivateInterface():
+    if panel is not None:
+        QtCore.QTimer.singleShot(0, _hide_chrome)
+        panel.refresh(force=True)
+
+def onDeactivateInterface():
+    if panel is not None:
+        panel.restore_tab_bar()
+
+def onDestroyInterface():
+    global panel
+    if panel is not None:
+        panel.restore_tab_bar()
+        panel.shutdown()
+    panel = None
+]]></script>
+    <includeInPaneTabMenu menu_position="3" create_separator="false"/>
+  </interface>
+</pythonPanelDocument>

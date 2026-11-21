@@ -1,0 +1,157 @@
+// Detail wrangle: resolve a surface anchor and cache a radius-limited influence.
+// UI-independent, so the Adjust stack also replays in hython.
+string mode = chs("mode");
+string anchor_part = chs("anchor_part");
+string authored = chs("definition");
+string current = detail(0,"__ko_adjust_part_key");
+string part_error = detail(0,"__ko_adjust_part_error");
+string weight = chs("weight");
+string status = chs("status");
+vector center = chv("center");
+vector n = normalize(chv("normal"));
+float radius = chf("radius");
+float reach = chf("reach");
+float eps = max(reach * 1e-5, 1e-8);
+vector hits[], uv[];
+int prims[];
+int seed = -1;
+vector q = center;
+vector resolved_normal=n;
+string issue = "";
+if (radius <= 0 || reach <= 0 || length2(n) < 0.5)
+    issue = "Invalid radius or anchor frame";
+else if (part_error != "") issue = part_error;
+else if (authored != "" && current != authored) issue = "Part definition changed; rebind this edit";
+else {
+    int count = intersect_all(0, "", center + (reach + 2*eps)*n,
+        -(2*reach + 4*eps)*n, hits, prims, uv, eps, -1);
+    if (count > 64)
+        issue = "Too many anchor candidates";
+    else {
+        float scores[];
+        float best = 1e20;
+        int best_index=-1;
+        resize(scores,count);
+        for (int i=0; i<count; i++) {
+            scores[i]=1e20;
+            string part=prim(0,"__ko_adjust_part",prims[i]);
+            float offset=abs(dot(hits[i]-center,n));
+            float facing=dot(prim_normal(0,prims[i],uv[i]),n);
+            if ((startswith(current,"attribute:") && authored!="" && part!=anchor_part) ||
+                offset>reach+eps || facing<0.6) continue;
+            scores[i]=offset + (1-facing)*reach*0.15;
+            if (scores[i]<best) { best=scores[i]; best_index=i; }
+        }
+        if (best_index>=0) {
+            seed=prims[best_index]; q=hits[best_index];
+            resolved_normal=normalize(prim_normal(0,seed,uv[best_index]));
+            string chosen=prim(0,"__ko_adjust_part",seed);
+            int seed_points[]=primpoints(0,seed);
+            for (int i=0; i<count; i++) {
+                if (i==best_index || scores[i]>best+max(eps*8,reach*0.025)) continue;
+                int coincident=distance(q,hits[i])<=eps*8;
+                if (mode=="nearby" && coincident) continue; // Same ball; sheet identity doesn't change the result.
+                int shared=0;
+                foreach (int p;primpoints(0,prims[i])) shared |= find(seed_points,p)>=0;
+                string part=prim(0,"__ko_adjust_part",prims[i]);
+                if (coincident && shared) {
+                    // At a real seam, prefer the side picked when authoring. Generated labels are only a seam tie-break.
+                    if (mode=="part" && chosen!=part && part==anchor_part) {
+                        seed=prims[i]; chosen=part;
+                        resolved_normal=normalize(prim_normal(0,seed,uv[i]));
+                    }
+                    continue;
+                }
+                if (!coincident || !shared) {
+                    issue="Two equally plausible surfaces; use a named part, Nearby in 3D, or rebind";
+                    break;
+                }
+            }
+        }
+    }
+    if (seed < 0 && issue == "")
+        issue = "Anchor could not find its surface; rebind";
+}
+
+dict touched;
+if (issue == "" && mode == "nearby") {
+    int points[] = nearpoints(0,q,radius,25001);
+    if (len(points)>25000) issue = "Nearby brush exceeded the point budget";
+    else if (!len(points)) issue = "Brush is smaller than local point spacing";
+    else {
+        addpointattrib(0,weight,0.0);
+        foreach (int p;points) {
+            float t=clamp(1 - distance(q,point(0,"P",p))/radius,0,1);
+            if (t<=0.) continue;
+            setpointattrib(0,weight,p,t*t*(3-2*t),"set");
+            foreach (int f;pointprims(0,p)) { string part=prim(0,"__ko_adjust_part",f); touched[part]=1; }
+        }
+    }
+}
+else if (issue == "") {
+    string chosen = prim(0,"__ko_adjust_part",seed);
+    // Relax only the local connected patch. Queue duplicates are suppressed;
+    // improved paths requeue an already visited point when necessary.
+    dict distances, queued;
+    int queue[];
+    foreach (int p; primpoints(0, seed)) {
+        float d = distance(point(0, "P", p), q);
+        if (d >= radius) continue;
+        string key = itoa(p);
+        distances[key] = d;
+        queued[key] = 1;
+        append(queue, p);
+    }
+    if (!len(queue)) issue = "Brush is smaller than local point spacing";
+    for (int k=0; k<len(queue) && issue==""; k++) {
+        if (k >= 80000) {
+            issue = "Brush exceeded the local traversal budget";
+            break;
+        }
+        int p = queue[k];
+        string key = itoa(p);
+        float d = distances[key];
+        queued[key] = 0;
+        vector pos = point(0, "P", p);
+        foreach (int f; pointprims(0,p)) {
+            if (mode=="part" && string(prim(0,"__ko_adjust_part",f))!=chosen) continue;
+            int ring[] = primpoints(0,f);
+            int i = find(ring,p);
+            int near[] = array(ring[(i+1)%len(ring)], ring[(i+len(ring)-1)%len(ring)]);
+            foreach (int nb; near) {
+                float nextd = d + distance(pos, point(0,"P",nb));
+                string id = itoa(nb);
+                if (nextd >= radius || (isvalidindex(distances,id) && nextd >= float(distances[id]))) continue;
+                distances[id] = nextd;
+                if (!int(queued[id])) { queued[id] = 1; append(queue,nb); }
+            }
+        }
+    }
+    if (issue == "") {
+        addpointattrib(0,weight,0.0);
+        int written = 0;
+        foreach (string id; keys(distances)) {
+            int p = atoi(id);
+            if (mode=="part") {
+                int border = 0;
+                foreach (int f; pointprims(0,p))
+                    if (string(prim(0,"__ko_adjust_part",f))!=chosen) { border=1; break; }
+                if (border) continue; // Do not indirectly move adjacent parts at shared seams.
+            }
+            float t = clamp(1 - float(distances[id])/radius,0,1);
+            setpointattrib(0,weight,p,t*t*(3-2*t),"set");
+            if (mode=="part") touched[chosen]=1;
+            else foreach (int f;pointprims(0,p)) { string part=prim(0,"__ko_adjust_part",f); touched[part]=1; }
+            written++;
+        }
+        if (!written) issue="Brush footprint is entirely on pinned part boundaries";
+    }
+}
+if (issue == "") {
+    setdetailattrib(0,weight+"_center",q,"set");
+    setdetailattrib(0,weight+"_normal",resolved_normal,"set");
+    setdetailattrib(0,weight+"_parts",keys(touched),"set");
+    setdetailattrib(0,weight+"_part",string(prim(0,"__ko_adjust_part",seed)),"set");
+}
+setdetailattrib(0,status,issue,"set");
+if (issue != "") warning("KoAdjust brush: %s",issue);

@@ -1,0 +1,52 @@
+// UV islands are components of shared *mesh edges* with continuous endpoint UVs.
+// Pure UV-coordinate connectivity would merge otherwise separate stacked islands.
+int findroot(int parents[]; const int i) {
+    int idx = i;
+    while (parents[idx] != idx) {
+        parents[idx] = parents[parents[idx]];
+        idx = parents[idx];
+    }
+    return idx;
+}
+string uv = chs("../uv_attribute");
+int count = nprimitives(0);
+int parents[], ranks[];
+resize(parents,count);
+resize(ranks,count);
+for (int i=0; i<count; i++) parents[i]=i;
+for (int i=0; i<count; i++) {
+    int first=primhedge(0,i);
+    if (first<0) continue;
+    int h=first;
+    do {
+        if (hedge_isprimary(0,h)) {
+            int a=hedge_srcpoint(0,h);
+            vector u=vertex(0,uv,hedge_srcvertex(0,h));
+            vector v=vertex(0,uv,hedge_dstvertex(0,h));
+            for (int e=hedge_nextequiv(0,h); e>=0 && e!=h; e=hedge_nextequiv(0,e)) {
+                int reverse=hedge_srcpoint(0,e)!=a;
+                vector u2=vertex(0,uv,reverse ? hedge_dstvertex(0,e) : hedge_srcvertex(0,e));
+                vector v2=vertex(0,uv,reverse ? hedge_srcvertex(0,e) : hedge_dstvertex(0,e));
+                if (length2(u-u2)>1e-12 || length2(v-v2)>1e-12) continue;
+                int other=hedge_prim(0,e);
+                int x=findroot(parents,i), y=findroot(parents,other);
+                if (x==y) continue;
+                if (ranks[x]<ranks[y]) parents[x]=y;
+                else {
+                    parents[y]=x;
+                    if (ranks[x]==ranks[y]) ranks[x]++;
+                }
+            }
+        }
+        h=hedge_next(0,h);
+    } while (h>=0 && h!=first);
+}
+addprimattrib(0,"__ko_adjust_part","");
+int labels[];
+resize(labels,count);
+int next=0;
+for (int i=0; i<count; i++) {
+    int root=findroot(parents,i);
+    if (!labels[root]) labels[root]=++next;
+    setprimattrib(0,"__ko_adjust_part",i,sprintf("Island %d",labels[root]),"set");
+}

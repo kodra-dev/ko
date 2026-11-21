@@ -1,0 +1,16 @@
+{
+  "fileversion": "22.0.466",
+  "name": "ko_adjust",
+  "categories": "Modeling",
+  "pane": "scene",
+  "label": "KoAdjust",
+  "type": "submenu",
+  "items": {
+    "0": {"label":"Move", "type":"script_action", "icon":"SOP_edit", "script":"import ko_adjust; ko_adjust.launch(kwargs, 'grab')"},
+    "1": {"label":"Clay", "type":"script_action", "icon":"SOP_peak", "script":"import ko_adjust; ko_adjust.launch(kwargs, 'clay')"},
+    "2": {"label":"Inflate", "type":"script_action", "icon":"SOP_peak", "script":"import ko_adjust; ko_adjust.launch(kwargs, 'inflate')"},
+    "4": {"label":"Smooth", "type":"script_action", "icon":"SOP_smooth", "script":"import ko_adjust; ko_adjust.launch(kwargs, 'smooth')"},
+    "5": {"label":"Relax", "type":"script_action", "icon":"SOP_smooth", "script":"import ko_adjust; ko_adjust.launch(kwargs, 'relax')"},
+    "6": {"label":"Planar", "type":"script_action", "icon":"SOP_edit", "script":"import ko_adjust; ko_adjust.launch(kwargs, 'flatten')"}
+  }
+}

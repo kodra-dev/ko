@@ -1,0 +1,57 @@
+// Point wrangle: all tools change positions only, from the same input positions.
+string attr = chs("weight");
+float w = point(0,attr,@ptnum);
+if (w <= 0 || string(detail(0,chs("status"))) != "") return;
+string tool = chs("tool");
+float amount = chf("strength");
+if (tool=="grab") {
+    vector delta=chv("delta");
+    if (chs("direction")=="normal") {
+        vector authored=normalize(chv("../bind/normal"));
+        vector resolved=detail(0,attr+"_normal");
+        delta=dot(delta,authored)*resolved;
+    }
+    @P += w*delta;
+    return;
+}
+if (tool=="flatten" || tool=="clay") {
+    vector center = detail(0,attr+"_center");
+    vector n = detail(0,attr+"_normal");
+    float above=dot(@P-center,n);
+    if (tool=="flatten") @P -= n*above*w*clamp(amount,0.,1.);
+    else if (abs(amount)>1e-8) {
+        float target=amount*(0.4+0.6*w);
+        float move=target-above;
+        if (move*amount>0) @P += n*clamp(move,-abs(amount),abs(amount))*w;
+    }
+    return;
+}
+if (tool=="smooth") {
+    int adjacent[]=neighbours(0,@ptnum);
+    vector sum={0,0,0};
+    foreach (int p;adjacent) sum+=point(0,"P",p);
+    if (len(adjacent)>=2) @P=lerp(@P,sum/len(adjacent),w*clamp(amount,0.,1.));
+    return;
+}
+vector normal = {0,0,0};
+foreach (int f; pointprims(0,@ptnum)) normal += prim_normal(0,f,{0.5,0.5,0});
+normal = normalize(normal);
+if (tool=="inflate") {
+    @P += normal*w*amount;
+    return;
+}
+if (tool=="relax") {
+    vector average = {0,0,0};
+    int count = 0;
+    foreach (int nb; neighbours(0,@ptnum)) {
+        // Restrict the smoothing stencil to the same authored influence.
+        float neighbor_weight = point(0,attr,nb);
+        if (neighbor_weight<=0.) continue;
+        average += point(0,"P",nb);
+        count++;
+    }
+    if (count>=2) {
+        vector goal = average/count-@P;
+        @P += (goal-normal*dot(goal,normal))*w*clamp(amount,0.,1.);
+    }
+}
