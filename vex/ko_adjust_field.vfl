@@ -1,0 +1,187 @@
+// One radius-limited distance solve seeded by all resolved stroke samples.
+int resolve(int g; string mode, authored_part, part_filter; vector center, n; float reach;
+            export vector q, resolved_normal; export string issue) {
+    float eps=max(reach*1e-5,1e-8);
+    vector hits[], uv[];
+    int prims[];
+    int count=intersect_all(g,"",center+(reach+2*eps)*n,-(2*reach+4*eps)*n,hits,prims,uv,eps,-1);
+    if (count>64) { issue="Too many anchor candidates"; return -1; }
+    if (count<=0) { issue="Anchor could not find its surface; rebind"; return -1; }
+    float scores[];
+    resize(scores,count);
+    float best=1e20;
+    int best_index=-1;
+    for (int i=0; i<count; i++) {
+        scores[i]=1e20;
+        string part=prim(g,"__ko_adjust_part",prims[i]);
+        float offset=abs(dot(hits[i]-center,n));
+        float facing=dot(prim_normal(g,prims[i],uv[i]),n);
+        if ((part_filter!="" && part!=part_filter) || offset>reach+eps || facing<.6) continue;
+        scores[i]=offset+(1-facing)*reach*.15;
+        if (scores[i]<best) { best=scores[i]; best_index=i; }
+    }
+    if (best_index<0) { issue="Anchor could not find its surface; rebind"; return -1; }
+    int seed=prims[best_index];
+    q=hits[best_index];
+    resolved_normal=normalize(prim_normal(g,seed,uv[best_index]));
+    string chosen=prim(g,"__ko_adjust_part",seed);
+    int seed_points[]=primpoints(g,seed);
+    for (int i=0; i<count; i++) {
+        if (i==best_index || scores[i]>best+max(eps*8,reach*.025)) continue;
+        int coincident=distance(q,hits[i])<=eps*8;
+        if (mode=="nearby" && coincident) continue;
+        int shared=0;
+        foreach (int p;primpoints(g,prims[i])) shared |= find(seed_points,p)>=0;
+        string part=prim(g,"__ko_adjust_part",prims[i]);
+        if (coincident && shared) {
+            if (mode=="part" && chosen!=part && part==authored_part) {
+                seed=prims[i]; chosen=part;
+                resolved_normal=normalize(prim_normal(g,seed,uv[i]));
+            }
+            continue;
+        }
+        issue="Two equally plausible surfaces; use a named part, Nearby in 3D, or rebind";
+        return -1;
+    }
+    return seed;
+}
+
+
+void offer(export int pts[]; export float ds[]; int p; float d) {
+    int i=len(pts);
+    append(pts,p); append(ds,d);
+    while (i>0) {
+        int par=(i-1)/2;
+        if (ds[par]<=d) break;
+        pts[i]=pts[par]; ds[i]=ds[par]; i=par;
+    }
+    pts[i]=p; ds[i]=d;
+}
+
+int pop_min(export int pts[]; export float ds[]; export float d) {
+    int p=pts[0], last=pop(pts);
+    d=ds[0];
+    float last_d=pop(ds);
+    int n=len(pts), i=0;
+    if (!n) return p;
+    while (2*i+1<n) {
+        int c=2*i+1;
+        if (c+1<n && ds[c+1]<ds[c]) c++;
+        if (last_d<=ds[c]) break;
+        pts[i]=pts[c]; ds[i]=ds[c]; i=c;
+    }
+    pts[i]=last; ds[i]=last_d;
+    return p;
+}
+
+string mode=chs("mode"), anchor_part=chs("anchor_part"), authored=chs("definition");
+string current=detail(0,"__ko_adjust_part_key"), issue=detail(0,"__ko_adjust_part_error");
+string weight=chs("weight"), status=chs("status");
+vector centers[]=array(chv("center")), normals[]=array(normalize(chv("normal")));
+float radius=chf("radius"), reach=chf("reach"), falloff=clamp(chf("falloff"),.2,5.);
+string samples=chs("samples");
+if (samples!="") {
+    dict payload=json_loads(samples,2);
+    float data[]=payload["samples"];
+    for (int i=0; i+5<len(data) && len(centers)<96; i+=6) {
+        append(centers,set(data[i],data[i+1],data[i+2]));
+        append(normals,normalize(set(data[i+3],data[i+4],data[i+5])));
+    }
+}
+if (issue=="" && (radius<=0 || reach<=0 || length2(normals[0])<.5))
+    issue="Invalid radius or anchor frame";
+if (issue=="" && authored!="" && current!=authored) issue="Part definition changed; rebind this edit";
+
+string chosen="";
+int first_component=-1, seeds[];
+vector resolved[], resolved_normals[];
+for (int s=0;s<len(centers) && issue=="";s++) {
+    string filter=(s>0 && mode=="part") ? chosen :
+        (!s && startswith(current,"attribute:") && authored!="" ? anchor_part : "");
+    vector q,n;
+    int seed=resolve(0,mode,anchor_part,filter,centers[s],normals[s],reach,q,n,issue);
+    if (seed<0) break;
+    int component=prim(0,"__ko_adjust_component",seed);
+    string part=prim(0,"__ko_adjust_part",seed);
+    if (!s) { chosen=part; first_component=component; }
+    else if (mode!="nearby" && component!=first_component) { issue="Stroke crossed a disconnected surface; rebind"; break; }
+    else if (mode=="part" && part!=chosen) { issue="Stroke crossed its selected part; rebind"; break; }
+    append(seeds,seed); append(resolved,q); append(resolved_normals,n);
+}
+
+int budget=240000, restrict=mode=="part" && nuniqueval(0,"prim","__ko_adjust_part")>1;
+int owner[], queue[], touched[];
+float distances[], priorities[];
+if (issue=="") {
+    resize(owner,npoints(0)); resize(distances,npoints(0));
+    for (int s=0;s<len(seeds);s++) {
+        vector q=resolved[s];
+        int points[];
+        if (mode=="nearby") points=nearpoints(0,q,radius,25001);
+        else points=primpoints(0,seeds[s]);
+        budget-=len(points);
+        if (len(points)>25000 || budget<0) { issue="Brush exceeded the local traversal budget"; break; }
+        foreach (int p;points) {
+            float d=distance(q,point(0,"P",p));
+            if (d>=radius || (owner[p] && d>=distances[p])) continue;
+            if (!owner[p]) append(touched,p);
+            owner[p]=s+1; distances[p]=d;
+            if (mode!="nearby") offer(queue,priorities,p,d);
+        }
+    }
+}
+while (len(queue) && issue=="") {
+    if (--budget<0) { issue="Brush exceeded the local traversal budget"; break; }
+    float d;
+    int p=pop_min(queue,priorities,d);
+    if (d!=distances[p]) continue;
+    int adjacent[];
+    if (!restrict) adjacent=neighbours(0,p);
+    else foreach (int f;pointprims(0,p)) {
+        if (string(prim(0,"__ko_adjust_part",f))!=chosen) continue;
+        int ring[]=primpoints(0,f), i=find(ring,p);
+        append(adjacent,ring[(i+1)%len(ring)]);
+        append(adjacent,ring[(i+len(ring)-1)%len(ring)]);
+    }
+    vector pos=point(0,"P",p);
+    foreach (int q;adjacent) {
+        float nextd=d+distance(pos,point(0,"P",q));
+        if (nextd>=radius || (owner[q] && nextd>=distances[q])) continue;
+        if (!owner[q]) append(touched,q);
+        owner[q]=owner[p]; distances[q]=nextd;
+        offer(queue,priorities,q,nextd);
+    }
+}
+dict parts;
+int written=0;
+if (issue=="") {
+    addpointattrib(0,weight,0.);
+    int multiple=len(seeds)>1;
+    if (multiple) addpointattrib(0,weight+"_stamp",0);
+    foreach (int p;touched) {
+        int border=0;
+        int faces[];
+        if (restrict || mode!="part") faces=pointprims(0,p);
+        if (restrict) foreach (int f;faces) {
+            if (string(prim(0,"__ko_adjust_part",f))!=chosen) { border=1; break; }
+        }
+        if (border) continue;
+        float t=clamp(1-distances[p]/radius,0,1);
+        setpointattrib(0,weight,p,pow(t*t*(3-2*t),falloff),"set");
+        if (multiple) setpointattrib(0,weight+"_stamp",p,owner[p]-1,"set");
+        if (mode!="part") foreach (int f;faces) { string part=prim(0,"__ko_adjust_part",f); parts[part]=1; }
+        written++;
+    }
+    if (!written) issue="Brush is smaller than local spacing or lies on pinned boundaries";
+    else if (mode=="part") parts[chosen]=1;
+}
+if (issue=="") {
+    setdetailattrib(0,weight+"_center",resolved[0],"set");
+    setdetailattrib(0,weight+"_normal",resolved_normals[0],"set");
+    setdetailattrib(0,weight+"_centers",resolved,"set");
+    setdetailattrib(0,weight+"_normals",resolved_normals,"set");
+    setdetailattrib(0,weight+"_parts",keys(parts),"set");
+    setdetailattrib(0,weight+"_part",chosen,"set");
+}
+setdetailattrib(0,status,issue,"set");
+if (issue!="") warning("KoAdjust brush: %s",issue);

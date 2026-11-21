@@ -4,41 +4,66 @@ import math
 import time
 
 import hou
+from viewerstate.utils import hudHotkeyRef
 
 import ko_adjust as a
 
 MODES = {'part':'One Part','nearby':'Nearby in 3D','connected':'Topologically Connected'}
 
 
+def cursor_feedback(strength,falloff):
+    """Radius of the 50%-weight contour and stroke width in viewport pixels."""
+    threshold=.5**(1/max(.2,falloff))
+    lo,hi=0.,1.
+    for _ in range(12):
+        t=(lo+hi)*.5
+        if t*t*(3-2*t)<threshold:
+            lo=t
+        else:
+            hi=t
+    return 1-(lo+hi)*.5, 1.0+4.0*min(1.,max(0.,strength))
+
+
 class State:
     def __init__(self, state_name, scene_viewer):
         self.viewer = scene_viewer
-        self.node = self.handle = self.ring = self.wire = self.ghost = None
+        self.node = self.handle = self.ring = self.inner_ring = self.wire = self.ghost = None
+        self._ring_feedback=None
         self.drag = self.pick_action = None
         self.review = self.handle_undo = False
         self.hidden = set()
         self.last_hover = 0.
         self.hover = None
+        self.brush_adjust = None
         self.pending_rewind = self.approved_rewind = None
+        self._hud_callback=self._brush_parm_changed
+        self._hud_pending=False
 
     def onEnter(self, kwargs):
         self.node = kwargs['node']
         a.update_saved_strokes(self.node)
+        a.sync_rewind(self.node)
+        self.review=bool(self.node.evalParm('active_stage'))
         self.handle = hou.Handle(self.viewer, 'grab_move')
         self.ring = hou.GeometryDrawable(self.viewer, hou.drawableGeometryType.Line, 'ko_adjust_radius')
-        self.ring.setParams({'color1':(.99,.73,.25,1.),'line_width':2.})
+        self.ring.setParams({'color1':(.32,.79,1.,.9),'line_width':1.})
+        self.inner_ring=hou.GeometryDrawable(self.viewer,hou.drawableGeometryType.Line,'ko_adjust_strength')
+        self._ring_feedback=None
         self.circle = hou.Geometry()
         circle = self.circle.createPolygon()
         for point in self.circle.createPoints(tuple((math.cos(i*math.tau/64),math.sin(i*math.tau/64),0.) for i in range(64))):
             circle.addVertex(point)
         self.ring.setGeometry(self.circle)
+        self.inner_ring.setGeometry(self.circle)
         self.wire = hou.GeometryDrawable(self.viewer,hou.drawableGeometryType.Line,'ko_adjust_before')
         self.wire.setParams({'color1':(.54,.75,.85,.22),'line_width':1.,'fade_factor':.2})
         self.ghost = hou.GeometryDrawable(self.viewer,hou.drawableGeometryType.Face,'ko_adjust_other_parts')
         self.ghost.setParams({'color1':(.54,.59,.65,.19),'fade_factor':.2})
         self._set_focus(set())
+        self._set_view_active(True)
         self.set_hidden(a.hidden_parts(self.node))
         self.refresh()
+        self.node.addEventCallback((hou.nodeEventType.ParmTupleChanged,),self._hud_callback)
 
     def onGenerate(self, kwargs):
         node = kwargs.get('node') or self.viewer.currentNode()
@@ -66,10 +91,18 @@ class State:
             self.visibility_revision = self._part_revision()
         elif self.hidden and self._part_revision()!=self.visibility_revision:
             self.set_hidden(set())
+        if self.hover and self.hover[2] in self.hidden:
+            self.hover=None
 
     def _set_focus(self,parts):
         with hou.undos.disabler():
             self.node.parm('view_focus').set(json.dumps(dict.fromkeys(sorted(parts),1)) if parts else '')
+
+    def _set_view_active(self,value):
+        with hou.undos.disabler():
+            parm=self.node.parm('view_active')
+            if parm is not None:
+                parm.set(value)
 
     def _editing(self,names=()):
         with hou.undos.disabler():
@@ -82,6 +115,11 @@ class State:
         affected, picked = a.brush_parts(stage)
         all_parts = set(a.parts(self.node))
         others = all_parts-self.hidden-affected if affected else set()
+        if self.drag is not None:
+            signature=(frozenset(affected),frozenset(others))
+            if not update_wire and self.drag.get('display_parts')==signature:
+                return
+            self.drag['display_parts']=signature
         self._set_focus(affected if others else set())
         self._editing(affected or ({picked} if picked is not None else set()))
         self.ghost.show(False)
@@ -105,38 +143,60 @@ class State:
     def refresh(self, message=''):
         if self.node is None:
             return
-        tool = self.node.evalParm('tool')
+        tool = a.choice(self.node,'tool')
         stage = a.active(self.node)
         issue = a.status(stage) if stage and not self.drag else ''
         if self.pick_action:
             usage = dict(rebind='Click a new anchor', hide='Click a part to hide', solo='Click a part to isolate')[self.pick_action] + ' · Esc cancels'
-        elif self.review:
-            usage = 'Drag mesh: new brush from here · Wheel: reviewed radius · Move gizmo when available'
         else:
-            usage = 'LMB brush · Shift: Smooth · Wheel: radius · RMB: controls'
-        self.viewer.setPromptMessage(message or f'KoAdjust · {issue or usage}')
-        stages = a.history(self.node)
-        mode = stage.node('bind').evalParm('mode') if self.review and stage else self.node.evalParm('influence')
-        label = f'{stages.index(stage)+1}/{len(stages)} · {a.LABEL[stage.userData("ko_adjust_tool")]}' if self.review and stage else a.LABEL[tool]
-        rows = [{'label':'Review' if self.review else 'Brush','value':label},
-                {'label':'Affect','value':MODES[mode]}, {'label':'Hidden parts','value':str(len(self.hidden))},
-                {'label':'Brushes / Parts / History','key':'RMB'}]
-        if not self.review and tool=='grab':
-            direction='Surface Normal' if self.node.evalParm('move_direction')=='normal' else 'View Plane'
-            row={'label':'Move Direction','value':direction}
-            keys=hou.hotkeys.assignments(a.STATE_CONTEXT,a.MOVE_DIRECTION_ACTION)
-            if keys:
-                row['key']=', '.join(keys)
-            rows.append(row)
-        if issue:
-            rows.append({'label':'Needs repair','value':issue})
-        self.viewer.hudInfo(show=True, template={'title':'KoAdjust','icon':'SOP_edit','rows':rows}, panel=hou.hudPanel.ToolInfo)
+            usage = 'Drag to branch' if self.review else 'KoAdjust'
+        self.viewer.setPromptMessage(message or issue or usage)
+        label=a.LABEL[stage.userData('ko_adjust_tool')] if self.review and stage else a.LABEL[tool]
+        self.viewer.hudInfo(show=True,template=self._hud_template(tool,label),panel=hou.hudPanel.ToolInfo)
         self.handle.show(self._grab() is not None and self.drag is None)
         if self._grab() is not None:
             self.handle.update()
 
+    def _hud_template(self,tool,label):
+        # Native Sculpt token syntax shows mouse glyphs instead of spelling chords out.
+        rows=[{'label':'Radius','key':'mousewheel'},
+              {'label':'Radius (drag)','key':'Ctrl Shift LMB'},
+              {'label':'Strength (L/R)','key':'Ctrl Shift MMB'},
+              {'label':'Falloff (U/D)','key':'Ctrl Shift MMB'},
+              {'label':'Smooth','key':'Shift LMB'},
+              {'label':'Tools','key':'RMB'}]
+        if tool=='grab' and not self.review:
+            direction='Normal' if a.choice(self.node,'move_direction')=='normal' else 'View Plane'
+            rows.append({'label':direction,'key':hudHotkeyRef(a.MOVE_DIRECTION_ACTION)})
+        return {'title':'KoAdjust · '+label,'icon':a.ICON,'rows':rows}
+
+    def _brush_settings(self):
+        stage=None if self.brush_adjust else (
+            self.drag['stage'] if self.drag else a.active(self.node) if self.review else None)
+        bind=stage.node('bind') if stage is not None else self.node
+        strength=(bind.parm('brush_strength') if stage is not None else None) or self.node.parm('strength')
+        return bind.evalParm('radius'),strength.eval(),bind.evalParm('falloff')
+
+    def _brush_parm_changed(self,event_type,parm_tuple=None,**kwargs):
+        if parm_tuple is None or parm_tuple.name() not in ('radius','strength','falloff') or self._hud_pending:
+            return
+        node=self.node
+        self._hud_pending=True
+
+        def update():
+            self._hud_pending=False
+            if self.node is None or self.node!=node:
+                return
+            try:
+                if self.hover and not self.drag and not self.review:
+                    self._brush_ring(self.hover[0],self.hover[1],node.evalParm('radius'))
+                    self.viewer.curViewport().draw()
+            except hou.ObjectWasDeleted:
+                pass
+        hou.ui.postEventCallback(update)
+
     def onDraw(self, kwargs):
-        for drawable in (self.ghost,self.wire,self.ring):
+        for drawable in (self.ghost,self.wire,self.ring,self.inner_ring):
             if drawable and drawable.visible():
                 drawable.draw(kwargs['draw_handle'])
 
@@ -146,30 +206,47 @@ class State:
         self.wire.show(bool(self.node.evalParm('wire')))
 
     def _brush_ring(self, center, normal, radius):
-        rotation = hou.Vector3(0,0,1).matrixToRotateTo(normal)
-        self.ring.setTransform(hou.hmath.buildScale((radius,)*3) * rotation * hou.hmath.buildTranslate(center))
+        rotation=hou.Vector3(0,0,1).matrixToRotateTo(normal)*hou.hmath.buildTranslate(center)
+        _,strength,falloff=self._brush_settings()
+        params=cursor_feedback(strength,falloff)
+        inner_scale,width=params
+        if self._ring_feedback!=params:
+            self.inner_ring.setParams({'color1':(.32,.79,1.,1.),'line_width':width})
+            self._ring_feedback=params
+        self.ring.setTransform(hou.hmath.buildScale((radius,)*3)*rotation)
+        self.inner_ring.setTransform(hou.hmath.buildScale((radius*inner_scale,)*3)*rotation)
         self.ring.show(True)
+        self.inner_ring.show(True)
+
+    def _hide_brush_ring(self):
+        for ring in (self.ring,self.inner_ring):
+            if ring is not None:
+                ring.show(False)
 
     def _pick(self, geo, event, *, visible=True):
+        return self._ray_pick(geo,*event.ray(),visible=visible)
+
+    def _ray_pick(self,geo,o,d,*,visible=True,target_part=None):
         if geo is None or not geo.findPrimAttrib(a.PART):
             raise ValueError('Parts are unavailable. Check Define Parts By and the input attribute.')
-        o, d = event.ray()
         pos, n, uv = hou.Vector3(), hou.Vector3(), hou.Vector3()
         part = geo.findPrimAttrib(a.PART)
         # Use the native group on the live preview. For a reviewed stage, the
         # temporary group isn't in its history, so skip hidden hits by name.
         hidden_group = visible and self.hidden and geo.findPrimGroup(a.HIDDEN)
-        pattern = '* ^' + a.HIDDEN if hidden_group else '*'
+        pattern='*' if target_part is None else '@'+a.PART+'='+json.dumps(target_part,ensure_ascii=False)
+        if hidden_group:
+            pattern+=' ^'+a.HIDDEN
         for _ in range(64):
             i = geo.intersect(o,d,pos,n,uv,pattern=pattern,min_hit=0.,tolerance=1e-6)
             if i < 0:
                 return None
-            prim = geo.prim(i)
-            if not isinstance(prim, hou.Polygon) or not prim.isClosed():
-                raise ValueError('Pick a closed polygon (unpack packed surfaces before brushing).')
-            name = prim.attribValue(part)
-            if not visible or name not in self.hidden:
-                return pos, prim.normal(), name, a.part_key(geo)
+            prim=geo.prim(i)
+            name=prim.attribValue(part)
+            if (target_part is None or name==target_part) and (not visible or name not in self.hidden):
+                if not isinstance(prim,hou.Polygon) or not prim.isClosed():
+                    raise ValueError('Pick a closed polygon (unpack packed surfaces before brushing).')
+                return pos,prim.normal(),name,a.part_key(geo)
             pattern += f' ^{i}'
         return None
 
@@ -189,9 +266,10 @@ class State:
                 bind=stage.node('bind')
                 deform=stage.node('deform')
                 direction=deform.parm('direction')
-                if direction is not None and direction.eval()=='normal':
+                if direction is not None and direction.evalAsString()=='normal':
                     amount=hou.Vector3(deform.evalParmTuple('delta')).dot(hou.Vector3(bind.evalParmTuple('normal')))
                     deform.parmTuple('delta').set(normal*amount)
+                a.rebase_samples(bind,pos,normal)
                 bind.setParms({'center':tuple(pos),'normal':tuple(normal),'anchor_part':name,'definition':key})
         elif action == 'hide':
             self.set_hidden(self.hidden | {name})
@@ -241,7 +319,7 @@ class State:
             return False
         pos, normal, name, key = hit
         device=event.device()
-        tool='smooth' if device.isShiftKey() else node.evalParm('tool')
+        tool='smooth' if device.isShiftKey() else a.choice(node,'tool')
         radius = node.evalParm('radius')
         future=a.future(node)
         previous=node.evalParm('active_stage')
@@ -257,27 +335,83 @@ class State:
             branch=node.node('stack').indirectInputs()[0] if previous==a.BASE else a.active(node)
         else:
             self.approved_rewind=None
+        stroke_input=geo.freeze(read_only=True) if tool!='grab' else None
         vp = self.viewer.curViewport()
         revision = upstream.geometry().vexAttribDataId()
         camera = (vp.name(),vp.viewTransform().asTuple())
         self.handle.show(False)
         self.viewer.beginStateUndo('KoAdjust ' + a.LABEL[tool])
         try:
-            stage = a.append(node,tool,mode=node.evalParm('influence'),anchor_part=name,definition=key,
-                             center=pos,normal=normal,radius=radius,branch_input=branch,direction=node.evalParm('move_direction'))
+            stage = a.append(node,tool,mode=a.choice(node,'influence'),anchor_part=name,definition=key,
+                             center=pos,normal=normal,radius=radius,branch_input=branch,direction=a.choice(node,'move_direction'),
+                             falloff=node.evalParm('falloff'),brush_strength=node.evalParm('strength'))
         except Exception:
             self.viewer.endStateUndo()
             raise
         self.drag = dict(stage=stage,tool=tool,center=pos,normal=normal,plane=event.ray()[1].normalized(),
-                         x=device.mouseX(),y=device.mouseY(),previous=previous,moved=False,last=0.,
+                         y=device.mouseY(),previous=previous,moved=False,last=0.,
                          upstream=upstream,revision=revision,camera=camera,radius=radius,
-                         future=future,restore=restore,direction=node.evalParm('move_direction'),
-                         invert=device.isCtrlKey(),review_before=review_before)
+                         future=future,restore=restore,direction=a.choice(node,'move_direction'),
+                         invert=device.isCtrlKey(),review_before=review_before,strength=node.evalParm('strength'),
+                         stroke_input=stroke_input,samples=[],last_sample=pos,last_ray=event.ray(),part=name,
+                         mode=a.choice(node,'influence'))
+        if tool!='grab':
+            self._set_dab_amount(self.drag)
         self.review=False
-        node.parm('active_stage').set('')
+        a.set_rewind(node,'')
         self._preview_parts(stage)
         self._brush_ring(pos,normal,radius)
         return True
+
+    def _set_dab_amount(self,drag):
+        amount=drag['strength']
+        if drag['tool'] in ('clay','inflate'):
+            amount*=drag['radius']*(.25 if drag['tool']=='clay' else .2)
+            if drag['invert']:
+                amount=-amount
+        drag['stage'].node('deform').parm('strength').set(amount)
+        drag['moved']=abs(amount)>1e-8
+
+    def _stroke_pick(self,drag,origin,direction):
+        geo=drag['stroke_input']
+        hit=self._ray_pick(geo,origin,direction,target_part=drag['part'])
+        if hit is None and drag['mode']!='part':
+            hit=self._ray_pick(geo,origin,direction)
+        return hit
+
+    def _sample_stroke(self,drag,event,final):
+        ray=event.ray()
+        hit=self._stroke_pick(drag,*ray)
+        if not hit:
+            return
+        pos=hit[0]
+        spacing=max(1e-8,drag['radius']*.32)
+        travel=(pos-drag['last_sample']).length()
+        if travel<spacing*(.5 if final else 1.) or len(drag['samples'])>=a.MAX_STAMPS-1:
+            return
+        sections=min(16,max(1,math.ceil(travel/spacing)))
+        old_o,old_d=drag['last_ray']
+        new_o,new_d=ray
+        changed=False
+        for i in range(1,sections+1):
+            if len(drag['samples'])>=a.MAX_STAMPS-1:
+                break
+            t=i/sections
+            origin=old_o+(new_o-old_o)*t
+            direction=(old_d+(new_d-old_d)*t).normalized()
+            sample=hit if i==sections else self._stroke_pick(drag,origin,direction)
+            if sample is None:
+                continue
+            p,n=sample[:2]
+            if (p-drag['last_sample']).length()>2*drag['radius'] and drag['mode']!='nearby':
+                break
+            drag['samples'].append((*p,*n))
+            drag['last_sample'],drag['last_ray']=p,(origin,direction)
+            changed=True
+        if changed:
+            drag['stage'].node('bind').parm('samples').set(a.encode_samples(drag['samples']))
+            self._preview_parts(drag['stage'],update_wire=False)
+        self._brush_ring(pos,hit[1],drag['radius'])
 
     def _update(self,event,final=False):
         drag = self.drag
@@ -305,21 +439,16 @@ class State:
                     # An almost end-on normal has no stable screen projection.
                     amount=(event.device().mouseY()-drag['y'])*drag['radius']/100
                 delta=axis*amount
+            delta*=drag['strength']
             deform.parmTuple('delta').set(delta)
-            value = delta.length()
+            value=delta.length()
+            drag['moved']=value>1e-7
+            info=f'{value:.4g}'
         else:
-            motion = event.device().mouseX()-drag['x']
-            drag['has_motion'] = drag.get('has_motion',False) or abs(motion)>2
-            fraction = motion/160
-            if final and not drag['has_motion']:
-                fraction = {'clay':.20,'inflate':.12,'smooth':.45,'relax':.45,'flatten':.6}[tool]
-            if tool in ('clay','inflate'):
-                value=fraction*drag['radius']*(-1 if drag['invert'] else 1)
-            else:
-                value=max(0.,min(1.,fraction))
-            deform.parm('strength').set(value)
-        drag['moved'] = abs(value)>1e-7
-        self.viewer.setPromptMessage(f'KoAdjust {a.LABEL[tool]} · {value:.4g} · Wheel: radius · Esc: cancel')
+            self._sample_stroke(drag,event,final)
+            count=1+len(drag['samples'])
+            info=f'{count} samples' if count<a.MAX_STAMPS else 'Stroke full — release to finish'
+        self.viewer.setPromptMessage(f'KoAdjust {a.LABEL[tool]} · {info} · Wheel: radius · Esc: cancel')
 
     def _finish(self,cancel=False):
         drag,self.drag = self.drag,None
@@ -337,7 +466,7 @@ class State:
                 if stage and self.node.node('stack/OUT').input(0) == stage:
                     self.node.node('stack/OUT').setInput(0,drag['restore'])
                     stage.destroy()
-                    self.node.parm('active_stage').set(drag['previous'])
+                    a.set_rewind(self.node,drag['previous'])
                     self.review=drag['review_before']
             else:
                 for later in reversed(drag['future']):
@@ -350,7 +479,7 @@ class State:
             if self.wire:
                 self.wire.show(False)
             self.ghost.show(False)
-            self.ring.show(False)
+            self._hide_brush_ring()
             self.before = self.ghost_mesh = None
             try:
                 self._set_focus(set())
@@ -360,12 +489,70 @@ class State:
             self.viewer.endStateUndo()
         self.refresh(f'KoAdjust · Kept later strokes: {issue}' if issue else '')
 
+    def _begin_brush_adjust(self,event,kind):
+        device=event.device()
+        if self.hover is None:
+            try:
+                self.hover=self._pick(self.pick_geometry(),event)
+            except (hou.Error,ValueError):
+                pass
+        self.viewer.beginStateUndo('KoAdjust Brush Settings')
+        self.brush_adjust=dict(kind=kind,x=device.mouseX(),y=device.mouseY(),
+            values={name:self.node.evalParm(name) for name in ('radius','strength','falloff')})
+        self._update_brush_adjust(event)
+
+    def _update_brush_adjust(self,event):
+        adjust=self.brush_adjust
+        values=adjust['values']
+        device=event.device()
+        dx=device.mouseX()-adjust['x']
+        dy=device.mouseY()-adjust['y']
+        if adjust['kind']=='radius':
+            radius=min(1e8,max(1e-8,values['radius']*math.exp(max(-20,min(20,dx/140)))))
+            self.node.parm('radius').set(radius)
+            info=f'Radius {radius:.4g}'
+        else:
+            strength=min(1.,max(0.,values['strength']+dx/200))
+            falloff=min(5.,max(.2,values['falloff']+dy/120))
+            self.node.setParms({'strength':strength,'falloff':falloff})
+            info=f'Strength {strength:.2f} · Falloff {falloff:.2f}'
+        self.viewer.setPromptMessage(info)
+        if self.hover:
+            self._brush_ring(self.hover[0],self.hover[1],self.node.evalParm('radius'))
+        self.viewer.curViewport().draw()
+
+    def _end_brush_adjust(self,cancel=False):
+        adjust,self.brush_adjust=self.brush_adjust,None
+        if adjust is None:
+            return
+        try:
+            if cancel:
+                self.node.setParms(adjust['values'])
+                if self.hover:
+                    self._brush_ring(self.hover[0],self.hover[1],adjust['values']['radius'])
+        finally:
+            self.viewer.endStateUndo()
+
     def onMouseEvent(self, kwargs):
         if self.node is None:
             return False
         event = kwargs['ui_event']
         reason = event.reason()
         try:
+            if self.brush_adjust is not None:
+                if reason in (hou.uiEventReason.Active,hou.uiEventReason.Changed):
+                    self._update_brush_adjust(event)
+                    if reason==hou.uiEventReason.Changed:
+                        self._end_brush_adjust()
+                return True
+            if self.drag is None and reason in (hou.uiEventReason.Start,hou.uiEventReason.Picked):
+                device=event.device()
+                if device.isCtrlKey() and device.isShiftKey():
+                    if device.isLeftButton() or device.isMiddleButton():
+                        self._begin_brush_adjust(event,'radius' if device.isLeftButton() else 'strength')
+                        if reason==hou.uiEventReason.Picked:
+                            self._end_brush_adjust()
+                        return True
             if self.drag is None and reason in (hou.uiEventReason.Start,hou.uiEventReason.Picked) and event.device().isLeftButton():
                 consumed = self._begin(event)
                 if self.drag and reason==hou.uiEventReason.Picked:
@@ -392,11 +579,12 @@ class State:
                     if hit:
                         self._brush_ring(hit[0],hit[1],self.node.evalParm('radius'))
                         self._editing({hit[2]})
-                        self.viewer.setPromptMessage(f'KoAdjust · {hit[2] or "(empty label)"} · LMB brush · Shift: Smooth · Wheel radius')
+                        self.viewer.setPromptMessage(hit[2] or 'Unnamed part')
                     else:
-                        self.ring.show(False)
+                        self._hide_brush_ring()
                         self._editing()
         except (hou.Error,ValueError) as exc:
+            self._end_brush_adjust(cancel=True)
             self._finish(cancel=True)
             self.refresh(str(exc))
             return True
@@ -416,6 +604,8 @@ class State:
         if self.drag:
             parm.set(value)
             self.drag['radius']=value
+            if self.drag['tool']!='grab':
+                self._set_dab_amount(self.drag)
             self._preview_parts(self.drag['stage'],update_wire=False)
             self._brush_ring(self.drag['center'],self.drag['normal'],value)
         else:
@@ -425,15 +615,15 @@ class State:
                 bind=stage.node('bind')
                 self._brush_ring(hou.Vector3(bind.evalParmTuple('center')),hou.Vector3(bind.evalParmTuple('normal')),value)
             else:
-                try:
-                    self.hover=self._pick(self.pick_geometry(),event)
-                except (hou.Error,ValueError):
-                    self.hover=None
+                # Wheel events need not carry a valid pointing ray on every driver.
+                if self.hover is None:
+                    try:
+                        self.hover=self._pick(self.pick_geometry(),event)
+                    except (hou.Error,ValueError):
+                        pass
                 if self.hover:
                     self._brush_ring(self.hover[0],self.hover[1],value)
-                else:
-                    self.ring.show(False)
-        self.viewer.setPromptMessage(f'KoAdjust · Radius {value:.4g}')
+        self.viewer.setPromptMessage(f'Radius {value:.4g}')
         self.viewer.curViewport().draw()
         return True
 
@@ -475,7 +665,8 @@ class State:
 
     def onKeyEvent(self,kwargs):
         key = kwargs['ui_event'].device().keyString().lower()
-        if key in ('esc','escape') and (self.drag or self.pick_action or self.approved_rewind or self.pending_rewind):
+        if key in ('esc','escape') and (self.drag or self.brush_adjust or self.pick_action or self.approved_rewind or self.pending_rewind):
+            self._end_brush_adjust(cancel=True)
             self.pick_action = self.approved_rewind = self.pending_rewind = None
             self._finish(cancel=True)
             self.refresh()
@@ -483,20 +674,28 @@ class State:
         return False
 
     def onInterrupt(self,kwargs):
+        self._end_brush_adjust(cancel=True)
         self._finish(cancel=True)
         self.onEndHandleToState(kwargs)
-        if self.ring:
-            self.ring.show(False)
+        self._hide_brush_ring()
 
     def onResume(self,kwargs):
         if self.node:
             self._expire_visibility()
             self.refresh()
+            if self.hover and not self.review:
+                self._brush_ring(self.hover[0],self.hover[1],self.node.evalParm('radius'))
+                self.viewer.curViewport().draw()
 
     def onExit(self,kwargs):
         self.onInterrupt(kwargs)
+        if self.node is not None:
+            try:
+                self.node.removeEventCallback((hou.nodeEventType.ParmTupleChanged,),self._hud_callback)
+            except (hou.ObjectWasDeleted,hou.OperationFailed):
+                pass
         try:
-            self.set_hidden(set())
+            self._set_view_active(False)
             self._set_focus(set())
             self._editing()
         except hou.ObjectWasDeleted:
@@ -512,6 +711,10 @@ class State:
             self.onMenuAction({'menu_item':args})
         elif command=='review':
             self.onMenuAction({'menu_item':'review'})
+        elif command=='rewind_selection' and self.node is not None:
+            self.review=bool(self.node.evalParm('active_stage'))
+            self.pick_action=None
+            self.refresh()
         elif command=='inspect' and isinstance(args,dict):
             args.update(ready=self.node is not None,reviewing=self.review,
                         handle_visible=self.handle.visible() if self.handle else False)
@@ -519,7 +722,7 @@ class State:
     def onMenuPreOpen(self,kwargs):
         item=kwargs['menu_item_states'].get('toggle_move_direction')
         if item is not None:
-            item['enable']=self.node is not None and self.node.evalParm('tool')=='grab' and self.drag is None
+            item['enable']=self.node is not None and a.choice(self.node,'tool')=='grab' and self.drag is None
 
     def onMenuAction(self,kwargs):
         action = kwargs['menu_item']
@@ -547,10 +750,10 @@ class State:
                 open_panel(node)
                 return
             elif action=='toggle_move_direction':
-                if node.evalParm('tool')!='grab':
+                if a.choice(node,'tool')!='grab':
                     return
                 parm=node.parm('move_direction')
-                direction='view' if parm.eval()=='normal' else 'normal'
+                direction='view' if parm.evalAsString()=='normal' else 'normal'
                 with hou.undos.group('KoAdjust Move Direction'):
                     parm.set(direction)
                 self.refresh('KoAdjust Move · '+('Surface Normal' if direction=='normal' else 'View Plane'))
@@ -558,11 +761,11 @@ class State:
             elif action in ('review','prev','next') and stage:
                 stages = a.history(node)
                 i = stages.index(stage)+{'review':0,'prev':-1,'next':1}[action]
-                node.parm('active_stage').set(stages[max(0,min(i,len(stages)-1))].name())
+                a.set_rewind(node,stages[max(0,min(i,len(stages)-1))].name())
                 self.review,self.pick_action = True,None
             elif action in ('new','latest'):
                 if action=='latest':
-                    node.parm('active_stage').set('')
+                    a.set_rewind(node,'')
                 self.review,self.pick_action = False,None
             elif action=='mute' and stage:
                 with hou.undos.group('Mute KoAdjust Stroke'):
@@ -577,7 +780,7 @@ class State:
 def template():
     template = hou.ViewerStateTemplate(a.STATE,'KoAdjust',hou.sopNodeTypeCategory())
     template.bindFactory(State)
-    template.bindIcon('SOP_edit')
+    template.bindIcon(a.ICON)
     template.bindHandle('xform','grab_move',handle_parms=['tx','ty','tz'])
     menu = hou.ViewerStateMenu('ko_adjust_menu','KoAdjust')
     context = a.STATE_CONTEXT

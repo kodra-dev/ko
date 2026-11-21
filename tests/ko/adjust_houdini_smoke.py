@@ -95,13 +95,17 @@ def run():
     assert authored==(grab.node('bind').evalParmTuple('center'),grab.node('deform').evalParmTuple('delta'))
     result_points=node.geometry().pointFloatAttribValues('P')
     node.parm('view_hidden').set(json.dumps({'left':1},ensure_ascii=False))
+    assert node.geometry().findPrimGroup('_3d_hidden_primitives') is None
+    node.parm('view_active').set(True)
     visible=node.geometry()
     assert topology(visible)==topo and visible.pointFloatAttribValues('P')==result_points
     hidden=node.node('viewport_mask').geometry().findPrimGroup(a.HIDDEN)
     assert hidden and hidden.primCount()==labels.geometry().primCount()/2
     rendered_mask=visible.findPrimGroup('_3d_hidden_primitives')
     assert rendered_mask and rendered_mask.primCount()==hidden.primCount()
-    node.parm('view_hidden').set('')
+    node.setParms({'view_active':False,'visibility_output':True})
+    assert node.geometry().findPrimGroup('_3d_hidden_primitives').primCount()==hidden.primCount()
+    node.setParms({'view_hidden':'','visibility_output':False})
     grid.setParms(dict(rows=39,cols=37))
     assert topology(node.geometry())==topology(source.geometry()) and not a.status(grab)
     assert max(points_z(node.geometry()))>.2
@@ -146,14 +150,23 @@ def run():
     assert len(edits)==6
     rewind_items=a.stage_menu({'node':node})
     assert rewind_items[::2]==['']+[stage.name() for stage in reversed(edits)]+[a.BASE]
+    assert rewind_items[1]=='Latest · 6. Smooth'
     assert rewind_items[3]=='6. Smooth' and '4. Relax' in rewind_items and '3. Planar' in rewind_items
     assert edits[-1].node('deform').parm('direction') is None
     saved=node.geometry().pointFloatAttribValues('P')
-    node.parm('active_stage').set(a.BASE)
+    rewind=node.parm('rewind_to')
+    assert rewind.evalAsString()=='__latest' and rewind.menuLabels()[0]=='Latest · 6. Smooth'
+    assert not rewind.keyframes()
+    for name in ('tool','influence','part_source','move_direction'):
+        assert isinstance(node.parm(name).parmTemplate(),hou.MenuParmTemplate)
+    rewind.set(a.BASE)
+    rewind.pressButton()
+    assert node.evalParm('active_stage')==a.BASE and rewind.evalAsString()==a.BASE
     assert points_z(node.geometry())==points_z(source.geometry()) and len(a.history(node))==6
-    node.parm('active_stage').set(grab.name())
+    a.set_rewind(node,grab.name())
+    assert rewind.evalAsString()==grab.name()
     assert node.geometry().pointFloatAttribValues('P')==grab.geometry().pointFloatAttribValues('P')
-    node.parm('active_stage').set('')
+    a.set_rewind(node,'')
     assert node.geometry().pointFloatAttribValues('P')==saved
 
     # Even when both sheets are within the search band, the clicked sheet at
@@ -183,16 +196,48 @@ def run():
     list_node.setParms({'part_source':'attribute','part_attribute':'part_id'})
     assert len(a.parts(list_node))==grid.geometry().primCount()
     assert list_node.parm('part_rows') is None
+    path_grid=grid.parent().createNode('grid','stroke_fixture')
+    path_grid.setParms({'orient':0,'rows':35,'cols':35,'sizex':2,'sizey':2})
+    path_node=a.make_adjust(path_grid)
+    n=path_grid.geometry().prim(0).normal()
+    path=a.append(path_node,'inflate',center=(-.6,.07,0),normal=n,radius=.25)
+    path.node('deform').parm('strength').set(.15)
+    path.node('bind').parm('samples').set(a.encode_samples([(-.6+.10*i,.07,0,*n) for i in range(1,13)]))
+    for rows in (35,44):
+        path_grid.parm('rows').set(rows)
+        mesh=path_node.geometry()
+        assert not a.status(path),a.status(path)
+        assert any(p.position().x()>.55 and abs(p.position().z())>.06 for p in mesh.points())
+        assert any(p.position().x()<-.55 and abs(p.position().z())>.06 for p in mesh.points())
+        assert topology(mesh)==topology(path_grid.geometry())
+    wave=grid.parent().createNode('attribwrangle','smooth_fixture')
+    wave.setInput(0,path_grid)
+    wave.parm('snippet').set('@P.z=.3*exp(-8*dot(@P,@P));')
+    wg=wave.geometry()
+    center=hou.Vector3()
+    prim=wg.intersect(hou.Vector3(.02,.03,1),hou.Vector3(0,0,-1),center,hou.Vector3(),hou.Vector3())
+    assert prim>=0
+    smooth_node=a.make_adjust(wave)
+    smooth=a.append(smooth_node,'smooth',center=center,normal=wg.prim(prim).normal(),radius=.6)
+    params=smooth.node('deform')
+    params.setParms({'strength':1,'smooth_span':1})
+    narrow=smooth_node.geometry().boundingBox().maxvec().z()
+    params.parm('smooth_span').set(3)
+    assert narrow-smooth_node.geometry().boundingBox().maxvec().z()>.004
     assert all(n.type().name()!='python' for n in node.allSubChildren())
     with tempfile.TemporaryDirectory() as tmp:
         path=str(Path(tmp)/'brushes.hip')
         name=node.path()
         expected=node.geometry().pointFloatAttribValues('P')
+        node.setParms({'view_hidden':'{"left":1}','view_active':True})
+        assert node.geometry().findPrimGroup('_3d_hidden_primitives') is not None
         hou.hipFile.save(path)
         hou.hipFile.load(path,suppress_save_prompt=True)
         del sys.modules['ko_adjust']
         reopened=hou.node(name)
         assert len(a.history(reopened))==6 and reopened.geometry().pointFloatAttribValues('P')==expected
+        assert not reopened.evalParm('view_active') and a.hidden_parts(reopened)=={'left'}
+        assert reopened.geometry().findPrimGroup('_3d_hidden_primitives') is None
     print('PASS KoAdjust brushes, part modes, topology and replay',hou.applicationVersionString())
 
 

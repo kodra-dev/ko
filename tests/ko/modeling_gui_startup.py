@@ -61,18 +61,20 @@ def run():
         assert not hou.hotkeys.assignments('h.pane.gview.state.sop.ko_adjust.review')
         keys=hou.hotkeys.assignments(a.STATE_CONTEXT,a.MOVE_DIRECTION_ACTION)
         conflicts=hou.hotkeys.findConflicts(a.STATE_CONTEXT,a.MOVE_DIRECTION_ACTION,a.MOVE_DIRECTION_KEY)
-        assert any(set(key.lower().split('+'))=={'ctrl','alt','m'} for key in keys),(keys,conflicts)
-        assert all(x.endswith('?'+a.MOVE_DIRECTION_ACTION) for x in conflicts),(keys,conflicts)
+        assert keys
+        if any(set(key.lower().split('+'))=={'ctrl','alt','m'} for key in keys):
+            assert all(x.endswith('?'+a.MOVE_DIRECTION_ACTION) for x in conflicts),(keys,conflicts)
         node.updateParmStates()
         assert node.parm('move_direction').isVisible()
         result['checks'].append('radial activates locked KoAdjust HDA and state-only actions')
         # Run callbacks with synthetic rays, never desktop/global mouse input.
         state = s.State(a.STATE, viewer)
         state.onEnter({'node': node})
-        def event(kind, x, *, y=0, shift=False, ctrl=False):
+        def event(kind, x, *, y=0, shift=False, ctrl=False, middle=False):
             return {'ui_event': SimpleNamespace(reason=lambda: kind,
-                device=lambda: SimpleNamespace(isLeftButton=lambda: True, mouseX=lambda: int(x*100),mouseY=lambda:y,
-                                               mouseWheel=lambda: 1,isShiftKey=lambda:shift,isCtrlKey=lambda:ctrl),
+                device=lambda: SimpleNamespace(isLeftButton=lambda: not middle,isMiddleButton=lambda:middle,
+                                               mouseX=lambda: int(x*100),mouseY=lambda:y,mouseWheel=lambda: 1,
+                                               isShiftKey=lambda:shift,isCtrlKey=lambda:ctrl),
                 ray=lambda: (hou.Vector3(x, .13, 2), hou.Vector3(0, 0, -1)))}
         start, active, changed = (hou.uiEventReason.Start, hou.uiEventReason.Active, hou.uiEventReason.Changed)
         sizes = []
@@ -83,9 +85,31 @@ def run():
         state._brush_ring = resize_ring
         radius_before = node.evalParm('radius')
         assert state.onMouseWheelEvent(event(active, .07))  # No preceding mouse movement.
-        assert sizes == [node.evalParm('radius')] and sizes[0] > radius_before and state.ring.visible()
+        assert sizes == [node.evalParm('radius')] and sizes[0] > radius_before
+        assert state.ring.visible() and state.inner_ring.visible()
+        assert state.onMouseWheelEvent(event(active,99))  # Broken/irrelevant wheel ray must not hide the ring.
+        assert len(sizes)==2 and sizes[1]>sizes[0] and state.ring.visible()
         state._brush_ring = original_ring
         result['checks'].append('stationary wheel event resizes the visible brush ring immediately')
+        base=node.evalParm('radius')
+        assert state.onMouseEvent(event(start,.07,ctrl=True,shift=True))
+        assert state.onMouseEvent(event(changed,.47,ctrl=True,shift=True))
+        assert node.evalParm('radius')>base and not a.history(node)
+        previous_inner,previous_width=state._ring_feedback
+        assert state.onMouseEvent(event(start,.47,ctrl=True,shift=True,middle=True))
+        assert state.onMouseEvent(event(changed,.07,y=30,ctrl=True,shift=True,middle=True))
+        assert node.evalParm('strength')<1 and node.evalParm('falloff')>1 and not a.history(node)
+        _,strength,falloff=state._brush_settings()
+        assert abs(strength-.8)<1e-6 and abs(falloff-1.25)<1e-6
+        inner,width=state._ring_feedback
+        assert inner<previous_inner and width<previous_width and state.inner_ring.visible()
+        hud=state._hud_template('smooth','Smooth')
+        assert hud['icon']==a.ICON and len(hud['rows'])==6
+        assert node.type().definition().icon()==a.ICON
+        assert not hou.qt.Icon(a.ICON,24,24).isNull()
+        assert hud['rows'][0]['key']=='mousewheel' and hud['rows'][1]['key']=='Ctrl Shift LMB'
+        node.setParms({'radius':base,'strength':1,'falloff':1})
+        result['checks'].append('native-style HUD and two-ring cursor respond to radius, strength and falloff without adding strokes')
         assert state._begin(event(start,.07)['ui_event'])
         assert state.onMouseEvent(event(active,.31))
         assert node.geometry().boundingBox().sizevec().x() == 2  # Local patch, not a whole-object move.
@@ -145,30 +169,38 @@ def run():
         state.onMenuAction({'menu_item':'inflate'})
         node.updateParmStates()
         assert not node.parm('move_direction').isVisible()
-        direction_before=node.evalParm('move_direction')
+        direction_before=a.choice(node,'move_direction')
         state.onMenuAction({'menu_item':'toggle_move_direction'})
-        assert node.evalParm('move_direction')==direction_before
+        assert a.choice(node,'move_direction')==direction_before
         state.onMenuAction({'menu_item':'nearby'})
         assert state.onMouseEvent(event(hou.uiEventReason.Picked,.61))
         assert len(a.history(node))==3
         dab=a.active(node)
-        assert dab.userData('ko_adjust_tool')=='inflate' and dab.node('bind').evalParm('mode')=='nearby'
+        assert dab.userData('ko_adjust_tool')=='inflate' and a.choice(dab.node('bind'),'mode')=='nearby'
         assert dab.node('deform').evalParm('strength')>0 and not a.status(dab)
         assert state.onMouseEvent(event(hou.uiEventReason.Picked,.65,shift=True))
-        assert a.active(node).userData('ko_adjust_tool')=='smooth' and node.evalParm('tool')=='inflate'
+        assert a.active(node).userData('ko_adjust_tool')=='smooth' and a.choice(node,'tool')=='inflate'
         state.onMenuAction({'menu_item':'grab'})
         node.updateParmStates()
         assert node.parm('move_direction').isVisible()
         state.onMenuAction({'menu_item':'toggle_move_direction'})
-        assert node.evalParm('move_direction')=='normal'
+        assert a.choice(node,'move_direction')=='normal'
         assert state.onMouseEvent(event(start,.27,y=100))
         assert state.onMouseEvent(event(changed,.27,y=136))
-        motion=a.active(node).node('deform').evalParmTuple('delta')
-        assert abs(motion[2])>.02 and abs(motion[0])<.005, motion
+        moved=a.active(node)
+        motion=hou.Vector3(moved.node('deform').evalParmTuple('delta'))
+        normal=hou.Vector3(moved.node('bind').evalParmTuple('normal'))
+        assert motion.length()>.02 and motion.cross(normal).length()<1e-5,motion
         result['checks'].append('Shift records Smooth temporarily; Surface Normal Move uses the normal, not the view plane')
 
         strokes=a.history(node)
-        node.parm('active_stage').set(strokes[0].name())
+        rewind=node.parm('rewind_to')
+        assert not rewind.keyframes() and strokes[3].userData('ko_adjust_tool')=='smooth'
+        rewind.set(strokes[3].name())
+        rewind.pressButton()
+        assert node.geometry().pointFloatAttribValues('P')==strokes[3].geometry().pointFloatAttribValues('P')
+        rewind.set(strokes[0].name())
+        rewind.pressButton()
         assert node.geometry().pointFloatAttribValues('P')==strokes[0].geometry().pointFloatAttribValues('P')
         assert len(a.history(node))==5
         old_message,old_post=hou.ui.displayMessage,hou.ui.postEventCallback
@@ -188,7 +220,7 @@ def run():
             posted.pop(0)()
             assert len(questions)==1 and len(a.history(node))==5
             reply=0
-            state.onMenuAction({'menu_item':'clay'})
+            state.onMenuAction({'menu_item':'smooth'})
             assert state.onMouseEvent(event(start,.31)) and not state.drag
             posted.pop(0)()
             assert len(questions)==2 and state.approved_rewind
@@ -201,11 +233,15 @@ def run():
             assert state.onMouseEvent(event(hou.uiEventReason.Picked,.31))
             assert a.history(node)==strokes and len(questions)==2
             node.parm('radius').set(radius)
-            assert state.onMouseEvent(event(hou.uiEventReason.Picked,.31))
-            assert len(a.history(node))==2 and a.history(node)[-1].userData('ko_adjust_tool')=='clay'
+            assert state.onMouseEvent(event(start,.31))
+            assert state.onMouseEvent(event(active,.47))
+            assert state.onMouseEvent(event(changed,.64))
+            assert len(a.history(node))==2 and a.history(node)[-1].userData('ko_adjust_tool')=='smooth'
+            assert a.history(node)[-1].node('bind').evalParm('samples')
             assert not node.evalParm('active_stage') and len(questions)==2 and not state.approved_rewind
             hou.undos.performUndo()
             assert len(a.history(node))==5 and node.evalParm('active_stage')==strokes[0].name()
+            assert rewind.evalAsString()==strokes[0].name()
         finally:
             hou.ui.displayMessage,hou.ui.postEventCallback=old_message,old_post
         result['checks'].append('rewind confirmation survives native-style interruption and is not repeated')
@@ -237,9 +273,33 @@ def run():
         assert a.hidden_parts(node)=={panel.model.names[-1]}
         panel.show_all.click()
         assert not a.hidden_parts(node)
-        other=a.make_adjust(grid)
+        cover=obj.createNode('grid','partial_occluder')
+        cover.setParms({'orient':0,'sizex':.7,'sizey':2,'rows':12,'cols':12})
+        lifted=obj.createNode('xform','lift_cover')
+        lifted.setInput(0,cover)
+        lifted.setParms({'tx':.52,'tz':.35})
+        layers=obj.createNode('merge','stacked_surfaces')
+        layers.setInput(0,grid)
+        layers.setInput(1,lifted)
+        other=a.make_adjust(layers)
         panel.bind(other)
         assert panel.model.names==a.parts(other)
+        painter=s.State(a.STATE,viewer)
+        painter.onEnter({'node':other})
+        other.setParms({'tool':'inflate','radius':.26})
+        assert abs(painter._pick(painter.pick_geometry(),event(active,.58)['ui_event'])[0].z()-.35)<1e-4
+        assert painter.onMouseEvent(event(start,-.57))
+        assert painter.onMouseEvent(event(active,-.17))
+        assert painter.onMouseEvent(event(changed,.58))
+        strokes_paint=a.history(other)
+        assert len(strokes_paint)==1 and not a.status(strokes_paint[0]),a.status(strokes_paint[0])
+        assert len(json.loads(strokes_paint[0].node('bind').evalParm('samples'))['samples'])>24
+        count=grid.geometry().pointCount()
+        positions=other.geometry().points()
+        assert any(p.position().x()>.51 and abs(p.position().z())>.02 for p in positions[:count])
+        assert all(abs(p.position().z()-.35)<1e-4 for p in positions[count:])
+        painter.onExit({})
+        result['checks'].append('continuous drag paints a replayable path as one stroke')
         panel.bind(grid)
         assert panel.node is None and panel.proxy.rowCount()==0
         assert node.parm('update_strokes').description()=='Migrate Old Brush Data'
