@@ -12,12 +12,33 @@ PART_ERROR = '__ko_adjust_part_error'
 PART_KEY = '__ko_adjust_part_key'
 HIDDEN = '__ko_adjust_hidden'
 TOOLS = ('grab','clay','inflate','smooth','relax','flatten')
+SURFACE_REFINEMENT = 'surface_refinement'
+SHAPE_EDITING = 'shape_editing'
+REFINEMENT_TOOLS = frozenset(('smooth','relax'))
+BRUSH_SETTINGS = ('radius','strength','falloff')
+PROFILE_LABELS = {SHAPE_EDITING:'Shape Editing',SURFACE_REFINEMENT:'Surface Refinement'}
+PROFILE_COLORS = {SHAPE_EDITING:(.32,.79,1.),SURFACE_REFINEMENT:(1.,.66,.25)}
+BRUSH_SETTING_PARMS = frozenset(BRUSH_SETTINGS+tuple('refine_'+key for key in BRUSH_SETTINGS))
+
+
+def profile_for_tool(tool):
+    return SURFACE_REFINEMENT if tool in REFINEMENT_TOOLS else SHAPE_EDITING
+
+
+def setting_parm(profile,key):
+    # Keep the old channel names for Shape Editing so existing defaults survive.
+    return 'refine_'+key if profile==SURFACE_REFINEMENT else key
+
+
+def profile_settings(node,profile):
+    return {key:node.evalParm(setting_parm(profile,key)) for key in BRUSH_SETTINGS}
+
 LABEL = dict(grab='Move', clay='Clay', inflate='Inflate', smooth='Smooth', relax='Relax', flatten='Planar')
 STATE_CONTEXT = 'h.pane.gview.state.sop.' + STATE
 MOVE_DIRECTION_ACTION = STATE_CONTEXT + '.toggle_move_direction'
 MOVE_DIRECTION_KEY = 'Ctrl+Alt+M'
 BASE = '__base'
-KERNEL_VERSION = '4'
+KERNEL_VERSION = '5'
 MAX_STAMPS = 96
 LATEST = '__latest'
 INFLUENCES = ('part','nearby','connected')
@@ -266,20 +287,24 @@ def append(node, tool, *, mode='part', anchor_part='', definition='', center=(0,
         deform = stage.createNode('attribwrangle', 'deform')
         deform.setInput(0, bind)
         add_controls(deform, floats=(('strength','Brush Amount',0.),)+
-                                      ((('smooth_span','Smooth Span',3.),) if tool=='smooth' else ()),
+                                      ((('smooth_span','Smooth Span',3.),) if tool in REFINEMENT_TOOLS else ()),
                      vectors=(('delta','Displacement',(0,0,0)),),
                      strings=(('weight','Internal Weight',weight),('status','Internal Status',diagnostic)),
                      menus=(('tool','Brush',TOOLS,tuple(LABEL[t] for t in TOOLS),tool),)+
                            ((('direction','Move Direction',DIRECTIONS,DIRECTION_LABELS,direction),) if tool=='grab' else ()))
         set_wrangle(deform, sections['BrushDeformVEX'].contents(), False)
-        if tool=='smooth':
-            # The target is independent of cursor samples. Cook it once; the
-            # fast point wrangle blends toward it only where the brush lands.
-            target=stage.createNode('smooth::2.0','smooth_target')
-            target.setInput(0,stage.indirectInputs()[0])
-            target.setParms({'attributes':'P','method':2,'filterquality':1,'contrainedboundary':1,'updateaffectednmls':0})
-            target.parm('strength').setExpression('max(0.1, ch("../deform/smooth_span") * 2)')
-            deform.setInput(1,target)
+        if tool in REFINEMENT_TOOLS:
+            # Both targets depend only on the incoming geometry, not the cursor.
+            # A larger dose blends toward the stronger target without another cook.
+            source_ref=stage.indirectInputs()[0]
+            for index,name in enumerate(('smooth_target','smooth_target_more'),1):
+                target=stage.createNode('smooth::2.0',name)
+                target.setInput(0,source_ref)
+                target.setParms({'attributes':'P','method':2 if tool=='smooth' else 0,
+                    'filterquality':1,'contrainedboundary':1,'updateaffectednmls':0})
+                target.parm('strength').setExpression('max(0.1, ch("../deform/smooth_span") * %d)'%(2 if index==1 else 8))
+                deform.setInput(index,target)
+                source_ref=target
         clean = stage.createNode('attribdelete', 'clean_weights')
         clean.setInput(0, deform)
         _clean_brush_attrs(clean,weight)
@@ -314,7 +339,8 @@ def launch(kwargs, tool='grab'):
             node.parm('tool').set(tool)
             if node != source:
                 size = source.geometry().boundingBox().sizevec().length()
-                node.parm('radius').set(max(size * .09, .001))
+                radius=max(size*.09,.001)
+                node.setParms({setting_parm(profile,'radius'):radius for profile in PROFILE_LABELS})
             node.setDisplayFlag(True)
             if source.isRenderFlagSet():
                 node.setRenderFlag(True)

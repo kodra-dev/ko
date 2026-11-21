@@ -122,6 +122,17 @@ def run():
     grab.node('bind').parm('anchor_part').set('left')
     assert not a.status(grab)
 
+    tiny=a.make_adjust(source)
+    tiny.setParms({'part_source':'attribute','part_attribute':'part'})
+    for _ in range(4):
+        stroke=grab_fixture(tiny,source,'part')
+        stroke.node('bind').parm('radius').set(1e-5)
+        assert 'smaller than local spacing' in a.status(stroke), a.status(stroke)
+    assert points_z(tiny.geometry())==points_z(source.geometry())
+    warnings=tiny.warnings()
+    assert len(warnings)==1 and '4 edits need attention' in warnings[0], warnings
+    assert 'smaller than local spacing' in warnings[0], warnings
+
     connectivity=a.make_adjust(source)
     assert len(a.parts(connectivity))==2
     # UV seam along the center of a connected grid, created on vertices.
@@ -224,6 +235,33 @@ def run():
     narrow=smooth_node.geometry().boundingBox().maxvec().z()
     params.parm('smooth_span').set(3)
     assert narrow-smooth_node.geometry().boundingBox().maxvec().z()>.004
+
+    def paths(geo):
+        samples=[]
+        for i in range(9):
+            pos=hou.Vector3()
+            hit=geo.intersect(hou.Vector3(-.36+.09*i,.03,1),hou.Vector3(0,0,-1),pos,hou.Vector3(),hou.Vector3())
+            assert hit>=0
+            samples.append((*pos,*geo.prim(hit).normal()))
+        return samples,samples+samples[-2::-1]+samples[1:]+samples[-2::-1]
+
+    uneven=grid.parent().createNode('attribwrangle','relax_fixture')
+    uneven.setInput(0,path_grid)
+    uneven.parm('snippet').set('@P.x+=.04*sin(14*@P.x);')
+    for tool,brush_input in (('smooth',wave),('relax',uneven),('inflate',path_grid)):
+        brush_node=a.make_adjust(brush_input)
+        source_geo=brush_input.geometry()
+        once,repeated=paths(source_geo)
+        stage=a.append(brush_node,tool,center=once[0][:3],normal=once[0][3:],radius=.31)
+        stage.node('deform').parm('strength').set(1. if tool!='inflate' else .09)
+        source_positions=source_geo.pointFloatAttribValues('P')
+        changes=[]
+        for stroke in (once,repeated):
+            stage.node('bind').parm('samples').set(a.encode_samples(stroke[1:]))
+            out=brush_node.geometry()
+            assert not a.status(stage),a.status(stage)
+            changes.append(sum(abs(x-y) for x,y in zip(source_positions,out.pointFloatAttribValues('P'))))
+        assert changes[1] > changes[0]*1.1,(tool,changes)
     assert all(n.type().name()!='python' for n in node.allSubChildren())
     with tempfile.TemporaryDirectory() as tmp:
         path=str(Path(tmp)/'brushes.hip')

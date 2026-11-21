@@ -14,18 +14,54 @@ if (tool=="grab") {
     @P += w*delta;
     return;
 }
+// The graph field limits the footprint; this parallel pass counts repeated
+// visits only for points already inside it. Normalize the overlap of stamps
+// spaced a third of a radius apart so revisits—not sampling density—add dose.
+float exposure=1.;
+vector centers[];
+int multiple=haspointattrib(0,attr+"_stamp");
+if (multiple) {
+    centers=detail(0,attr+"_centers");
+    float radius=chf("../bind/radius"), falloff=chf("../bind/falloff"), coverage=0.;
+    foreach (vector q;centers) {
+        float d2=distance2(q,@P);
+        if (d2>=radius*radius) continue;
+        float t=1-sqrt(d2)/radius;
+        float v=t*t*(3-2*t);
+        coverage+=falloff==1. ? v : pow(v,falloff);
+    }
+    exposure=max(1.,coverage/3.);
+}
+if ((tool=="smooth" || tool=="relax") && npoints(1)==npoints(0)) {
+    vector target=point(1,"P",@ptnum);
+    float dose=w*clamp(amount,0.,1.)*exposure;
+    vector result=lerp(@P,target,min(1.,dose));
+    if (dose>1. && npoints(2)==npoints(0)) {
+        vector deeper=point(2,"P",@ptnum);
+        result=lerp(target,deeper,1.-exp(-.65*(dose-1.)));
+    }
+    vector delta=result-@P;
+    if (tool=="relax") {
+        vector n={0,0,0};
+        foreach (int f;pointprims(0,@ptnum)) n+=prim_normal(0,f,{.5,.5,0});
+        n=normalize(n);
+        delta-=n*dot(n,delta);
+    }
+    @P+=delta;
+    return;
+}
 if (tool=="flatten" || tool=="clay") {
     vector center = detail(0,attr+"_center");
     vector n = detail(0,attr+"_normal");
-    if (tool=="clay" && haspointattrib(0,attr+"_stamp")) {
+    if (tool=="clay" && multiple) {
         int stamp=point(0,attr+"_stamp",@ptnum);
-        vector centers[]=detail(0,attr+"_centers");
         vector normals[]=detail(0,attr+"_normals");
         center=centers[stamp]; n=normals[stamp];
     }
     float above=dot(@P-center,n);
-    if (tool=="flatten") @P -= n*above*w*clamp(amount,0.,1.);
+    if (tool=="flatten") @P-=n*above*(1.-pow(1.-w*clamp(amount,0.,1.),exposure));
     else if (abs(amount)>1e-8) {
+        amount*=exposure;
         float target=amount*(0.4+0.6*w);
         float move=target-above;
         if (move*amount>0) @P += n*clamp(move,-abs(amount),abs(amount))*w;
@@ -33,11 +69,6 @@ if (tool=="flatten" || tool=="clay") {
     return;
 }
 if (tool=="smooth") {
-    if (npoints(1)==npoints(0)) {
-        vector target=point(1,"P",@ptnum);
-        @P=lerp(@P,target,w*clamp(amount,0.,1.));
-        return;
-    }
     // Compatibility for strokes authored before a native target was cached.
     int adjacent[]=neighbours(0,@ptnum);
     int start=0, depth=clamp(chi("smooth_span"),1,3);
@@ -65,7 +96,7 @@ vector normal = {0,0,0};
 foreach (int f; pointprims(0,@ptnum)) normal += prim_normal(0,f,{0.5,0.5,0});
 normal = normalize(normal);
 if (tool=="inflate") {
-    @P += normal*w*amount;
+    @P+=normal*w*amount*exposure;
     return;
 }
 if (tool=="relax") {

@@ -6770,6 +6770,11 @@
 															]
 														},
 														{
+															"action":"h.pane.gview.state.sop.ko_adjust.copy_viewer_error",
+															"keys":[
+															]
+														},
+														{
 															"action":"h.pane.gview.state.sop.ko_adjust.extrude",
 															"keys":[
 															]

@@ -62,6 +62,7 @@ def run():
         keys=hou.hotkeys.assignments(a.STATE_CONTEXT,a.MOVE_DIRECTION_ACTION)
         conflicts=hou.hotkeys.findConflicts(a.STATE_CONTEXT,a.MOVE_DIRECTION_ACTION,a.MOVE_DIRECTION_KEY)
         assert keys
+        assert not hou.hotkeys.assignments(a.STATE_CONTEXT,a.STATE_CONTEXT+'.adjust_surface_refinement')
         if any(set(key.lower().split('+'))=={'ctrl','alt','m'} for key in keys):
             assert all(x.endswith('?'+a.MOVE_DIRECTION_ACTION) for x in conflicts),(keys,conflicts)
         node.updateParmStates()
@@ -70,9 +71,10 @@ def run():
         # Run callbacks with synthetic rays, never desktop/global mouse input.
         state = s.State(a.STATE, viewer)
         state.onEnter({'node': node})
-        def event(kind, x, *, y=0, shift=False, ctrl=False, middle=False):
+        def event(kind,x,*,y=0,shift=False,ctrl=False,middle=False,right=False):
             return {'ui_event': SimpleNamespace(reason=lambda: kind,
-                device=lambda: SimpleNamespace(isLeftButton=lambda: not middle,isMiddleButton=lambda:middle,
+                device=lambda: SimpleNamespace(isLeftButton=lambda: not (middle or right),
+                                               isMiddleButton=lambda:middle,isRightButton=lambda:right,
                                                mouseX=lambda: int(x*100),mouseY=lambda:y,mouseWheel=lambda: 1,
                                                isShiftKey=lambda:shift,isCtrlKey=lambda:ctrl),
                 ray=lambda: (hou.Vector3(x, .13, 2), hou.Vector3(0, 0, -1)))}
@@ -92,24 +94,125 @@ def run():
         state._brush_ring = original_ring
         result['checks'].append('stationary wheel event resizes the visible brush ring immediately')
         base=node.evalParm('radius')
+        sizes.clear()
+        state._brush_ring=resize_ring
         assert state.onMouseEvent(event(start,.07,ctrl=True,shift=True))
-        assert state.onMouseEvent(event(changed,.47,ctrl=True,shift=True))
-        assert node.evalParm('radius')>base and not a.history(node)
+        # Treat the whole burst as one preview interval, independent of host speed.
+        state.brush_adjust['last_preview']=float('inf')
+        for i in range(512):
+            assert state.onMouseEvent(event(active,.27+(i%2)*.01,ctrl=True,shift=True))
+        assert sizes==[base] and node.evalParm('radius')==base and state._brush_settings()[0]>base
+        prompts=[]
+        hud_updates=[]
+        class HudProbe:
+            def __getattr__(self,name):
+                return getattr(viewer,name)
+
+            def setPromptMessage(self,message):
+                prompts.append(message)
+
+            def hudInfo(self,**kwargs):
+                assert kwargs['panel']==hou.hudPanel.ToolInfo
+                hud_updates.append(kwargs['values'])
+                viewer.hudInfo(**kwargs)
+
+        state.viewer=HudProbe()
+        try:
+            # A sustained drag can exceed Houdini's 40-message buffer even at 30 Hz.
+            for i in range(48):
+                state.brush_adjust['last_preview']=0.
+                assert state.onMouseEvent(event(active,.30+(i%2)*.01,ctrl=True,shift=True))
+            assert len(sizes)==49 and not prompts and len(hud_updates)==48
+            assert hud_updates[-1]['radius']==f'{sizes[-1]:.4g}'
+            assert state.onMouseEvent(event(changed,.47,ctrl=True,shift=True))
+            assert sizes[-1]==node.evalParm('radius')>base and not a.history(node)
+            assert not prompts and hud_updates[-1]['radius']==f'{sizes[-1]:.4g}'
+        finally:
+            state.viewer=viewer
+            state._brush_ring=original_ring
+        result['checks'].append('radius drag updates Tool Info live without emitting viewport prompts')
+        for direction in (1,-1):
+            initial=node.evalParm('radius')
+            assert state.onMouseEvent(event(start,.47,ctrl=True,shift=True))
+            assert state.onMouseEvent(event(changed,.47,y=direction*40,ctrl=True,shift=True))
+            assert direction*(node.evalParm('radius')-initial)>0
         previous_inner,previous_width=state._ring_feedback
         assert state.onMouseEvent(event(start,.47,ctrl=True,shift=True,middle=True))
         assert state.onMouseEvent(event(changed,.07,y=30,ctrl=True,shift=True,middle=True))
-        assert node.evalParm('strength')<1 and node.evalParm('falloff')>1 and not a.history(node)
+        assert node.evalParm('strength')<1 and node.evalParm('falloff')<1 and not a.history(node)
         _,strength,falloff=state._brush_settings()
-        assert abs(strength-.8)<1e-6 and abs(falloff-1.25)<1e-6
+        assert abs(strength-.8)<1e-6 and abs(falloff-.75)<1e-6
+        assert state._hud_values['strength']=='0.80' and state._hud_values['falloff']=='0.75'
         inner,width=state._ring_feedback
-        assert inner<previous_inner and width<previous_width and state.inner_ring.visible()
+        assert inner>previous_inner and width<previous_width and state.inner_ring.visible()
+        assert state.onMouseEvent(event(start,.07,ctrl=True,shift=True,middle=True))
+        assert state.onMouseEvent(event(changed,.07,y=-30,ctrl=True,shift=True,middle=True))
+        assert state._ring_feedback[0]<inner and node.evalParm('falloff')==1
         hud=state._hud_template('smooth','Smooth')
         assert hud['icon']==a.ICON and len(hud['rows'])==6
         assert node.type().definition().icon()==a.ICON
         assert not hou.qt.Icon(a.ICON,24,24).isNull()
         assert hud['rows'][0]['key']=='mousewheel' and hud['rows'][1]['key']=='Ctrl Shift LMB'
         node.setParms({'radius':base,'strength':1,'falloff':1})
-        result['checks'].append('native-style HUD and two-ring cursor respond to radius, strength and falloff without adding strokes')
+        shape_before=a.profile_settings(node,a.SHAPE_EDITING)
+        refine_before=a.profile_settings(node,a.SURFACE_REFINEMENT)
+        assert state.onMouseEvent(event(start,.07,shift=True,right=True))
+        assert state._ring_profile==a.SURFACE_REFINEMENT
+        assert state.onMouseEvent(event(changed,.07,y=40,shift=True,right=True))
+        assert node.evalParm('refine_radius')>refine_before['radius']
+        menu={'menu':'ko_adjust_menu','menu_states':{'enable':True},'menu_item_states':{}}
+        try:
+            state._shift_context_held=lambda: True
+            state.onMenuPreOpen(menu)
+            assert not menu['menu_states']['enable']
+        finally:
+            del state._shift_context_held
+        # No further viewer mouse event: plain RMB must recover from a Shift menu.
+        state.onMenuPreOpen(menu)
+        assert menu['menu_states']['enable']
+        assert state.onMouseEvent(event(active,.47,shift=True,middle=True))
+        assert state.onMouseEvent(event(changed,.07,y=30,shift=True,middle=True))
+        assert node.evalParm('refine_strength')<refine_before['strength']
+        assert node.evalParm('refine_falloff')<refine_before['falloff']
+        assert a.profile_settings(node,a.SHAPE_EDITING)==shape_before and not a.history(node)
+
+        # Locked channels fail quietly on release; there is no per-event write or undo stack.
+        locked=node.parm('refine_radius')
+        frozen_radius=locked.eval()
+        locked.lock(True)
+        assert state.onMouseEvent(event(start,.07,shift=True,right=True))
+        for x in (.16,.27,.38):
+            assert state.onMouseEvent(event(active,x,shift=True,right=True))
+        assert state.onMouseEvent(event(changed,.47,shift=True,right=True))
+        assert locked.eval()==frozen_radius and not state.brush_adjust
+        locked.lock(False)
+        # Ctrl+Shift is independent of the preceding Shift-only setting drag.
+        assert state.onMouseEvent(event(start,.07,ctrl=True,shift=True))
+        assert state._ring_profile==a.SHAPE_EDITING
+        assert state.onMouseEvent(event(changed,.47,ctrl=True,shift=True))
+        assert node.evalParm('radius')>shape_before['radius']
+        assert node.evalParm('refine_radius')==frozen_radius
+        node.setParms({a.setting_parm(a.SHAPE_EDITING,k):v for k,v in shape_before.items()})
+        node.setParms({a.setting_parm(a.SURFACE_REFINEMENT,k):v for k,v in refine_before.items()})
+        result['checks'].append('Shift+RMB/MMB directly edit Refinement, suppress the RMB menu, and preserve Shape Editing')
+
+        original_adjust=state._update_brush_adjust
+        def fail_adjust(_event):
+            raise hou.OperationFailed('KoAdjust diagnostic probe')
+        state._update_brush_adjust=fail_adjust
+        try:
+            assert state.onMouseEvent(event(start,.07,ctrl=True,shift=True))
+            timestamp=state._error_reported['onMouseEvent']
+            assert state.onMouseEvent(event(active,.47,ctrl=True,shift=True))
+            assert state._error_reported['onMouseEvent']==timestamp and not state.brush_adjust
+            assert 'KoAdjust diagnostic probe' in state._viewer_error
+            menu={'menu':'ko_adjust_menu','menu_states':{'enable':True},
+                  'menu_item_states':{'copy_viewer_error':{'enable':False}}}
+            state.onMenuPreOpen(menu)
+            assert menu['menu_item_states']['copy_viewer_error']['enable']
+        finally:
+            state._update_brush_adjust=original_adjust
+        result['checks'].append('repeated viewer callback failures retain one traceback and cancel safely')
         assert state._begin(event(start,.07)['ui_event'])
         assert state.onMouseEvent(event(active,.31))
         assert node.geometry().boundingBox().sizevec().x() == 2  # Local patch, not a whole-object move.
@@ -132,6 +235,18 @@ def run():
         hou.undos.performUndo()
         assert not a.history(node) and obj.displayNode() == node
         result['checks'].append('shaded SOP result updates during drag, before wireframe, wheel, cancel and one-step undo')
+        saved_radius=node.evalParm('radius')
+        node.parm('radius').set(1e-5)
+        assert state.onMouseEvent(event(start,.07)) and state.drag
+        assert state.onMouseEvent(event(changed,.31))
+        assert not a.history(node) and not node.warnings()
+        node.parm('radius').set(saved_radius)
+        state.onMenuAction({'menu_item':'flatten'})
+        picked_event=event(hou.uiEventReason.Picked,.07)
+        assert state.onMouseEvent(picked_event)
+        assert not a.history(node) and node.geometry().pointFloatAttribValues('P')==p0
+        state.onMenuAction({'menu_item':'grab'})
+        result['checks'].append('unbound Move and no-op Planar strokes are not saved')
         picked = state._pick(state.pick_geometry(),event(start,.07)['ui_event'])
         assert abs(picked[0].z()-.4)<1e-4
         state.onMenuAction({'menu_item':'hide'})
@@ -178,8 +293,14 @@ def run():
         dab=a.active(node)
         assert dab.userData('ko_adjust_tool')=='inflate' and a.choice(dab.node('bind'),'mode')=='nearby'
         assert dab.node('deform').evalParm('strength')>0 and not a.status(dab)
+        old_refine=a.profile_settings(node,a.SURFACE_REFINEMENT)
+        node.setParms({'refine_radius':.28,'refine_strength':.7,'refine_falloff':1.4})
         assert state.onMouseEvent(event(hou.uiEventReason.Picked,.65,shift=True))
-        assert a.active(node).userData('ko_adjust_tool')=='smooth' and a.choice(node,'tool')=='inflate'
+        smooth=a.active(node)
+        assert smooth.userData('ko_adjust_tool')=='smooth' and a.choice(node,'tool')=='inflate'
+        bind=smooth.node('bind')
+        assert tuple(bind.evalParm(name) for name in ('radius','brush_strength','falloff'))==(.28,.7,1.4)
+        node.setParms({a.setting_parm(a.SURFACE_REFINEMENT,k):v for k,v in old_refine.items()})
         state.onMenuAction({'menu_item':'grab'})
         node.updateParmStates()
         assert node.parm('move_direction').isVisible()
@@ -228,11 +349,11 @@ def run():
             assert state.onMouseEvent(event(start,.31)) and state.drag
             state.onInterrupt({})
             assert a.history(node)==strokes and node.evalParm('active_stage')==strokes[0].name()
-            radius=node.evalParm('radius')
-            node.parm('radius').set(.00001)  # Too small to reach any vertices on this patch.
+            radius=node.evalParm('refine_radius')
+            node.parm('refine_radius').set(.00001)  # Too small to reach any vertices on this patch.
             assert state.onMouseEvent(event(hou.uiEventReason.Picked,.31))
             assert a.history(node)==strokes and len(questions)==2
-            node.parm('radius').set(radius)
+            node.parm('refine_radius').set(radius)
             assert state.onMouseEvent(event(start,.31))
             assert state.onMouseEvent(event(active,.47))
             assert state.onMouseEvent(event(changed,.64))

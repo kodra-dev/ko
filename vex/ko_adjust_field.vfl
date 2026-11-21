@@ -152,11 +152,11 @@ while (len(queue) && issue=="") {
         offer(queue,priorities,q,nextd);
     }
 }
+int multiple=len(seeds)>1;
 dict parts;
 int written=0;
 if (issue=="") {
     addpointattrib(0,weight,0.);
-    int multiple=len(seeds)>1;
     if (multiple) addpointattrib(0,weight+"_stamp",0);
     foreach (int p;touched) {
         int border=0;

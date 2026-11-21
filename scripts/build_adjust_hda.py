@@ -74,11 +74,20 @@ if (string(detail(0,"__ko_adjust_part_error"))=="") {
 string error = detail(0,"__ko_adjust_part_error");
 if (error!="") warning("KoAdjust: %s",error);
 string names[] = detailintrinsic(0,"detailattributes");
+int unresolved = 0;
+string first_issue = "";
 foreach (string name; names) {
     if (!startswith(name,"ko_adjust_status_")) continue;
     string issue = detail(0,name);
-    if (issue != "") warning("KoAdjust edit needs attention: %s",issue);
-}''')
+    if (issue == "") continue;
+    if (!unresolved) first_issue = issue;
+    unresolved++;
+}
+// Report one warning per cook; each stroke retains its own review status.
+if (unresolved == 1) warning("KoAdjust edit needs attention: %s",first_issue);
+else if (unresolved > 1)
+    warning("KoAdjust: %d edits need attention. Example: %s. Review individual strokes for details.",unresolved,first_issue);
+''')
     mask = wrangle(main, 'viewport_mask', report, '''
 int active=chi("../view_active");
 string data=(active || chi("../visibility_output")) ? chs("../view_hidden") : "";
@@ -137,12 +146,17 @@ if (data!="" || focus!="") {
     direction.setConditional(hou.parmCondType.HideWhen,'{ tool != grab }')
     ptg.append(direction)
     ptg.append(menu('influence','Affect',('part','nearby','connected'),('One Part','Nearby in 3D','Topologically Connected'),'part','Choose where the brush can spread.'))
-    ptg.append(hou.FloatParmTemplate('radius','Radius',1,default_value=(.25,),min=0.,min_is_strict=True,
-        help='Size of the brush in geometry units. Scroll or Ctrl+Shift+LMB drag to resize.'))
-    ptg.append(hou.FloatParmTemplate('strength','Strength',1,default_value=(1.,),min=0.,max=1.,min_is_strict=True,
-        max_is_strict=True,help='How strongly the next stroke moves the surface. Ctrl+Shift+MMB drag horizontally.'))
-    ptg.append(hou.FloatParmTemplate('falloff','Falloff',1,default_value=(1.,),min=.2,max=5.,min_is_strict=True,
-        max_is_strict=True,help='How quickly the brush fades toward its edge. Higher values concentrate the effect at the center.'))
+    for prefix,folder_name,label,tools in (
+            ('','shape_editing','Shape Editing','Move, Clay, Inflate and Planar'),
+            ('refine_','surface_refinement','Surface Refinement','Smooth, Relax and temporary Shift-Smooth')):
+        folder=hou.FolderParmTemplate(folder_name,label,folder_type=hou.folderType.Collapsible)
+        folder.addParmTemplate(hou.FloatParmTemplate(prefix+'radius','Radius',1,default_value=(.25,),min=1e-8,min_is_strict=True,
+            help=f'Brush size for {tools}. Scroll or Ctrl+Shift+LMB drag to resize.'))
+        folder.addParmTemplate(hou.FloatParmTemplate(prefix+'strength','Strength',1,default_value=(1.,),min=0.,max=1.,min_is_strict=True,
+            max_is_strict=True,help=f'Brush strength for {tools}. Ctrl+Shift+MMB drag left or right.'))
+        folder.addParmTemplate(hou.FloatParmTemplate(prefix+'falloff','Falloff',1,default_value=(1.,),min=.2,max=5.,min_is_strict=True,
+            max_is_strict=True,help=f'Edge softness for {tools}. Ctrl+Shift+MMB drag up or down. Higher values concentrate the effect.'))
+        ptg.append(folder)
     parts_folder = hou.FolderParmTemplate('parts_folder','Parts',folder_type=hou.folderType.Simple)
     parts_folder.addParmTemplate(menu('part_source','Define Parts By',('connectivity','attribute','uv'),
                     ('Connectivity','Primitive Attribute','UV Islands'),'connectivity','Choose how the mesh is split into brushable parts.'))
